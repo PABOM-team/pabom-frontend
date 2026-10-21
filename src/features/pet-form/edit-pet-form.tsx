@@ -8,7 +8,7 @@ import { speciesQueries } from "@/entities/species";
 import { petsApi } from "@/shared/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import { isPetsOnlyLive } from "@/shared/config/env";
+import { isPetPhotoDisabled, isRoutineDetached } from "@/shared/config/env";
 import {
   morphFields,
   serverFileId,
@@ -103,8 +103,8 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
     onSuccess: async (updated) => {
       await invalidateCareData(queryClient);
       router.replace(`/pets/${pet.id}`);
-      // 생애 단계가 바뀌었을 때만 C3-3 토스트. 개체만 진짜로 보낼 때는 체크 리스트가 없어 띄우지 않는다
-      if (!isPetsOnlyLive && updated.lifeStageCode !== pet.lifeStageCode) {
+      // 생애 단계가 바뀌었을 때만 C3-3 토스트. 일정 쪽이 이 개체를 모르면(한쪽만 진짜) 띄우지 않는다
+      if (!isRoutineDetached && updated.lifeStageCode !== pet.lifeStageCode) {
         toast("체크 리스트를 다시 제안했어요", {
           action: { label: "확인하기", onClick: () => router.push(`/pets/${pet.id}/routines`) },
         });
@@ -133,8 +133,8 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         }
       />
       <ScreenBody className="space-y-5">
-        {/* 개체만 진짜로 보낼 때는 사진 업로드가 목업이라 백엔드가 그 파일 ID를 모른다 */}
-        {!isPetsOnlyLive ? (
+        {/* 개체·사진이 한쪽만 진짜 백엔드면 서로 파일 ID를 몰라서 사진 칸을 숨긴다 */}
+        {!isPetPhotoDisabled ? (
           <PetPhotoPicker
             variant="edit"
             value={draft.photo}

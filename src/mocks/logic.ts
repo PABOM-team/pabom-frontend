@@ -1,20 +1,20 @@
 import { addDays, differenceInCalendarDays, format, max as maxDate, parseISO } from "date-fns";
 import { careTitle, ROUTINE_CARE_ITEMS } from "@/shared/domain/care";
-import { lifeStageIdOf, toServerSex, type Pet } from "@/shared/domain/pet";
-import type { CareRecord } from "@/shared/domain/record";
-import { getOccurrences, type Routine } from "@/shared/domain/routine";
-import { lifeStageFromHatch, SPECIES_LABEL } from "@/shared/domain/species";
+import type { Pet } from "@/shared/domain/pet";
+import { getOccurrences } from "@/shared/domain/routine";
+import { lifeStageFromHatch } from "@/shared/domain/species";
 import type { Task, Today } from "@/shared/domain/today";
-import { CARE_STANDARD_VERSION, MORPHS, serverIdOf, SPECIES_DATA } from "./data";
+import { SPECIES_DATA } from "./data";
 import { db, ymd, type DbPet, type DbRecord, type DbRoutine } from "./db";
 
 /**
  * 백엔드가 할 계산을 흉내 낸다 (IA 14_업무규칙).
  * 일정은 '마지막 완료일 + 주기'(롤링)이고, 할 일 행을 미리 만들지 않고 조회할 때 계산한다.
+ * 백엔드 응답 모양으로 바꾸는 건 wire.ts가 한다.
  */
 
-const dateOf = (iso: string) => format(parseISO(iso), "yyyy-MM-dd");
-const day = (ymdString: string) => parseISO(`${ymdString}T00:00:00`);
+export const dateOf = (iso: string) => format(parseISO(iso), "yyyy-MM-dd");
+export const day = (ymdString: string) => parseISO(`${ymdString}T00:00:00`);
 
 export function speciesOf(pet: Pick<DbPet, "speciesId">) {
   return SPECIES_DATA.find((s) => s.id === pet.speciesId)!;
@@ -30,7 +30,13 @@ export function stageNameOf(pet: DbPet) {
   return speciesOf(pet).lifeStages.find((s) => s.code === code)?.name ?? code;
 }
 
-const liveRecords = () => db.records.filter((r) => !r.deletedAt);
+export const liveRecords = () => db.records.filter((r) => !r.deletedAt);
+
+/** 백엔드 revisionNo처럼 1부터, 정정할 때마다 1씩 */
+export const revisionNoOf = (record: DbRecord) => record.revisions.length + 1;
+
+export const fileUrlOf = (fileId: string | null) =>
+  db.files.find((f) => f.id === fileId)?.url ?? null;
 
 function lastRecordDate(routineId: string) {
   const dates = liveRecords()
@@ -39,68 +45,23 @@ function lastRecordDate(routineId: string) {
   return dates.length ? maxDate(dates) : null;
 }
 
+/** 마지막 완료일 (백엔드 RoutineState.lastDoneOn) */
+export function lastDoneOf(routine: DbRoutine) {
+  const last = lastRecordDate(routine.id);
+  return last ? dateOf(last.toISOString()) : null;
+}
+
 /** 다음 예정일. 미룬 날짜가 있으면 그 날, 없으면 마지막 기록 + 주기 */
 export function dueOf(routine: DbRoutine) {
-  const last = lastRecordDate(routine.id);
-  const base = last
-    ? ymd(addDays(day(dateOf(last.toISOString())), routine.intervalDays))
-    : routine.startDate;
+  const last = lastDoneOf(routine);
+  const base = last ? ymd(addDays(day(last), routine.intervalDays)) : routine.startDate;
   return {
     dueOn: routine.postponedTo ?? base,
     originalDueOn: routine.postponedTo ? base : null,
   };
 }
 
-export function serializeRoutine(routine: DbRoutine): Routine {
-  const pet = db.pets.find((p) => p.id === routine.petId)!;
-  const { dueOn, originalDueOn } = dueOf(routine);
-  return {
-    id: routine.id,
-    petId: routine.petId,
-    careItem: routine.careItem,
-    intervalDays: routine.intervalDays,
-    standardIntervalDays: routine.standardIntervalDays,
-    customized: routine.intervalDays !== routine.standardIntervalDays,
-    enabled: routine.enabled,
-    startDate: routine.startDate,
-    foodName: routine.foodName,
-    nextDueOn: dueOn,
-    postponedTo: routine.postponedTo,
-    originalDueOn,
-    basis: {
-      label: "reference",
-      condition: `${SPECIES_LABEL[pet.speciesId]} · ${stageNameOf(pet)}`,
-      sourceText: null,
-      version: CARE_STANDARD_VERSION,
-    },
-  };
-}
-
-export function serializeRecord(record: DbRecord): CareRecord {
-  const pet = db.pets.find((p) => p.id === record.petId);
-  return {
-    id: record.id,
-    petId: record.petId,
-    petName: pet?.name ?? "",
-    routineId: record.routineId,
-    careItem: record.careItem,
-    type: record.type,
-    method: record.method,
-    occurredAt: record.occurredAt,
-    createdAt: record.createdAt,
-    intake: record.intake,
-    weightG: record.weightG,
-    memo: record.memo,
-    foodName: record.foodName,
-    skipReason: record.skipReason,
-    photos: record.photoIds
-      .map((id) => db.files.find((f) => f.id === id))
-      .filter((f) => f !== undefined)
-      .map((f) => ({ id: f.id, url: f.url })),
-    revisions: record.revisions,
-  };
-}
-
+/** 앱 개체 모양 (status-changes·인계 카드 수락처럼 스웨거에 없는 API가 그대로 준다) */
 export function serializePet(pet: DbPet): Pet {
   const records = liveRecords().filter((r) => r.petId === pet.id);
   const firstRecord = records.map((r) => r.occurredAt).sort()[0];
@@ -115,7 +76,7 @@ export function serializePet(pet: DbPet): Pet {
     lifeStageSource: pet.manualStageCode ? "manual" : "hatch",
     stageUncertain: Boolean(pet.manualStageCode && pet.stageUncertain),
     acquiredOn: pet.acquiredOn,
-    photoUrl: pet.photoUrl,
+    photoUrl: fileUrlOf(pet.photoFileId),
     status: pet.status,
     endReason: pet.endReason,
     endedOn: pet.endedOn,
@@ -127,40 +88,6 @@ export function serializePet(pet: DbPet): Pet {
         : 0,
     recordCount: records.length,
     firstRecordOn: firstRecord ? dateOf(firstRecord) : null,
-  };
-}
-
-/**
- * 백엔드 PetResponse 모양 (GET /pets/{id}, POST /pets).
- * 상태·사진 주소·오늘 할 일 수·기록 수는 백엔드에 아직 없지만, 목업 화면을 위해 같이 준다
- */
-export function serializePetResponse(pet: DbPet) {
-  const serverId = serverIdOf(pet.speciesId);
-  const morph = MORPHS[serverId]?.find((m) => m.name === pet.morph);
-  const { status, endReason, endedOn, photoUrl, todayRemaining, recordCount, firstRecordOn } =
-    serializePet(pet);
-  return {
-    id: pet.id,
-    speciesId: serverId,
-    name: pet.name,
-    morphs: morph ? [{ id: morph.id, code: morph.code, name: morph.name }] : [],
-    customMorph: morph ? null : pet.morph,
-    hatchedAt: pet.hatchedOn,
-    adoptedAt: pet.acquiredOn,
-    lifeStageId: lifeStageIdOf(stageCodeOf(pet)),
-    stageCertainty: pet.manualStageCode && pet.stageUncertain ? "ESTIMATED" : "CONFIRMED",
-    sex: toServerSex(pet.sex),
-    sexCertainty: pet.sex === "unknown" ? "UNKNOWN" : "CONFIRMED",
-    photoFileId: null,
-    createdAt: pet.createdAt,
-    updatedAt: pet.createdAt,
-    status,
-    endReason,
-    endedOn,
-    photoUrl,
-    todayRemaining,
-    recordCount,
-    firstRecordOn,
   };
 }
 

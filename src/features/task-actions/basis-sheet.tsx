@@ -43,7 +43,8 @@ export function BasisSheet({
         <div className="flex border-b border-border py-2.5">
           <dt className="w-[104px] shrink-0 text-muted-foreground">할 일</dt>
           <dd>
-            {current?.title.split(" · ")[0]} · {current ? formatInterval(current.intervalDays) : ""}
+            {current?.title.split(" · ")[0]}
+            {current?.intervalDays != null ? ` · ${formatInterval(current.intervalDays)}` : ""}
           </dd>
         </div>
         <div className="flex border-b border-border py-2.5">

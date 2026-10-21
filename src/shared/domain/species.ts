@@ -24,8 +24,11 @@ export const SPECIES_CODE: Record<string, SpeciesId> = {
 };
 
 export type LifeStage = {
-  /** 백엔드 lifeStageId [가정] 해츨링 1 · 준성체 2 · 성체 3 (단계 목록 API가 아직 없다) */
-  id: number;
+  /**
+   * 백엔드 lifeStageId. 스웨거(CreatePetRequest.lifeStageId)의 유효값은 2(JUVENILE)·3(ADULT)·4(UNKNOWN)뿐이다.
+   * [백엔드 확인 필요] 해츨링 ID가 없어 null로 두고, 해츨링을 고르면 UNKNOWN으로 보낸다 (단계 목록 API가 아직 없다)
+   */
+  id: number | null;
   code: string;
   name: string;
   /** 부화 후 이 일수부터 이 단계 [미확정] 10/10 공동 기획에서 확정 */
@@ -35,10 +38,13 @@ export type LifeStage = {
 
 /** 생애 단계 경계는 [미확정] 10/10 공동 기획 값이 나오면 바꾼다 */
 export const LIFE_STAGES: LifeStage[] = [
-  { id: 1, code: "hatchling", name: "해츨링", minAgeDays: 0, criteria: "부화 후 3개월 미만" },
+  { id: null, code: "hatchling", name: "해츨링", minAgeDays: 0, criteria: "부화 후 3개월 미만" },
   { id: 2, code: "juvenile", name: "준성체", minAgeDays: 90, criteria: "부화 후 3개월~1년" },
   { id: 3, code: "adult", name: "성체", minAgeDays: 365, criteria: "부화 후 1년 이상" },
 ];
+
+/** 백엔드 lifeStageId 4 = UNKNOWN (단계 모름). 개체 응답에 오면 단계를 비운다 */
+export const LIFE_STAGE_UNKNOWN_ID = 4;
 
 /** 종 API가 주지 않는 값. TODO 백엔드가 단계·이름 정보를 주면 API 값으로 바꾼다 */
 const SPECIES_INFO: Record<
@@ -123,15 +129,20 @@ export const careStandardSchema = z.object({
   lifeStageCode: z.string(),
   careItem: routineCareItemSchema,
   intervalDays: z.number().int().min(1),
+  /** 바꿀 수 있는 범위 (백엔드 minDays·maxDays) */
+  minDays: z.number().int().min(1),
+  maxDays: z.number().int().min(1),
   label: careLabelSchema,
+  description: z.string().nullable(),
 });
 export type CareStandard = z.infer<typeof careStandardSchema>;
 
 export const careStandardTableSchema = z.object({
   speciesId: speciesIdSchema,
   version: z.string(),
-  effectiveFrom: z.iso.date(),
-  /** 기준표 확정 전 시안 값이면 '예시'로 표시 */
+  /** 적용 시작일. 백엔드 가이드라인 응답에는 없다 [백엔드 요청] */
+  effectiveFrom: z.iso.date().nullable(),
+  /** 기준표 확정 전 시안 값이면 '예시'로 표시. 백엔드는 PUBLISHED 버전만 주므로 false */
   isDraft: z.boolean(),
   standards: z.array(careStandardSchema),
   references: z.array(z.object({ title: z.string(), url: z.url().nullable() })),

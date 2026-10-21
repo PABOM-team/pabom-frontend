@@ -28,18 +28,21 @@ function TaskBadge({ task }: { task: Task }) {
 }
 
 function taskSubline(task: Task) {
-  const interval = formatInterval(task.intervalDays);
+  // 주기는 백엔드 오늘 할 일 응답에 아직 없어 비어 있을 수 있다
+  const interval = task.intervalDays === null ? "" : formatInterval(task.intervalDays);
   if (task.state === "done" && task.record) {
-    return `${interval} · ${formatTime(task.record.occurredAt)} 완료`;
+    return [interval, `${formatTime(task.record.occurredAt)} 완료`].filter(Boolean).join(" · ");
   }
   if (task.state === "skipped") {
     return [interval, task.record?.skipReason].filter(Boolean).join(" · ");
   }
   if (task.originalDueOn) {
     // 앞 날짜(U1)에서는 그날로 미뤄진 것이니 '원래 날짜'만, 오늘 이후로 옮겨 온 할 일은 화살표까지 (D1)
-    if (task.state === "planned") return `원래 ${formatMonthDay(task.originalDueOn)} · ${interval}`;
-    const to = task.dueOn === todayYmd() ? "오늘" : formatMonthDay(task.dueOn);
-    return `원래 ${formatMonthDay(task.originalDueOn)} → ${to} · ${interval}`;
+    const moved =
+      task.state === "planned"
+        ? `원래 ${formatMonthDay(task.originalDueOn)}`
+        : `원래 ${formatMonthDay(task.originalDueOn)} → ${task.dueOn === todayYmd() ? "오늘" : formatMonthDay(task.dueOn)}`;
+    return [moved, interval].filter(Boolean).join(" · ");
   }
   return interval;
 }

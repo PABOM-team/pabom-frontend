@@ -11,7 +11,8 @@ export const taskSchema = z.object({
   petName: z.string(),
   careItem: routineCareItemSchema,
   title: z.string(),
-  intervalDays: z.number().int(),
+  /** N일마다. 백엔드 오늘 할 일 응답(Task)에는 아직 없어 null일 수 있다 [백엔드 요청] */
+  intervalDays: z.number().int().nullable(),
   dueOn: z.iso.date(),
   /** 미룬 할 일이면 원래 예정일 */
   originalDueOn: z.iso.date().nullable(),

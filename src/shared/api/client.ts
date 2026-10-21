@@ -10,8 +10,9 @@ let refreshing: Promise<string | null> | undefined;
 /** 앱을 연 뒤 첫 요청들이 함께 기다리는 refresh 한 번 */
 let bootstrap: Promise<unknown> | undefined;
 
-/** 로그인 없이 부르는 공개 API(종·모프 조회). access 토큰을 싣지 않는다 */
-const isPublicPath = (url: string) => /\/species(\/[^/]+\/morphs)?$/.test(new URL(url).pathname);
+/** 로그인 없이 부르는 공개 API(종·모프·가이드라인 조회, 서버 상태). access 토큰을 싣지 않는다 */
+const isPublicPath = (url: string) =>
+  /\/(species(\/[^/]+\/(morphs|care-standards))?|health)$/.test(new URL(url).pathname);
 
 /**
  * 로그인 전에 부르는 API(인증·공개 API)와 가입 토큰을 직접 싣는 약관 동의.

@@ -48,7 +48,7 @@ export function useTaskActions({
     mutationFn: ({ task, input }: { task: Task; input: CompleteInput }) =>
       routinesApi.complete(task.routineId, input),
     onMutate: ({ task }) => setCheckingId(task.routineId),
-    onSuccess: (record, { task }) => {
+    onSuccess: ({ record }, { task }) => {
       setCompleting(null);
       toast(`'${CARE_ITEM_LABEL[task.careItem]}' 기록을 저장했어요`, {
         action: { label: "되돌리기", onClick: () => undoRecord(record.id) },

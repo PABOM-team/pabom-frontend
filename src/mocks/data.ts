@@ -1,8 +1,7 @@
-import type { RoutineCareItem } from "@/shared/domain/care";
+import { CARE_ITEM_CODE, type BackendCareStandards } from "@/shared/domain/backend";
+import { RECORD_KIND, ROUTINE_LABEL, type RoutineCareItem } from "@/shared/domain/care";
 import {
-  LIFE_STAGES,
   toSpeciesList,
-  type CareStandardTable,
   type Morph,
   type Species,
   type SpeciesId,
@@ -51,6 +50,9 @@ export const MORPHS: Record<number, Morph[]> = {
 export const serverIdOf = (speciesId: SpeciesId) =>
   SPECIES_DATA.find((s) => s.id === speciesId)!.serverId;
 
+export const speciesOfServerId = (serverId: number) =>
+  SPECIES_DATA.find((s) => s.serverId === serverId);
+
 type Interval = Partial<Record<RoutineCareItem, number>>;
 
 /** 관리 기준표 v0.1 시안. 항목·주기는 예시(가이드라인 확정 전) */
@@ -73,21 +75,52 @@ export function standardIntervals(speciesId: SpeciesId, stageCode: string): Inte
 
 export const CARE_STANDARD_VERSION = "v0.1";
 
-export function careStandardTable(speciesId: SpeciesId): CareStandardTable {
+/** 주기를 바꿀 수 있는 범위 (예시). 백엔드 minDays·maxDays와 같은 자리 */
+export const intervalRange = (days: number) => ({
+  minDays: Math.max(1, Math.floor(days / 2)),
+  maxDays: Math.max(days * 2, days + 1),
+});
+
+/** 백엔드 recordType 글자 (CareItemStandard.recordType·PetRoutineResult.recordType). [백엔드 확인 필요] 값 목록 */
+export const RECORD_TYPE_CODE: Record<RoutineCareItem, string> = {
+  feeding: "FEED_RESULT",
+  misting: "CHECK",
+  weight: "NUMBER",
+  cleaning: "CHECK",
+  shed: "CHECK",
+};
+
+/** GET /species/{id}/care-standards 응답 (백엔드 모양). 백엔드처럼 준성체·성체 기준만 준다 */
+export function careStandardsOf(species: Species): BackendCareStandards {
+  const lifeStages = [
+    ["JUVENILE", "juvenile"],
+    ["ADULT", "adult"],
+  ] as const;
   return {
-    speciesId,
-    version: CARE_STANDARD_VERSION,
-    effectiveFrom: "2026-10-14",
-    isDraft: true,
-    standards: LIFE_STAGES.flatMap((stage) =>
-      Object.entries(standardIntervals(speciesId, stage.code)).map(([careItem, intervalDays]) => ({
-        lifeStageCode: stage.code,
-        careItem: careItem as RoutineCareItem,
-        intervalDays,
-        label: "reference" as const,
-      })),
-    ),
-    references: [{ title: "〔참고 자료 · 발행처 · 연도〕", url: null }],
-    reviewNote: "〔수의사 자문 표현 미정 · 11월 자문 때 확인〕",
+    guidelineVersion: CARE_STANDARD_VERSION,
+    speciesId: species.serverId,
+    speciesCode: SPECIES_ROWS.find((r) => r.id === species.serverId)!.code,
+    speciesName: species.commonName,
+    lifeStages: lifeStages.map(([lifeStage, code]) => ({
+      lifeStage,
+      appliedLifeStage: lifeStage,
+      careItems: Object.entries(standardIntervals(species.id, code)).map(([item, days]) => {
+        const careItem = item as RoutineCareItem;
+        return {
+          careItemCode: CARE_ITEM_CODE[careItem],
+          careItemName: ROUTINE_LABEL[careItem],
+          defaultCycleDays: days,
+          ...intervalRange(days),
+          defaultEnabled: true,
+          recordType: RECORD_TYPE_CODE[careItem],
+          feedResultSet:
+            RECORD_KIND[careItem] === "intake" ? "ATE_ALL,ATE_PART,REFUSED,NOT_OBSERVED" : null,
+          defaultFoodName: careItem === "feeding" ? species.defaultFoodName : null,
+          evidenceLevel: "REFERENCE",
+          sourceRefs: "〔참고 자료 · 발행처 · 연도〕",
+          description: `${species.commonName} · ${species.lifeStages.find((s) => s.code === code)?.name ?? code}`,
+        };
+      }),
+    })),
   };
 }

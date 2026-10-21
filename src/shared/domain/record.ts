@@ -30,8 +30,27 @@ export const careRecordSchema = z.object({
   skipReason: z.string().nullable(),
   photos: z.array(photoSchema),
   revisions: z.array(recordRevisionSchema),
+  /** 정정할 때 보내는 낙관적 잠금 번호 (백엔드 revisionNo). 목록 아이템에는 없어서 null */
+  revisionNo: z.number().int().nullable(),
 });
 export type CareRecord = z.infer<typeof careRecordSchema>;
+
+/** 완료 체크·건너뛰기 결과 (API-41·42). 만들어진 기록 요약과 루틴의 다음 예정일 */
+export type RoutineActionResult = {
+  record: Pick<
+    CareRecord,
+    "id" | "careItem" | "type" | "occurredAt" | "intake" | "weightG" | "memo" | "skipReason"
+  >;
+  routine: RoutineState;
+  todayState: "todo" | "done" | "skipped" | null;
+};
+
+/** 완료·건너뛰기·미루기 뒤의 루틴 상태 (백엔드 RoutineState) */
+export type RoutineState = {
+  id: string;
+  lastDoneOn: string | null;
+  nextDueOn: string | null;
+};
 
 export const recordPageSchema = z.object({
   items: z.array(careRecordSchema),
@@ -43,11 +62,12 @@ export const MEMO_MAX = 200;
 
 export type RecordQuery = {
   petId?: string;
-  careItem?: string;
-  /** YYYY-MM-DD, 양 끝 포함 */
+  careItem?: z.infer<typeof careItemSchema>;
+  /** YYYY-MM-DD, 양 끝 포함 (최대 366일) */
   from?: string;
   to?: string;
   cursor?: string;
+  /** 받을 개수. 백엔드 한 페이지(50)를 넘으면 이어서 받는다 */
   limit?: number;
 };
 

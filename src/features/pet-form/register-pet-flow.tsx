@@ -9,7 +9,7 @@ import { speciesQueries } from "@/entities/species";
 import { petsApi } from "@/shared/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import { isPetsOnlyLive } from "@/shared/config/env";
+import { isPetPhotoDisabled, isRoutineDetached } from "@/shared/config/env";
 import {
   morphFields,
   serverFileId,
@@ -118,8 +118,10 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
     mutationFn: () => petsApi.create(toCreateInput(draft, species!, morphs ?? [], clientRequestId)),
     onSuccess: async (pet) => {
       await invalidateCareData(queryClient);
-      // 개체만 진짜 백엔드로 보낼 때는 체크 리스트(목업)가 이 개체를 몰라서 상세로 간다
-      router.replace(isPetsOnlyLive ? `/pets/${pet.id}` : `/pets/${pet.id}/routines?from=register`);
+      // 일정 쪽이 이 개체를 모르면(개체·일정이 한쪽만 진짜) 체크 리스트 대신 상세로 간다
+      router.replace(
+        isRoutineDetached ? `/pets/${pet.id}` : `/pets/${pet.id}/routines?from=register`,
+      );
     },
     onError: (error) => {
       const fields = getFieldErrors(error);
@@ -250,8 +252,8 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 
         {step === 4 ? (
           <div className="space-y-5">
-            {/* 개체만 진짜로 보낼 때는 사진 업로드가 목업이라 백엔드가 그 파일 ID를 모른다 */}
-            {!isPetsOnlyLive ? (
+            {/* 개체·사진이 한쪽만 진짜 백엔드면 서로 파일 ID를 몰라서 사진 칸을 숨긴다 */}
+            {!isPetPhotoDisabled ? (
               <PetPhotoPicker
                 value={draft.photo}
                 onChange={(photo) => patch({ photo })}
@@ -342,7 +344,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
           <Button size="xl" disabled={!canSubmit} onClick={() => create.mutate()}>
             {create.isPending || uploading ? (
               <LoaderCircle className="size-5 animate-spin" aria-label="저장 중" />
-            ) : isPetsOnlyLive ? (
+            ) : isRoutineDetached ? (
               "등록하기"
             ) : (
               "등록하고 체크 리스트 보기"

@@ -54,7 +54,8 @@ export function SpeciesGuidelineScreen() {
         ) : (
           <>
             <p className="text-[12.5px] text-[#888]">
-              {table.data.version} · {table.data.effectiveFrom} 적용
+              {table.data.version}
+              {table.data.effectiveFrom ? ` · ${table.data.effectiveFrom} 적용` : ""}
               {table.data.isDraft ? " (예시)" : ""}
             </p>
             <table className="mt-3 w-full text-left text-[13px]">

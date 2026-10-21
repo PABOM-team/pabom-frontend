@@ -103,10 +103,12 @@ export type PetUpdateInput = Partial<Omit<PetCreateInput, "clientRequestId" | "s
 
 export const toServerSex = (sex: Sex) => serverSexSchema.parse(sex.toUpperCase());
 
-/** 생애 단계 code ↔ 백엔드 lifeStageId [가정] LIFE_STAGES 참고 */
+/** 생애 단계 code ↔ 백엔드 lifeStageId. 해츨링은 백엔드 ID가 없어 null (LIFE_STAGES 참고) */
 export const lifeStageIdOf = (code: string | null | undefined) =>
   LIFE_STAGES.find((s) => s.code === code)?.id ?? null;
-const lifeStageCodeOf = (id: number | null) => LIFE_STAGES.find((s) => s.id === id)?.code ?? null;
+/** null·UNKNOWN(4)·모르는 ID는 null */
+const lifeStageCodeOf = (id: number | null) =>
+  id === null ? null : (LIFE_STAGES.find((s) => s.id === id)?.code ?? null);
 
 /** 고른 모프 이름 → 본문. 목록에 있는 모프면 ID, 없으면 직접 입력으로 보낸다 */
 export function morphFields(name: string | null, morphs: Morph[]) {
@@ -153,12 +155,11 @@ export const serverFileId = (fileId: string | null) => (fileId ? Number(fileId) 
 
 /**
  * 개체 응답 (백엔드 PetResponse·PetListResponse).
- * 백엔드가 아직 주지 않는 값은 아래 기본값(임시 데이터)으로 채운다. 목업은 진짜 값을 준다.
- * TODO 체크리스트·기록·사진 조회가 생기면 백엔드 스펙에 맞춘다
+ * 백엔드가 아직 주지 않는 값(상태·할 일 수·기록 수)은 아래 기본값(임시 데이터)으로 채운다. 목업은 진짜 값을 준다.
+ * 사진 주소는 photoFileId로 GET /files/{id}를 따로 불러 채운다 (endpoints.ts)
  */
 export const petResponseSchema = z.object({
-  /** 백엔드는 숫자, 목업은 문자열 */
-  id: z.union([z.number().int(), z.string()]).transform(String),
+  id: z.number().int().transform(String),
   speciesId: z.number().int(),
   name: z.string(),
   morphs: z.array(morphSchema).default([]),
@@ -170,26 +171,24 @@ export const petResponseSchema = z.object({
   stageCertainty: certaintySchema.default("UNKNOWN"),
   /** 목록 응답에는 없다 → 모름 */
   sex: serverSexSchema.default("UNKNOWN"),
-  photoFileId: z.union([z.number().int(), z.string()]).nullish(),
+  photoFileId: z.number().int().nullish(),
   /** 목록 응답에는 없다 */
   createdAt: z.iso.datetime({ offset: true, local: true }).nullish(),
-  // ── 백엔드에 아직 없는 값 (임시 데이터) ─────────────────
+  // ── 백엔드에 아직 없는 값 (임시 데이터). 스웨거에 status-changes API가 없다 ─────────
   /** 함께했던 개체 기능이 없어 모두 키우는 중 */
   status: petStatusSchema.default("active"),
   endReason: endReasonSchema.nullish(),
   endedOn: z.iso.date().nullish(),
-  /** photoFileId로 주소를 받는 API(GET /files/{id})를 아직 안 붙여서 기본 사진 */
-  photoUrl: z.string().nullish(),
-  /** 체크 리스트가 없어 0 */
+  /** 오늘 할 일 수는 GET /today에 있지만 개체 목록에는 없어 0 */
   todayRemaining: z.number().int().min(0).default(0),
-  /** 기록이 없어 0 */
+  /** 기록 수는 개체 응답에 없어 0 */
   recordCount: z.number().int().min(0).default(0),
   firstRecordOn: z.iso.date().nullish(),
 });
 export type PetResponse = z.infer<typeof petResponseSchema>;
 
-/** 백엔드 개체를 앱 개체로. 종은 백엔드 종 ID로 찾는다 */
-export function toPet(res: PetResponse, speciesList: Species[]): Pet {
+/** 백엔드 개체를 앱 개체로. 종은 백엔드 종 ID로 찾고, 사진 주소는 따로 받아 넣는다 */
+export function toPet(res: PetResponse, speciesList: Species[], photoUrl: string | null): Pet {
   const species = speciesList.find((s) => s.serverId === res.speciesId);
   if (!species) throw new Error(`알 수 없는 종이에요 (speciesId ${res.speciesId})`);
   const hatchedOn = res.hatchedAt ?? null;
@@ -207,7 +206,7 @@ export function toPet(res: PetResponse, speciesList: Species[]): Pet {
     lifeStageSource: hatchedOn ? "hatch" : "manual",
     stageUncertain: !hatchedOn && res.stageCertainty === "ESTIMATED",
     acquiredOn: res.adoptedAt ?? null,
-    photoUrl: res.photoUrl ?? null,
+    photoUrl,
     status: res.status,
     endReason: res.endReason ?? null,
     endedOn: res.endedOn ?? null,

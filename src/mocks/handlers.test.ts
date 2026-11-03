@@ -575,7 +575,8 @@ describe("목업 API", () => {
       careItemName: "급여",
       recordKind: "intake",
       type: "done",
-      method: "manual",
+      // 백엔드 source는 늘 MANUAL이라 직접 기록인지 알 수 없다 → null
+      method: null,
       intake: "partial",
       memo: "조금 남겼어요",
       photos: [{ id: photo.id, url: photo.url }],

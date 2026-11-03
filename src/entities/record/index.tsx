@@ -41,6 +41,7 @@ export function describeRecord(
 }
 
 export function recordMethodLabel(record: Pick<CareRecord, "method">) {
+  if (record.method === null) return null;
   return record.method === "routine" ? "할 일 체크" : "직접 기록";
 }
 
@@ -102,8 +103,12 @@ export function RecordRow({
             <span className="block truncate text-body-lg text-secondary-text">{record.memo}</span>
           ) : null}
           <span className="block text-body-md text-muted-foreground">
-            {recordMethodLabel(record)}
-            {variant === "day" || !prefix ? ` · ${formatTime(record.occurredAt)}` : null}
+            {[
+              recordMethodLabel(record),
+              variant === "day" || !prefix ? formatTime(record.occurredAt) : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
         </span>
         {variant === "day" ? (

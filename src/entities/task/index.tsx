@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { CheckIcon, PlusIcon } from "@/shared/ui/icons";
 import { todayApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { formatInterval } from "@/shared/domain/care";
+import { formatInterval, INTAKE_LABEL } from "@/shared/domain/care";
 import type { Task } from "@/shared/domain/today";
 import { formatMonthDay, formatTime, todayYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
@@ -31,7 +31,15 @@ function taskSubline(task: Task) {
   // 주기는 백엔드 오늘 할 일 응답에 아직 없어 비어 있을 수 있다
   const interval = task.intervalDays === null ? "" : formatInterval(task.intervalDays);
   if (task.state === "done" && task.record) {
-    return [interval, `${formatTime(task.record.occurredAt)} 완료`].filter(Boolean).join(" · ");
+    // 결과(먹은 정도·체중)가 있으면 완료 시각 앞에 같이 보여 준다
+    const result = task.record.intake
+      ? INTAKE_LABEL[task.record.intake]
+      : task.record.weightG !== null
+        ? `${task.record.weightG} g`
+        : "";
+    return [interval, result, `${formatTime(task.record.occurredAt)} 완료`]
+      .filter(Boolean)
+      .join(" · ");
   }
   if (task.state === "skipped") {
     return [interval, task.record?.skipReason].filter(Boolean).join(" · ");

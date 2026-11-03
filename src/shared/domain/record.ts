@@ -23,7 +23,8 @@ export const careRecordSchema = z.object({
   recordKind: recordKindSchema,
   type: z.enum(["done", "skipped"]),
   /** routine: 할 일 체크, manual: 직접 기록 */
-  method: z.enum(["routine", "manual"]),
+  /** 할 일 체크인지 직접 기록인지. 백엔드 목록 응답으로는 알 수 없어 null일 수 있다 */
+  method: z.enum(["routine", "manual"]).nullable(),
   /** 사건 시각과 입력 시각은 따로 저장한다 */
   occurredAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),

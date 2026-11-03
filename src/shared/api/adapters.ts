@@ -331,8 +331,11 @@ function toRevision(revision: BackendRevision) {
   };
 }
 
-/** 스웨거 source enum은 MANUAL뿐이라, 그 밖의 값(할 일 체크)은 routine으로 본다 [백엔드 확인 필요] */
-const methodOf = (source: string) => (source === "MANUAL" ? "manual" : "routine");
+/**
+ * 백엔드는 할 일 체크로 만든 기록도 source=MANUAL로 주고, 직접 기록도 routineId가 붙어
+ * 둘을 가를 수 없다 [백엔드 확인 필요]. MANUAL이면 모름(null)으로 두어 라벨을 숨긴다
+ */
+const methodOf = (source: string): CareRecord["method"] => (source === "MANUAL" ? null : "routine");
 
 export function toCareRecord(raw: BackendRecord, revisions: BackendRevision[] = []): CareRecord {
   const careItem = raw.itemCode;

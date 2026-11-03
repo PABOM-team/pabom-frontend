@@ -183,7 +183,7 @@ export function EditRecordSheet({
                 O/X 기록이라 고칠 값이 없어요. 시각과 메모만 고칠 수 있어요.
               </InfoBox>
             ) : null}
-            {kind === "memo" || record.method === "manual" || draft.photos.length ? (
+            {kind === "memo" || record.method !== "routine" || draft.photos.length ? (
               <>
                 <SheetLabel className="mt-1">사진</SheetLabel>
                 <PhotoInput

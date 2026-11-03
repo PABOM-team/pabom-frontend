@@ -213,6 +213,12 @@ const routinesOrEmpty = (petId: string) =>
     ? routinesApi.list(petId).catch(() => [])
     : routinesApi.list(petId);
 
+/** 개체(pets)와 기록(record)이 한쪽만 진짜 백엔드여도 마찬가지라, 그때는 최근 기록을 빈 목록으로 둔다 */
+const recentRecordsOrEmpty = (petId: string) =>
+  env.apiMocking && env.apiLive.has("pets") !== env.apiLive.has("record")
+    ? recordsApi.list({ petId, limit: 5 }).catch(() => ({ items: [], nextCursor: null }))
+    : recordsApi.list({ petId, limit: 5 });
+
 export const petsApi = {
   /**
    * API-20 내 개체 목록 (최근 등록 순). 백엔드는 아직 status 조건이 없어 모두 키우는 중으로 온다.
@@ -233,7 +239,7 @@ export const petsApi = {
     const [pet, routines, recent] = await Promise.all([
       getPet(petId),
       routinesOrEmpty(petId),
-      recordsApi.list({ petId, limit: 5 }),
+      recentRecordsOrEmpty(petId),
     ]);
     return { pet, routines, recentRecords: recent.items };
   },

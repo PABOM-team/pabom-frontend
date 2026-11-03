@@ -75,7 +75,7 @@ type RoutineFields = {
   careItemName: string;
   recordType: string | null | undefined;
   intervalDays: number;
-  defaultCycleDays: number;
+  defaultCycleDays: number | null | undefined;
   cycleSource: "GUIDELINE" | "USER_CUSTOM";
   enabled: boolean;
   startDate: string | null;
@@ -93,7 +93,7 @@ function routineOf(raw: RoutineFields): Routine {
     careItemName: routineLabel(raw.careItemCode, raw.careItemName),
     recordKind: recordKindOf({ code: raw.careItemCode, recordType: raw.recordType }),
     intervalDays: raw.intervalDays,
-    standardIntervalDays: raw.defaultCycleDays,
+    standardIntervalDays: raw.defaultCycleDays ?? null,
     customized: raw.cycleSource === "USER_CUSTOM",
     enabled: raw.enabled,
     startDate: raw.startDate,

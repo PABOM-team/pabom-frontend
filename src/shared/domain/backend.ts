@@ -84,10 +84,11 @@ export const backendPetRoutineSchema = z.object({
   active: z.boolean(),
   intervalDays: z.number().int(),
   cycleSource: cycleSourceSchema,
-  defaultCycleDays: z.number().int(),
-  minDays: z.number().int(),
-  maxDays: z.number().int(),
-  isOutOfRange: z.boolean(),
+  // 주기를 직접 바꾼 루틴(USER_CUSTOM)은 기준값들이 null 로 온다 (dev 서버 확인)
+  defaultCycleDays: z.number().int().nullish(),
+  minDays: z.number().int().nullish(),
+  maxDays: z.number().int().nullish(),
+  isOutOfRange: z.boolean().nullish(),
   /** 꺼진 루틴(active=false)은 둘 다 null로 온다 */
   nextDueAt: dateTime.nullable(),
   startDate: date.nullable(),
@@ -116,10 +117,11 @@ export const backendRoutineDetailsSchema = z.object({
   versionLabel: z.string(),
   /** 기록 방식. 스웨거 RoutineDetailsResult에는 없어 코드로 짐작한다 [백엔드 확인 필요] */
   recordType: z.string().nullish(),
-  defaultCycleDays: z.number().int(),
-  minDays: z.number().int(),
-  maxDays: z.number().int(),
-  isOutOfRange: z.boolean(),
+  // 주기를 직접 바꾼 루틴(USER_CUSTOM)은 기준값들이 null 로 온다 (dev 서버 확인)
+  defaultCycleDays: z.number().int().nullish(),
+  minDays: z.number().int().nullish(),
+  maxDays: z.number().int().nullish(),
+  isOutOfRange: z.boolean().nullish(),
   reason: routineReasonSchema.nullish(),
   reasonNote: z.string().nullish(),
   modifiedAt: dateTime.nullish(),

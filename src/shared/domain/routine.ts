@@ -18,7 +18,8 @@ export const routineSchema = z.object({
   /** N일마다 반복 */
   intervalDays: z.number().int().min(ROUTINE_INTERVAL_MIN).max(ROUTINE_INTERVAL_MAX),
   /** 기준표 값. 바꾸면 customized가 켜진다 */
-  standardIntervalDays: z.number().int().min(1),
+  /** 기준표 값. 주기를 직접 바꾼 뒤에는 백엔드가 주지 않아 null 일 수 있다 */
+  standardIntervalDays: z.number().int().min(1).nullable(),
   customized: z.boolean(),
   enabled: z.boolean(),
   /** 꺼진 일정은 시작일·다음 예정일이 없다 */

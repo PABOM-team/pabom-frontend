@@ -7,7 +7,7 @@ import { routinesApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
 import { isRoutineFoodNameSupported } from "@/shared/config/env";
-import { isFeedItem, RECORD_KIND_HINT } from "@/shared/domain/care";
+import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@/shared/domain/care";
 import { ROUTINE_INTERVAL_MAX, ROUTINE_INTERVAL_MIN, type Routine } from "@/shared/domain/routine";
 import { Button } from "@/shared/ui/button";
 import { Badge, InfoBox } from "@/shared/ui/display";
@@ -91,15 +91,45 @@ export function RoutineEditSheet({
     onSettled: refresh,
   });
 
+  /** 직접 바꾼 주기를 가이드라인 기준값으로 되돌린다 (POST /routines/{id}/reset) */
+  const reset = useMutation({
+    mutationFn: () => routinesApi.reset(current!.id),
+    onSuccess: (next) => {
+      onOpenChange(false);
+      toast(`기준 주기(${formatInterval(next.intervalDays)})로 되돌렸어요`);
+    },
+    onError: (error) => toast(getErrorMessage(error, "되돌리지 못했어요.")),
+    onSettled: refresh,
+  });
+  const pending = save.isPending || reset.isPending;
+
   return (
     <Sheet
       open={Boolean(routine)}
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        <Button size="xl" disabled={invalid || save.isPending} onClick={() => save.mutate()}>
-          저장
-        </Button>
+        <div className="flex gap-2">
+          {current?.customized ? (
+            <Button
+              variant="outline"
+              size="xl"
+              className="shrink-0"
+              disabled={pending}
+              onClick={() => reset.mutate()}
+            >
+              기준으로 되돌리기
+            </Button>
+          ) : null}
+          <Button
+            size="xl"
+            className="flex-1"
+            disabled={invalid || pending}
+            onClick={() => save.mutate()}
+          >
+            저장
+          </Button>
+        </div>
       }
     >
       <SheetLabel className="mt-1">

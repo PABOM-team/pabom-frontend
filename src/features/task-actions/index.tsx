@@ -71,14 +71,16 @@ export function useTaskActions({
     },
   });
 
+  /** 날짜가 null이면 미루기 취소 (백엔드: postponeTo에 null을 보낸다) */
   const postpone = useMutation({
-    mutationFn: ({ task, date }: { task: Task; date: string }) =>
+    mutationFn: ({ task, date }: { task: Task; date: string | null }) =>
       routinesApi.postpone(task.routineId, date),
     onSuccess: (_, { date }) => {
       setPostponing(null);
-      toast(`${formatShortDay(date)}로 미뤘어요`);
+      toast(date ? `${formatShortDay(date)}로 미뤘어요` : "미루기를 취소했어요");
     },
-    onError: (error) => toast(getErrorMessage(error, "미루지 못했어요.")),
+    onError: (error, { date }) =>
+      toast(getErrorMessage(error, date ? "미루지 못했어요." : "미루기를 취소하지 못했어요.")),
     onSettled: refresh,
   });
 
@@ -126,16 +128,22 @@ export function useTaskActions({
         { label: "수정하기", onSelect: () => onEditRoutine(task) },
       ];
     }
+    // 미룬 할 일(원래 예정일이 있음)은 미루기를 취소해 원래 날로 되돌릴 수 있다
+    const cancelPostpone: MenuItem[] = task.originalDueOn
+      ? [{ label: "미루기 취소", onSelect: () => postpone.mutate({ task, date: null }) }]
+      : [];
     // 앞 날짜(U1)의 ⋯: 그날 할 일은 아직 체크·미루기를 못 하니 일정 자체를 고치거나 지운다
     if (task.state === "planned") {
       return [
         { label: "수정하기", onSelect: () => onEditRoutine(task) },
+        ...cancelPostpone,
         { label: "삭제하기", tone: "danger", onSelect: () => setDeleting(task) },
       ];
     }
     return [
       { label: "수정하기", onSelect: () => onEditRoutine(task) },
       { label: "미루기", onSelect: () => setPostponing(task) },
+      ...cancelPostpone,
       { label: "건너뛰기", onSelect: () => setSkipping(task) },
       { label: "삭제하기", tone: "danger", onSelect: () => setDeleting(task) },
     ];

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { petsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
+import { isPetStatusChangeSupported } from "@/shared/config/env";
 import { END_REASON_LABEL, endReasonSchema, type EndReason, type Pet } from "@/shared/domain/pet";
 import { formatDayLabel, todayYmd } from "@/shared/lib/date";
 import { josa } from "@/shared/lib/josa";
@@ -120,9 +121,9 @@ export function DeletePetDialog({
       onOpenChange={onOpenChange}
       title={`${josa(pet.name, "을/를")} 삭제할까요?`}
       description={
-        pet.status === "active"
+        pet.status === "active" && isPetStatusChangeSupported
           ? "기록·체크 리스트가 모두 지워져요. 분양 보냈거나 무지개다리를 건넜다면 삭제 대신 '함께했던 개체로 바꾸기'를 써 주세요."
-          : "기록이 모두 지워지고 되돌릴 수 없어요."
+          : "기록·체크 리스트가 모두 지워지고 되돌릴 수 없어요."
       }
       confirmLabel="삭제"
       tone="danger"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
@@ -11,13 +11,18 @@ import { routinesShortLine } from "@/entities/routine";
 import { stageName, useSpeciesMap } from "@/entities/species";
 import { ChangeStatusSheet, DeletePetDialog, useRevertPetStatus } from "@/features/pet-lifecycle";
 import { EditRecordSheet } from "@/features/record-editor";
-import { getHttpStatus } from "@/shared/api/errors";
+import { petsApi } from "@/shared/api/endpoints";
+import { getErrorMessage, getHttpStatus } from "@/shared/api/errors";
+import { invalidateCareData } from "@/shared/api/query-keys";
 import { isPetStatusChangeSupported } from "@/shared/config/env";
-import { END_REASON_LABEL, SEX_LABEL } from "@/shared/domain/pet";
-import { isKnownStage } from "@/shared/domain/species";
+import { isWeightItem } from "@/shared/domain/care";
+import { END_REASON_LABEL, lifeStageIdOf, SEX_LABEL } from "@/shared/domain/pet";
+import { isKnownStage, lifeStageFromWeight } from "@/shared/domain/species";
 import { formatFullDate } from "@/shared/lib/date";
 import { format, parseISO } from "date-fns";
+import { Button } from "@/shared/ui/button";
 import { Avatar, InfoBox, InfoRow, LoadError, Skeleton } from "@/shared/ui/display";
+import { toast } from "@/shared/ui/toast";
 import { Menu } from "@/shared/ui/menu";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { TopBar } from "@/shared/ui/top-bar";
@@ -32,6 +37,15 @@ export function PetDetailScreen() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
   const revert = useRevertPetStatus(data?.pet);
+  const queryClient = useQueryClient();
+  // 단계를 모르는 개체는 최근 체중 기록으로 단계를 제안하고, 버튼 한 번으로 정한다 (Figma 댓글: 체중으로 단계 제안)
+  const confirmStage = useMutation({
+    mutationFn: (code: string) =>
+      petsApi.update(petId, { lifeStageId: lifeStageIdOf(code), stageCertainty: "CONFIRMED" }),
+    onSuccess: () => toast("생애 단계를 정했어요"),
+    onError: (error) => toast(getErrorMessage(error, "단계를 정하지 못했어요.")),
+    onSettled: () => invalidateCareData(queryClient),
+  });
 
   if (isPending) {
     return (
@@ -60,6 +74,8 @@ export function PetDetailScreen() {
   const ended = pet.status === "ended";
   const spec = species.get(pet.speciesId);
   const stageUnknown = !isKnownStage(pet.lifeStageCode);
+  const lastWeight = recentRecords.find((r) => isWeightItem(r.careItem) && r.weightG)?.weightG;
+  const suggested = stageUnknown && spec ? lifeStageFromWeight(spec, lastWeight) : null;
 
   return (
     <Screen>
@@ -111,6 +127,21 @@ export function PetDetailScreen() {
               </span>
             ) : null}
           </InfoRow>
+          {suggested ? (
+            <InfoBox tone="primary" className="my-2 flex items-center justify-between gap-3">
+              <span>
+                체중 {lastWeight}g으로 보면 <strong>{suggested.name}</strong>예요.
+              </span>
+              <Button
+                size="sm"
+                className="shrink-0"
+                disabled={confirmStage.isPending}
+                onClick={() => confirmStage.mutate(suggested.code)}
+              >
+                {suggested.name}로 정하기
+              </Button>
+            </InfoBox>
+          ) : null}
           <InfoRow label="부화일">
             {pet.hatchedOn ? formatFullDate(pet.hatchedOn) : "몰라요"}
           </InfoRow>

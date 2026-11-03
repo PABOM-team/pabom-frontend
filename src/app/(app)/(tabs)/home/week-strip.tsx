@@ -4,29 +4,53 @@ import { addDays, format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { PlusIcon } from "@/shared/ui/icons";
 import Link from "next/link";
+import { useRef } from "react";
 import type { Pet } from "@/shared/domain/pet";
 import { fromYmd, toYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
 import { Avatar, Skeleton } from "@/shared/ui/display";
 
-/** 주간 달력 (Figma 주간 캘린더). 기록·할 일이 있는 날에 점 */
+/** 가로로 이만큼 끌면 주를 넘긴다 (px) */
+const SWIPE_THRESHOLD = 48;
+
+/** 주간 달력 (Figma 주간 캘린더). 기록·할 일이 있는 날에 점. 좌우로 밀면 앞·뒤 주로 */
 export function WeekStrip({
   weekStart,
   selected,
   today,
   marked,
   onSelect,
+  onSwipe,
 }: {
   weekStart: string;
   selected: string;
   today: string;
   marked: Set<string>;
   onSelect: (ymd: string) => void;
+  /** -1: 지난 주, 1: 다음 주 */
+  onSwipe?: (direction: -1 | 1) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => toYmd(addDays(fromYmd(weekStart), i)));
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   return (
-    <ol className="grid grid-cols-7">
+    <ol
+      className="grid touch-pan-y grid-cols-7"
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        touchStart.current = t ? { x: t.clientX, y: t.clientY } : null;
+      }}
+      onTouchEnd={(e) => {
+        const start = touchStart.current;
+        const t = e.changedTouches[0];
+        touchStart.current = null;
+        if (!start || !t || !onSwipe) return;
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+        onSwipe(dx < 0 ? 1 : -1);
+      }}
+    >
       {days.map((ymd) => {
         const isToday = ymd === today;
         const isSelected = ymd === selected;

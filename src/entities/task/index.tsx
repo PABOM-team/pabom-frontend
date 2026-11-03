@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { CheckIcon } from "@/shared/ui/icons";
+import { CheckIcon, PlusIcon } from "@/shared/ui/icons";
 import { todayApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { formatInterval } from "@/shared/domain/care";
@@ -150,5 +150,49 @@ function CheckCircle({
         checking && "animate-pulse border-primary",
       )}
     />
+  );
+}
+
+/**
+ * 제안 카드 (D1 변형). 생애 단계를 모르는(잘 모르겠어요) 개체에 '체중 재기'를 권한다.
+ * D1 와이어프레임에는 '제안' 상태가 따로 없어 일반 카드 모양에 '제안' 배지만 붙였다.
+ * [백엔드 확인 필요] 오늘 할 일(GET /today) 응답에는 제안 항목이 없어 홈에서 개체 단계로 만든다.
+ */
+export function SuggestionCard({
+  petName,
+  title,
+  subline,
+  onCheck,
+  onOpen,
+}: {
+  petName: string;
+  title: string;
+  subline: string;
+  onCheck: () => void;
+  onOpen?: () => void;
+}) {
+  return (
+    <article className="flex items-center gap-2.5 rounded-xl border-[1.3px] border-dashed border-input bg-background py-2.5 pr-3 pl-3">
+      <button
+        type="button"
+        aria-label={`${petName} ${title} 기록하기`}
+        onClick={onCheck}
+        className="flex size-7 shrink-0 items-center justify-center rounded-full border-[1.8px] border-primary text-primary transition-colors hover:bg-primary-soft"
+      >
+        <PlusIcon className="size-4" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={onOpen ?? onCheck}
+        className="flex min-w-0 flex-1 flex-col gap-0.5 py-1 text-left"
+      >
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Badge tone="primary">{petName}</Badge>
+          <span className="truncate text-body-xl font-bold text-foreground">{title}</span>
+          <Badge>제안</Badge>
+        </span>
+        <span className="truncate text-body-md text-muted-foreground">{subline}</span>
+      </button>
+    </article>
   );
 }

@@ -9,7 +9,13 @@ import { UnavailableCard } from "@/features/handover";
 import { handoverQueries } from "@/entities/handover";
 import { meQueries } from "@/entities/session";
 import { stageName, useSpeciesMap } from "@/entities/species";
-import { formatInterval, INTAKE_LABEL, ROUTINE_LABEL } from "@/shared/domain/care";
+import {
+  CARE_ITEM_LABEL,
+  formatInterval,
+  INTAKE_LABEL,
+  ROUTINE_LABEL,
+  type CareItem,
+} from "@/shared/domain/care";
 import { SPECIES_LABEL } from "@/shared/domain/pet";
 import { formatMonthDay, ymdOf } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
@@ -94,7 +100,9 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
                 {/* 사진이 붙은 기록은 왼쪽에 사진 자리 (U7) */}
                 {r.photoCount ? <PhotoBox /> : null}
                 <span className="min-w-0 flex-1">
-                  {formatMonthDay(ymdOf(r.occurredAt))} {r.careItem}
+                  {/* 백엔드는 항목 코드로 줄 수 있어 라벨로 바꾼다 [백엔드 확인 필요] */}
+                  {formatMonthDay(ymdOf(r.occurredAt))}{" "}
+                  {CARE_ITEM_LABEL[r.careItem as CareItem] ?? r.careItem}
                   {r.intake ? ` · ${INTAKE_LABEL[r.intake]}` : ""}
                   {r.weightG ? ` · ${r.weightG.toFixed(1)} g` : ""}
                   {r.memo ? (
@@ -114,7 +122,7 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
           <button
             type="button"
             onClick={() => setShowAll(true)}
-            className="mx-auto mt-3 flex items-center gap-0.5 text-body-lg font-bold text-primary"
+            className="mx-auto mt-1 flex min-h-11 items-center gap-0.5 text-body-lg font-medium text-primary"
           >
             기록 {data.records.length}개 모두 보기
             <ChevronRightIcon className="size-3.5" />

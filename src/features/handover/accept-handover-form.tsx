@@ -9,16 +9,22 @@ import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData, queryKeys } from "@/shared/api/query-keys";
 import type { HandoverPreview } from "@/shared/domain/handover";
 import { SPECIES_LABEL } from "@/shared/domain/pet";
-import { lifeStageFromHatch } from "@/shared/domain/species";
 import { todayYmd } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
+import { ChipGroup } from "@/shared/ui/chip";
 import { Field, Input, Switch } from "@/shared/ui/form";
 import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
 import { toast } from "@/shared/ui/toast";
 import { TopBar } from "@/shared/ui/top-bar";
 
-/** SCR-T03 인계 카드로 개체 등록 (2차). 카드 내용으로 미리 채우고, 종은 읽기 전용 */
+/** 생애 단계 칩의 '잘 모르겠어요' 값. 저장할 때는 null로 보낸다 */
+const STAGE_UNKNOWN = "unknown";
+
+/**
+ * SCR-T03 인계 카드로 개체 등록 (2차). 카드 내용으로 미리 채우고, 종은 읽기 전용.
+ * 생애 단계는 카드에 적힌 단계를 칩에 미리 골라 두고 바꿀 수 있다 (v1.2 개발 명세 3-1)
+ */
 export function AcceptHandoverForm({
   preview,
 }: {
@@ -30,14 +36,22 @@ export function AcceptHandoverForm({
   const [name, setName] = useState(preview.pet.name);
   const [hatchedOn, setHatchedOn] = useState(preview.pet.hatchedOn);
   const [acquiredOn, setAcquiredOn] = useState<string | null>(preview.pet.handedOverOn);
+  const [stageCode, setStageCode] = useState(preview.pet.lifeStageCode || STAGE_UNKNOWN);
   const [importRoutines, setImportRoutines] = useState(preview.routines.length > 0);
-  const stage = species ? lifeStageFromHatch(species, hatchedOn) : null;
+  // 칩: 백엔드 단계(어린 개체·성체) + 잘 모르겠어요. 단계 이름은 종 API 값을 그대로 쓴다
+  const stageOptions = [
+    ...(species?.lifeStages ?? [])
+      .filter((s) => s.id !== null)
+      .map((s) => ({ value: s.code, label: s.name })),
+    { value: STAGE_UNKNOWN, label: "잘 모르겠어요" },
+  ];
 
   const accept = useMutation({
     mutationFn: () =>
       handoverApi.accept(preview.code, {
         name: name.trim(),
         hatchedOn,
+        lifeStageCode: stageCode === STAGE_UNKNOWN ? null : stageCode,
         acquiredOn: acquiredOn!,
         importRoutines,
       }),
@@ -69,17 +83,21 @@ export function AcceptHandoverForm({
             {[SPECIES_LABEL[preview.pet.speciesId], preview.pet.morph].filter(Boolean).join(" · ")}
           </p>
         </Field>
-        <Field
-          label="부화일"
-          htmlFor="accept-hatched"
-          hint={stage ? `생애 단계 · ${stage.name} (자동)` : undefined}
-        >
+        <Field label="부화일" htmlFor="accept-hatched">
           <DateField
             id="accept-hatched"
             title="부화일"
             value={hatchedOn}
             max={todayYmd()}
             onChange={setHatchedOn}
+          />
+        </Field>
+        <Field label="생애 단계" hint="인계 카드에 적힌 단계예요. 다르면 바꿔 주세요.">
+          <ChipGroup
+            label="생애 단계"
+            options={stageOptions}
+            value={stageCode}
+            onChange={(code) => code && setStageCode(code)}
           />
         </Field>
         <Field label="분양받은 날" htmlFor="accept-acquired">

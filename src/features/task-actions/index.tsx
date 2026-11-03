@@ -60,8 +60,8 @@ export function useTaskActions({
         setAlreadyOpen(true);
         return;
       }
-      // 시트는 그대로 두고 다시 시도 (C3-4)
-      toast("저장하지 못했어요", {
+      // 시트는 그대로 두고 다시 시도 (C3-4). 오프라인이면 연결 안내 (C5-1)
+      toast(navigator.onLine ? "저장하지 못했어요" : "체크하지 못했어요. 연결을 확인해 주세요", {
         action: { label: "다시 시도", onClick: () => complete.mutate(variables) },
       });
     },

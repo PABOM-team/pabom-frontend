@@ -1098,6 +1098,8 @@ export const appHandlers = [
         userId: user.id,
         name: input.name.trim(),
         hatchedOn: input.hatchedOn,
+        // 카드에서 고른 단계 (v1.2 T03). 부화일로 계산되는 값과 다를 때만 직접 고른 값으로 둔다
+        manualStageCode: input.lifeStageCode,
         acquiredOn: input.acquiredOn,
         photoFileId: null,
         status: "active" as const,

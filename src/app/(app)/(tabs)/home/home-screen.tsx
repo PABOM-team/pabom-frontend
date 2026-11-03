@@ -15,10 +15,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { recordQueries, RecordRow } from "@/entities/record";
-import { TaskCard, todayQueries } from "@/entities/task";
+import { SuggestionCard, TaskCard, todayQueries } from "@/entities/task";
 import { AddRecordSheet, EditRecordSheet } from "@/features/record-editor";
 import { useTaskActions } from "@/features/task-actions";
-import { CARE_ITEM_LABEL } from "@/shared/domain/care";
+import { CARE_ITEM_LABEL, type CareItem } from "@/shared/domain/care";
+import type { Pet } from "@/shared/domain/pet";
 import type { CareRecord } from "@/shared/domain/record";
 import { formatDayLabel, fromYmd, toYmd, todayYmd, ymdOf } from "@/shared/lib/date";
 import { LoadError, Skeleton } from "@/shared/ui/display";
@@ -35,13 +36,22 @@ export function HomeScreen() {
   const [selected, setSelected] = useState(today);
   const [weekStart, setWeekStart] = useState(weekStartOf(today));
   const [petId, setPetId] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState<{ petId?: string; item?: CareItem } | null>(null);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
 
   const pets = useQuery(petQueries.list("active"));
   const weekEnd = toYmd(addDays(fromYmd(weekStart), 6));
   const weekRecords = useQuery(recordQueries.list({ from: weekStart, to: weekEnd, limit: 200 }));
   const marked = new Set((weekRecords.data?.items ?? []).map((r) => ymdOf(r.occurredAt)));
+  // 단계를 모르는(잘 모르겠어요) 개체 중 오늘 체중을 아직 안 잰 개체 → '체중 재기' 제안 카드 (v1.2 H01)
+  const weighedToday = new Set(
+    (weekRecords.data?.items ?? [])
+      .filter((r) => r.careItem === "weight" && ymdOf(r.occurredAt) === today)
+      .map((r) => r.petId),
+  );
+  const stageUnknownPets = (pets.data ?? []).filter(
+    (p) => !p.lifeStageCode && !weighedToday.has(p.id) && (petId === null || p.id === petId),
+  );
 
   const actions = useTaskActions({
     onEditRecord: setEditRecordId,
@@ -91,8 +101,8 @@ export function HomeScreen() {
         {!noPets ? (
           <button
             type="button"
-            onClick={() => setAddOpen(true)}
-            className="flex items-center gap-0.5 text-body-lg font-medium text-primary"
+            onClick={() => setAddOpen({ petId: petId ?? undefined })}
+            className="flex h-11 items-center gap-0.5 text-body-lg font-medium text-primary"
           >
             <PlusIcon className="size-4" />
             기록
@@ -107,6 +117,7 @@ export function HomeScreen() {
           today={today}
           marked={marked}
           onSelect={select}
+          onSwipe={(direction) => moveWeek(direction * 7)}
         />
         <PetFilterRow
           pets={pets.data ?? []}
@@ -135,18 +146,26 @@ export function HomeScreen() {
             date={selected}
             petId={petId}
             onEdit={setEditRecordId}
-            onAdd={() => setAddOpen(true)}
+            onAdd={() => setAddOpen({ petId: petId ?? undefined })}
           />
         ) : (
-          <TaskList date={selected} petId={petId} mode={mode} actions={actions} />
+          <TaskList
+            date={selected}
+            petId={petId}
+            mode={mode}
+            actions={actions}
+            suggestions={mode === "today" ? stageUnknownPets : []}
+            onWeigh={(pet) => setAddOpen({ petId: pet.id, item: "weight" })}
+          />
         )}
       </ScreenBody>
 
       {actions.sheets}
       <AddRecordSheet
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        defaultPetId={petId ?? undefined}
+        open={Boolean(addOpen)}
+        onOpenChange={(open) => !open && setAddOpen(null)}
+        defaultPetId={addOpen?.petId}
+        defaultItem={addOpen?.item}
         defaultDate={mode === "future" ? today : selected}
       />
       <EditRecordSheet
@@ -173,11 +192,16 @@ function TaskList({
   petId,
   mode,
   actions,
+  suggestions,
+  onWeigh,
 }: {
   date: string;
   petId: string | null;
   mode: "today" | "future";
   actions: ReturnType<typeof useTaskActions>;
+  /** 단계를 모르는 개체: '체중 재기' 제안 카드 */
+  suggestions: Pet[];
+  onWeigh: (pet: Pet) => void;
 }) {
   const [showFinished, setShowFinished] = useState(false);
   const { data, isPending, isError, refetch } = useQuery(
@@ -215,13 +239,24 @@ function TaskList({
   const doneCount = finished.filter((t) => t.state === "done").length;
   const skipCount = finished.length - doneCount;
 
+  const remaining = todo.length + suggestions.length;
+
   return (
     <section className="space-y-3">
-      {todo.length > 0 ? (
+      {remaining > 0 ? (
         <h2 className="text-body-xl font-bold">
-          오늘의 할 일 <span className="text-primary">{todo.length}개 남음</span>
+          오늘의 할 일 <span className="text-primary">{remaining}개 남음</span>
         </h2>
       ) : null}
+      {suggestions.map((pet) => (
+        <SuggestionCard
+          key={`weigh-${pet.id}`}
+          petName={pet.name}
+          title="체중 재기"
+          subline="단계 미정 · 체중을 재면 생애 단계를 제안해 드려요"
+          onCheck={() => onWeigh(pet)}
+        />
+      ))}
       {todo.map((task) => (
         <TaskCard
           key={task.routineId}
@@ -232,7 +267,7 @@ function TaskList({
           menu={actions.menuFor(task)}
         />
       ))}
-      {todo.length === 0 && finished.length > 0 ? (
+      {remaining === 0 && finished.length > 0 ? (
         <div className="flex flex-col items-center rounded-xl border-[1.3px] border-input px-4 py-6 text-center">
           <CheckIcon className="size-7 text-foreground" strokeWidth={1.6} aria-hidden />
           <p className="mt-2 text-body-xl font-bold">오늘 할 일을 모두 마쳤어요</p>

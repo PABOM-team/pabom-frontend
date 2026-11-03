@@ -95,10 +95,9 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
               onChange={(routinesOn) => setScope({ ...scope, routines: routinesOn })}
             />
             <li className="border-b border-border py-3">
-              <p className="mb-2 text-body-lg">최근 기록</p>
+              <p className="mb-2 text-body-lg font-medium text-secondary-text">최근 기록</p>
               <ChipGroup
                 label="최근 기록"
-                size="sm"
                 options={RECORD_WEEKS.map((w) => ({
                   value: w,
                   label: w === 0 ? "넘기지 않음" : `최근 ${w}주`,

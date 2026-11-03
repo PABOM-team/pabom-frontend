@@ -71,6 +71,8 @@ export type HandoverPreview = z.infer<typeof handoverPreviewSchema>;
 export type HandoverAcceptInput = {
   name: string;
   hatchedOn: string | null;
+  /** 카드에 적힌 단계를 미리 고르고 바꿀 수 있다 (v1.2 T03). null = 잘 모르겠어요 */
+  lifeStageCode: string | null;
   acquiredOn: string;
   importRoutines: boolean;
 };

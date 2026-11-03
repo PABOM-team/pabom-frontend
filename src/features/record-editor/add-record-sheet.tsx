@@ -43,11 +43,14 @@ export function AddRecordSheet({
   open,
   onOpenChange,
   defaultPetId,
+  defaultItem,
   defaultDate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultPetId?: string;
+  /** 홈 '체중 재기' 제안 카드처럼 항목을 정해 두고 열 때 */
+  defaultItem?: CareItem;
   /** 홈 지난 날짜에서 '+ 이날 기록 추가'로 열면 그 날짜 */
   defaultDate?: string;
 }) {
@@ -69,7 +72,7 @@ export function AddRecordSheet({
     setLastOpen(open);
     if (open) {
       setPetId(defaultPetId ?? null);
-      setItem(null);
+      setItem(defaultItem ?? null);
       setIntake(null);
       setWeight("");
       setPhotos([]);

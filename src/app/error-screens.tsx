@@ -1,19 +1,35 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSyncExternalStore } from "react";
+import { getStoredAccount } from "@/shared/api/session";
 import { StateMessage } from "@/shared/ui/display";
 import { Screen } from "@/shared/ui/screen";
 
-/** SCR-E01 없는 페이지. 남의 개체·기록도 같은 화면으로 보여 존재 여부를 숨긴다. 탭바 없음 */
+const noop = () => () => {};
+
+/**
+ * SCR-E01 없는 페이지. 남의 개체·기록도 같은 화면으로 보여 존재 여부를 숨긴다. 앱바·탭바 없음.
+ * 로그인하지 않은 사람은 버튼이 '처음으로' (서버 렌더에서는 로그인 여부를 몰라 '처음으로'로 그린다)
+ */
 export function NotFoundScreen() {
   const router = useRouter();
+  const loggedIn = useSyncExternalStore(
+    noop,
+    () => Boolean(getStoredAccount()),
+    () => false,
+  );
   return (
     <Screen className="justify-center">
       <StateMessage
         icon={null}
         title="페이지를 찾을 수 없어요"
         description="주소가 바뀌었거나 삭제된 정보예요."
-        action={{ label: "홈 화면으로 가기 (오늘)", onClick: () => router.replace("/home") }}
+        action={
+          loggedIn
+            ? { label: "홈 화면으로 가기 (오늘)", onClick: () => router.replace("/home") }
+            : { label: "처음으로", onClick: () => router.replace("/welcome") }
+        }
       />
     </Screen>
   );

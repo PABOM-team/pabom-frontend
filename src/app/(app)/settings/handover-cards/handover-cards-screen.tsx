@@ -12,7 +12,7 @@ import { HANDOVER_STATUS_LABEL, type HandoverCard } from "@/shared/domain/handov
 import { formatMonthDay, ymdOf } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { Avatar, Badge, LoadError, Skeleton } from "@/shared/ui/display";
+import { Avatar, Badge, LoadError, Skeleton, StateMessage } from "@/shared/ui/display";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { Sheet } from "@/shared/ui/sheet";
 import { toast } from "@/shared/ui/toast";
@@ -56,6 +56,12 @@ export function HandoverCardsScreen() {
           <Skeleton className="h-32" />
         ) : isError ? (
           <LoadError onRetry={() => refetch()} />
+        ) : !data.length ? (
+          <StateMessage
+            className="flex-1 justify-center"
+            title="보낸 인계 카드가 없어요"
+            description="개체 상세의 '인계 카드 만들기'로 만든 카드가 여기에 모여요."
+          />
         ) : (
           data.map((card) => (
             <article key={card.code} className="rounded-xl border-[1.3px] border-input p-3.5">

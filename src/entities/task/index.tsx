@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { CheckIcon, PlusIcon } from "@/shared/ui/icons";
 import { todayApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { formatInterval, intakeLabelFor } from "@/shared/domain/care";
+import { formatInterval, intakeLabelFor, isFeedItem } from "@/shared/domain/care";
 import type { FeedResultSet } from "@/shared/domain/species";
 import type { Task } from "@/shared/domain/today";
 import { formatMonthDay, formatTime, todayYmd } from "@/shared/lib/date";
@@ -63,6 +63,7 @@ function taskSubline(task: Task, feedResultSet: FeedResultSet | null) {
 export function TaskCard({
   task,
   feedResultSet = null,
+  foodName = null,
   onCheck,
   onOpen,
   menu,
@@ -71,12 +72,18 @@ export function TaskCard({
   task: Task;
   /** 급여 할 일의 먹이 묶음. 완료 결과(먹은 정도) 이름이 묶음에 맞춰 보인다 */
   feedResultSet?: FeedResultSet | null;
+  /** 급여 할 일 제목에 붙일 먹이 이름 (오늘 할 일 응답에 없어 가이드라인 기본 먹이로 채운다) */
+  foodName?: string | null;
   onCheck?: () => void;
   onOpen?: () => void;
   menu?: MenuItem[];
   checking?: boolean;
 }) {
   const finished = task.state === "done" || task.state === "skipped";
+  const title =
+    foodName && isFeedItem(task.recordKind) && !task.title.includes(" · ")
+      ? `${task.title} · ${foodName}`
+      : task.title;
 
   return (
     <article className="flex items-center gap-2.5 rounded-xl border-[1.3px] border-input bg-background py-2.5 pr-1 pl-3">
@@ -97,7 +104,7 @@ export function TaskCard({
               task.state === "done" ? "text-subtle-foreground" : "text-foreground",
             )}
           >
-            {task.title}
+            {title}
           </span>
           <TaskBadge task={task} />
         </span>
@@ -111,7 +118,7 @@ export function TaskCard({
         </span>
       </button>
       {menu && menu.length ? (
-        <Menu items={menu} label={`${task.title} 메뉴`} />
+        <Menu items={menu} label={`${title} 메뉴`} />
       ) : (
         <span className="w-2" />
       )}

@@ -74,6 +74,29 @@ export function useFeedResultSet(
  * 여러 개체·종의 기록을 한 화면에 늘어놓을 때 쓰는 먹이 묶음 찾기.
  * 지원 종 둘의 가이드라인을 미리 불러 두고 (종, 항목)으로 찾는다
  */
+/** 급여 항목의 가이드라인 기본 먹이 이름 (예: 인공 사료·귀뚜라미). 없으면 null */
+export function defaultFoodNameOf(
+  table: Pick<CareStandardTable, "standards"> | undefined,
+  careItem: string,
+): string | null {
+  return (
+    table?.standards.find((s) => s.careItem === careItem && s.defaultFoodName)?.defaultFoodName ??
+    null
+  );
+}
+
+/** 여러 개체의 할 일을 한 화면에 늘어놓을 때 (종, 항목) → 기본 먹이 이름 */
+export function useDefaultFoodNameResolver() {
+  const tables = useQueries({
+    queries: SPECIES.map((speciesId) => speciesQueries.careStandards(speciesId)),
+  });
+  const bySpecies = new Map<SpeciesId, CareStandardTable | undefined>(
+    SPECIES.map((speciesId, i) => [speciesId, tables[i]?.data]),
+  );
+  return (speciesId: SpeciesId | undefined, careItem: string): string | null =>
+    speciesId ? defaultFoodNameOf(bySpecies.get(speciesId), careItem) : null;
+}
+
 export function useFeedResultSetResolver() {
   const tables = useQueries({
     queries: SPECIES.map((speciesId) => speciesQueries.careStandards(speciesId)),

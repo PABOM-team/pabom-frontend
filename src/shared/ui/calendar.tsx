@@ -2,15 +2,21 @@
 
 import {
   addMonths,
+  addYears,
   eachDayOfInterval,
   endOfMonth,
+  endOfYear,
   format,
   getDay,
   isSameDay,
+  isSameMonth,
+  setMonth as setMonthOf,
   startOfMonth,
+  startOfYear,
   subMonths,
+  subYears,
 } from "date-fns";
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
+import { CalendarIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { useState, type ReactNode } from "react";
 import { formatFullDate, fromYmd, toYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
@@ -19,6 +25,78 @@ import { FieldButton } from "./form";
 import { Sheet } from "./sheet";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const MONTHS = Array.from({ length: 12 }, (_, i) => i);
+
+const NAV_BUTTON =
+  "flex size-10 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30";
+
+/** 연·월 고르기. 헤더를 누르면 날짜 격자 대신 보인다 */
+function YearMonthPicker({
+  month,
+  min,
+  max,
+  onPick,
+}: {
+  month: Date;
+  min?: string;
+  max?: string;
+  onPick: (month: Date) => void;
+}) {
+  const [year, setYear] = useState(() => startOfYear(month));
+  const canPrevYear = !min || toYmd(endOfYear(subYears(year, 1))) >= min;
+  const canNextYear = !max || toYmd(startOfYear(addYears(year, 1))) <= max;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between py-2">
+        <button
+          type="button"
+          aria-label="이전 해"
+          disabled={!canPrevYear}
+          onClick={() => setYear((y) => subYears(y, 1))}
+          className={NAV_BUTTON}
+        >
+          <ChevronLeftIcon className="size-4" />
+        </button>
+        <p className="text-body-xl font-bold">{format(year, "yyyy년")}</p>
+        <button
+          type="button"
+          aria-label="다음 해"
+          disabled={!canNextYear}
+          onClick={() => setYear((y) => addYears(y, 1))}
+          className={NAV_BUTTON}
+        >
+          <ChevronRightIcon className="size-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-2 py-1">
+        {MONTHS.map((i) => {
+          const candidate = setMonthOf(year, i);
+          const disabled =
+            (min && toYmd(endOfMonth(candidate)) < min) ||
+            (max && toYmd(startOfMonth(candidate)) > max);
+          const selected = isSameMonth(candidate, month);
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={Boolean(disabled)}
+              aria-pressed={selected}
+              onClick={() => onPick(startOfMonth(candidate))}
+              className={cn(
+                "flex h-11 items-center justify-center rounded-lg text-body-lg",
+                disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
+                selected && "bg-primary font-bold text-white hover:bg-primary",
+              )}
+            >
+              {i + 1}월
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /** 달력 한 달 (D3). min/max 밖의 날은 고를 수 없다 */
 export function Calendar({
@@ -35,6 +113,7 @@ export function Calendar({
   today?: string;
 }) {
   const [month, setMonth] = useState(() => startOfMonth(fromYmd(value ?? today)));
+  const [picking, setPicking] = useState(false);
   const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
   const blanks = getDay(days[0]!);
   const canPrev = !min || toYmd(endOfMonth(subMonths(month, 1))) >= min;
@@ -48,57 +127,85 @@ export function Calendar({
           aria-label="이전 달"
           disabled={!canPrev}
           onClick={() => setMonth((m) => subMonths(m, 1))}
-          className="flex size-8 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30"
+          className={cn(NAV_BUTTON, picking && "invisible")}
         >
           <ChevronLeftIcon className="size-4" />
         </button>
-        <p className="text-body-xl font-bold">{format(month, "yyyy년 M월")}</p>
+        <button
+          type="button"
+          aria-label="연·월 고르기"
+          aria-expanded={picking}
+          onClick={() => setPicking((p) => !p)}
+          className="flex h-10 items-center gap-1 rounded-lg px-2 text-body-xl font-bold hover:bg-muted"
+        >
+          {format(month, "yyyy년 M월")}
+          <ChevronDownIcon
+            className={cn(
+              "size-4 text-muted-foreground transition-transform",
+              picking && "rotate-180",
+            )}
+          />
+        </button>
         <button
           type="button"
           aria-label="다음 달"
           disabled={!canNext}
           onClick={() => setMonth((m) => addMonths(m, 1))}
-          className="flex size-8 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30"
+          className={cn(NAV_BUTTON, picking && "invisible")}
         >
           <ChevronRightIcon className="size-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 text-center text-body-md text-muted-foreground">
-        {WEEKDAYS.map((d) => (
-          <span key={d} className="py-1.5">
-            {d}
-          </span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-1 text-center">
-        {Array.from({ length: blanks }, (_, i) => (
-          <span key={`b${i}`} />
-        ))}
-        {days.map((day) => {
-          const ymd = toYmd(day);
-          const disabled = (min && ymd < min) || (max && ymd > max);
-          const selected = value === ymd;
-          const isToday = isSameDay(day, fromYmd(today));
-          return (
-            <button
-              key={ymd}
-              type="button"
-              disabled={Boolean(disabled)}
-              aria-pressed={selected}
-              aria-label={formatFullDate(day)}
-              onClick={() => onChange(ymd)}
-              className={cn(
-                "mx-auto flex size-9 items-center justify-center rounded-full text-body-lg",
-                disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
-                isToday && !selected && "border-[1.5px] border-primary font-bold text-primary",
-                selected && "bg-primary font-bold text-white hover:bg-primary",
-              )}
-            >
-              {format(day, "d")}
-            </button>
-          );
-        })}
-      </div>
+      {picking ? (
+        <YearMonthPicker
+          month={month}
+          min={min}
+          max={max}
+          onPick={(m) => {
+            setMonth(m);
+            setPicking(false);
+          }}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-7 text-center text-body-md text-muted-foreground">
+            {WEEKDAYS.map((d) => (
+              <span key={d} className="py-1.5">
+                {d}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-y-1 text-center">
+            {Array.from({ length: blanks }, (_, i) => (
+              <span key={`b${i}`} />
+            ))}
+            {days.map((day) => {
+              const ymd = toYmd(day);
+              const disabled = (min && ymd < min) || (max && ymd > max);
+              const selected = value === ymd;
+              const isToday = isSameDay(day, fromYmd(today));
+              return (
+                <button
+                  key={ymd}
+                  type="button"
+                  disabled={Boolean(disabled)}
+                  aria-pressed={selected}
+                  aria-label={formatFullDate(day)}
+                  onClick={() => onChange(ymd)}
+                  className={cn(
+                    "mx-auto flex size-9 items-center justify-center rounded-full text-body-lg",
+                    disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
+                    isToday && !selected && "border-[1.5px] border-primary font-bold text-primary",
+                    selected && "bg-primary font-bold text-white hover:bg-primary",
+                  )}
+                >
+                  {format(day, "d")}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

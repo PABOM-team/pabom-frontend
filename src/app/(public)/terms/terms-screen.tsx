@@ -39,8 +39,8 @@ export function TermsScreen() {
           value={tab}
           onChange={(next) => router.replace(next === "privacy" ? "/terms?tab=privacy" : "/terms")}
         />
-        <p className="mt-3 text-[12px] text-[#888]">{doc.version}</p>
-        <nav className="mt-3 rounded-[10px] bg-[#f3f3f3] p-3 text-[13px]">
+        <p className="mt-3 text-body-md text-muted-foreground">{doc.version}</p>
+        <nav className="mt-3 rounded-md bg-muted p-3 text-body-lg">
           <p className="mb-1 font-bold">목차</p>
           {doc.sections.map((s, i) => (
             <a key={s} href={`#sec-${i}`} className="block py-0.5 text-primary">
@@ -51,19 +51,15 @@ export function TermsScreen() {
         {/* 원문 확정 전이라 Figma처럼 앞 두 조만 막대로 보여 준다 */}
         {doc.sections.slice(0, 2).map((s, i) => (
           <section key={s} id={`sec-${i}`} className="mt-5">
-            <h2 className="mb-2.5 text-[14px] font-bold">{s}</h2>
+            <h2 className="mb-2.5 text-body-lg font-bold">{s}</h2>
             <div className="space-y-2" aria-label="원문 준비 중">
               {[100, 100, 100, 62].map((w, j) => (
-                <div
-                  key={j}
-                  className="h-2.5 rounded-full bg-[#ececec]"
-                  style={{ width: `${w}%` }}
-                />
+                <div key={j} className="h-2.5 rounded-full bg-muted" style={{ width: `${w}%` }} />
               ))}
             </div>
           </section>
         ))}
-        <p className="mt-6 text-[13px] font-medium text-primary">이전 버전 보기</p>
+        <p className="mt-6 text-body-lg font-medium text-primary">이전 버전 보기</p>
       </ScreenBody>
     </Screen>
   );

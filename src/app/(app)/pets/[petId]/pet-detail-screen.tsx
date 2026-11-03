@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -83,7 +83,7 @@ export function PetDetailScreen() {
       />
       <ScreenBody>
         {ended && pet.endedOn && pet.endReason ? (
-          <InfoBox className="mb-4 bg-[#f0f0f0] text-[13px] text-[#444]">
+          <InfoBox className="mb-4 bg-muted text-body-lg text-secondary-text">
             {formatFullDate(pet.endedOn)} {END_REASON_LABEL[pet.endReason]} · 기록만 볼 수 있어요
           </InfoBox>
         ) : null}
@@ -91,8 +91,8 @@ export function PetDetailScreen() {
         <div className="flex items-center gap-4">
           <Avatar src={pet.photoUrl} size={72} />
           <div className="min-w-0">
-            <h2 className="text-[22px] font-bold">{pet.name}</h2>
-            <p className="text-[13px] text-muted-foreground">{petSpeciesLine(pet)}</p>
+            <h2 className="text-title-sm font-bold">{pet.name}</h2>
+            <p className="text-body-lg text-muted-foreground">{petSpeciesLine(pet)}</p>
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export function PetDetailScreen() {
             {stageName(spec, pet.lifeStageCode)}
             {/* 키우는 중이고 부화일로 정해진 단계일 때만 '(부화일 기준)' (Figma P04·P08) */}
             {!ended && pet.lifeStageSource === "hatch" ? (
-              <span className="text-[12px] text-[#999]"> (부화일 기준)</span>
+              <span className="text-body-md text-subtle-foreground"> (부화일 기준)</span>
             ) : null}
           </InfoRow>
           <InfoRow label="부화일">
@@ -115,18 +115,18 @@ export function PetDetailScreen() {
             href={`/pets/${pet.id}/routines`}
             className="mt-2 flex min-h-[52px] items-center gap-3 border-b border-border py-3"
           >
-            <span className="shrink-0 text-[15px] font-bold">체크 리스트</span>
-            <span className="min-w-0 flex-1 truncate text-right text-[13px] text-muted-foreground">
+            <span className="shrink-0 text-body-xl font-bold">체크 리스트</span>
+            <span className="min-w-0 flex-1 truncate text-right text-body-lg text-muted-foreground">
               {routinesShortLine(routines) || "아직 없어요"}
             </span>
-            <ChevronRight className="size-4 shrink-0 text-[#888]" />
+            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
           </Link>
         ) : null}
 
-        <h3 className="mt-4 mb-1 text-[14px] font-medium">최근 기록</h3>
+        <h3 className="mt-4 mb-1 text-body-lg font-medium">최근 기록</h3>
         {/* 지금 백엔드 상세 응답에는 체크 리스트·최근 기록이 없어 빈 목록으로 온다 */}
         {!recentRecords.length ? (
-          <p className="py-3 text-[13px] text-muted-foreground">아직 기록이 없어요</p>
+          <p className="py-3 text-body-lg text-muted-foreground">아직 기록이 없어요</p>
         ) : null}
         {recentRecords.map((record) => (
           <RecordRow
@@ -140,10 +140,10 @@ export function PetDetailScreen() {
         {recentRecords.length ? (
           <Link
             href={`/pets/${pet.id}/records`}
-            className="mx-auto mt-3 flex w-fit items-center gap-0.5 py-2 text-[14px] font-bold text-primary"
+            className="mx-auto mt-3 flex w-fit items-center gap-0.5 py-2 text-body-lg font-bold text-primary"
           >
             전체 기록 보기
-            <ChevronRight className="size-3.5" />
+            <ChevronRightIcon className="size-3.5" />
           </Link>
         ) : null}
       </ScreenBody>

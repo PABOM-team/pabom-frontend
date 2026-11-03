@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { meQueries } from "@/entities/session";
@@ -169,7 +170,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
               type="button"
               aria-label="닫기"
               onClick={() => (dirty ? setExitOpen(true) : exit())}
-              className="flex size-10 items-center justify-center rounded-full text-[22px] leading-none hover:bg-muted"
+              className="flex size-10 items-center justify-center rounded-full text-title-sm leading-none hover:bg-muted"
             >
               ×
             </button>
@@ -185,7 +186,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 
         {step === 1 ? (
           <>
-            <h2 className="text-[20px] leading-snug font-bold whitespace-pre-line">
+            <h2 className="text-title-xs leading-snug font-bold whitespace-pre-line">
               {onboarding
                 ? `${me?.nickname ? `${me.nickname}님, ` : ""}반가워요\n어떤 친구를 키우나요?`
                 : "어떤 친구인가요?"}
@@ -208,7 +209,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 
         {step === 2 ? (
           <>
-            <h2 className="text-[20px] font-bold">어떤 종인가요?</h2>
+            <h2 className="text-title-xs font-bold">어떤 종인가요?</h2>
             {speciesPending ? (
               <Skeleton className="h-40" />
             ) : (
@@ -237,8 +238,8 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
         {step === 3 ? (
           <>
             <div>
-              <h2 className="text-[20px] font-bold">모프를 골라 주세요</h2>
-              <p className="mt-1.5 text-[13px] text-[#888]">
+              <h2 className="text-title-xs font-bold">모프를 골라 주세요</h2>
+              <p className="mt-1.5 text-body-lg text-muted-foreground">
                 {species?.commonName} · 모르면 오른쪽 위 &lsquo;건너뛰기&rsquo;
               </p>
             </div>
@@ -282,10 +283,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
               onChange={patch}
             />
             <div
-              className={cn(
-                "rounded-[12px] border",
-                detailsOpen ? "border-primary" : "border-input",
-              )}
+              className={cn("rounded-lg border", detailsOpen ? "border-primary" : "border-input")}
             >
               <button
                 type="button"
@@ -294,15 +292,17 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
                 className="flex w-full items-center justify-between px-3.5 py-3 text-left"
               >
                 <span>
-                  <span className="block text-[14.5px]">더 자세한 정보 (선택)</span>
+                  <span className="block text-body-lg">더 자세한 정보 (선택)</span>
                   {!detailsOpen ? (
-                    <span className="block text-[12px] text-[#888]">성별 · 데려온 날</span>
+                    <span className="block text-body-md text-muted-foreground">
+                      성별 · 데려온 날
+                    </span>
                   ) : null}
                 </span>
                 {detailsOpen ? (
-                  <ChevronUp className="size-4 text-primary" />
+                  <ChevronUpIcon className="size-4 text-primary" />
                 ) : (
-                  <ChevronDown className="size-4 text-[#888]" />
+                  <ChevronDownIcon className="size-4 text-muted-foreground" />
                 )}
               </button>
               {detailsOpen ? (
@@ -355,7 +355,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
           <button
             type="button"
             onClick={() => router.replace("/home")}
-            className="py-1 text-[13px] text-[#555]"
+            className="py-1 text-body-lg text-secondary-text"
           >
             나중에 할게요
           </button>
@@ -396,20 +396,22 @@ function ChoiceCard({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3.5 rounded-[14px] border-[1.3px] p-3.5 text-left transition-colors",
+        "flex w-full items-center gap-3.5 rounded-xl border-[1.3px] p-3.5 text-left transition-colors",
         selected
           ? "border-primary bg-primary-soft/60"
-          : "border-[#ddd] bg-background hover:bg-[#fafafa]",
+          : "border-input bg-background hover:bg-muted",
         disabled && "cursor-not-allowed opacity-50 hover:bg-background",
       )}
     >
       <PhotoBox className="size-[60px]" />
       <span className="min-w-0">
-        <span className="flex items-center gap-1 text-[16px] font-bold">
+        <span className="flex items-center gap-1 text-body-xl font-bold">
           {title}
           {selected ? <span className="text-primary">✓</span> : null}
         </span>
-        {description ? <span className="block text-[12px] text-[#888]">{description}</span> : null}
+        {description ? (
+          <span className="block text-body-md text-muted-foreground">{description}</span>
+        ) : null}
       </span>
     </button>
   );

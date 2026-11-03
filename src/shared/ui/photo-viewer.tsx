@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { XIcon } from "./icons";
 import { Dialog } from "radix-ui";
 import { useRef, useState, type ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
@@ -37,7 +37,7 @@ export function PhotoViewer({
             event.preventDefault();
             trackRef.current?.scrollTo({ left: initialIndex * trackRef.current.clientWidth });
           }}
-          className="absolute inset-0 flex flex-col bg-[#111] text-white outline-none"
+          className="absolute inset-0 flex flex-col bg-inverse text-white outline-none"
         >
           <Dialog.Title className="sr-only">사진 크게 보기</Dialog.Title>
           <Dialog.Description className="sr-only">
@@ -48,9 +48,9 @@ export function PhotoViewer({
               aria-label="닫기"
               className="flex size-10 items-center justify-center rounded-full hover:bg-white/10"
             >
-              <X className="size-6" />
+              <XIcon className="size-6" />
             </Dialog.Close>
-            <span className="pr-3 text-[15px]">
+            <span className="pr-3 text-body-xl">
               {index + 1} / {photos.length}
             </span>
           </div>
@@ -86,7 +86,7 @@ export function PhotoViewer({
                 ))}
               </div>
             ) : null}
-            {caption ? <div className="text-[13.5px] leading-relaxed">{caption}</div> : null}
+            {caption ? <div className="text-body-lg leading-relaxed">{caption}</div> : null}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

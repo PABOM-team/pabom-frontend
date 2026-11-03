@@ -53,7 +53,7 @@ export function AcceptHandoverForm({
     <Screen>
       <TopBar title="인계 카드로 등록하기" fallbackHref={`/share/${preview.code}`} />
       <ScreenBody className="space-y-4">
-        <p className="text-[13px] text-[#555]">
+        <p className="text-body-lg text-secondary-text">
           카드 내용을 미리 채웠어요. 확인하고 필요하면 고쳐 주세요.
         </p>
         <Field label="이름" htmlFor="accept-name">
@@ -65,7 +65,7 @@ export function AcceptHandoverForm({
           />
         </Field>
         <Field label="종 · 모프">
-          <p className="flex h-12 items-center rounded-[10px] bg-[#f3f3f3] px-3.5 text-[15px] text-[#444]">
+          <p className="flex h-12 items-center rounded-md bg-muted px-3.5 text-body-xl text-secondary-text">
             {[SPECIES_LABEL[preview.pet.speciesId], preview.pet.morph].filter(Boolean).join(" · ")}
           </p>
         </Field>
@@ -94,8 +94,8 @@ export function AcceptHandoverForm({
         {preview.routines.length ? (
           <label className="flex items-center gap-3 pt-2">
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-bold">체크 리스트도 가져오기</span>
-              <span className="block text-[12px] text-[#888]">
+              <span className="block text-body-xl font-bold">체크 리스트도 가져오기</span>
+              <span className="block text-body-md text-muted-foreground">
                 항목 {preview.routines.length}개 · 다음 예정일은 오늘 기준으로 다시 계산해요
               </span>
             </span>

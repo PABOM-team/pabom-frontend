@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { meQueries } from "@/entities/session";
 import { useLogout } from "@/features/auth";
@@ -32,10 +32,10 @@ export function SettingsScreen() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="flex h-[50px] items-center justify-between border-b border-border text-[15px]"
+                className="flex h-[50px] items-center justify-between border-b border-border text-body-xl"
               >
                 {item.label}
-                <ChevronRight className="size-4 text-[#aaa]" />
+                <ChevronRightIcon className="size-4 text-subtle-foreground" />
               </Link>
             </li>
           ))}
@@ -44,14 +44,19 @@ export function SettingsScreen() {
           type="button"
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          className="mt-4 flex h-[50px] w-full items-center justify-between border-b border-border text-[15px]"
+          className="mt-4 flex h-[50px] w-full items-center justify-between border-b border-border text-body-xl"
         >
           로그아웃
           {provider ? (
-            <span className="text-[13px] text-[#888]">{AUTH_PROVIDER_LABEL[provider]} 계정</span>
+            <span className="text-body-lg text-muted-foreground">
+              {AUTH_PROVIDER_LABEL[provider]} 계정
+            </span>
           ) : null}
         </button>
-        <Link href="/settings/withdraw" className="mt-3 inline-block text-[12.5px] text-[#888]">
+        <Link
+          href="/settings/withdraw"
+          className="mt-3 inline-block text-body-md text-muted-foreground"
+        >
           회원 탈퇴
         </Link>
       </ScreenBody>

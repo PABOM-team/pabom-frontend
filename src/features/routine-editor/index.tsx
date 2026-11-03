@@ -36,13 +36,13 @@ export function RoutineRow({ routine, onEdit }: { routine: Routine; onEdit: () =
   return (
     <li className="flex items-center gap-3 border-b border-border py-3">
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 text-[15px] font-bold">
+        <p className="flex items-center gap-1.5 text-body-xl font-bold">
           {label}
-          {routine.customized ? <Badge tone="blue-outline">내가 바꿈</Badge> : null}
+          {routine.customized ? <Badge tone="primary">내가 바꿈</Badge> : null}
         </p>
-        <p className="truncate text-[12.5px] text-[#777]">{routineSummary(routine)}</p>
+        <p className="truncate text-body-md text-muted-foreground">{routineSummary(routine)}</p>
       </div>
-      <button type="button" onClick={onEdit} className="shrink-0 px-1 text-[13px] text-primary">
+      <button type="button" onClick={onEdit} className="shrink-0 px-1 text-body-lg text-primary">
         수정
       </button>
       <Switch

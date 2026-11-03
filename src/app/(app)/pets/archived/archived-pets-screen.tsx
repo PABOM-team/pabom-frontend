@@ -14,7 +14,7 @@ export function ArchivedPetsScreen() {
     <Screen>
       <TopBar title="함께했던 개체" fallbackHref="/pets" />
       <ScreenBody className="space-y-3">
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-body-lg text-muted-foreground">
           함께했던 개체는 기록만 볼 수 있어요. 오늘 할 일에는 뜨지 않아요.
         </p>
         {isPending ? (

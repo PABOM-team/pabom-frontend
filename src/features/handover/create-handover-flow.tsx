@@ -76,7 +76,7 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
             type="button"
             aria-label="닫기"
             onClick={() => router.replace(`/pets/${pet.id}`)}
-            className="flex size-10 items-center justify-center rounded-full text-[22px] hover:bg-muted"
+            className="flex size-10 items-center justify-center rounded-full text-title-sm hover:bg-muted"
           >
             ×
           </button>
@@ -95,7 +95,7 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
               onChange={(routinesOn) => setScope({ ...scope, routines: routinesOn })}
             />
             <li className="border-b border-border py-3">
-              <p className="mb-2 text-[13px]">최근 기록</p>
+              <p className="mb-2 text-body-lg">최근 기록</p>
               <ChipGroup
                 label="최근 기록"
                 size="sm"
@@ -109,7 +109,7 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
                 }
               />
               {scope.recordWeeks > 0 ? (
-                <p className="mt-2 text-[12px] text-[#888]">
+                <p className="mt-2 text-body-md text-muted-foreground">
                   {scope.photos
                     ? `기록 ${recordCount}개 · 사진 ${photoCount}장이 함께 넘어가요`
                     : `기록 ${recordCount}개가 함께 넘어가요`}
@@ -136,11 +136,11 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
           </ul>
         ) : (
           <>
-            <h2 className="text-[17px] font-bold">받는 분에게 이렇게 보여요</h2>
-            <div className="flex items-center gap-3.5 rounded-[14px] border-[1.3px] border-[#ddd] p-3.5">
+            <h2 className="text-title-xs font-bold">받는 분에게 이렇게 보여요</h2>
+            <div className="flex items-center gap-3.5 rounded-xl border-[1.3px] border-input p-3.5">
               <Avatar src={pet.photoUrl} size={52} />
-              <div className="min-w-0 text-[12.5px] text-muted-foreground">
-                <p className="text-[17px] font-bold text-foreground">{pet.name}</p>
+              <div className="min-w-0 text-body-md text-muted-foreground">
+                <p className="text-title-xs font-bold text-foreground">{pet.name}</p>
                 <p>
                   {petSpeciesLine(pet)} · {stage}
                 </p>
@@ -158,7 +158,7 @@ export function CreateHandoverFlow({ detail }: { detail: PetDetail }) {
               <p>사진 · {scope.photos ? `${photoCount}장` : "넘기지 않음"}</p>
               <p>내 닉네임 · {scope.nickname ? "보여요" : "보이지 않음"}</p>
             </InfoBox>
-            <label className="flex items-center gap-2.5 text-[14px]">
+            <label className="flex items-center gap-2.5 text-body-lg">
               <Checkbox checked={agreed} onCheckedChange={(on) => setAgreed(on === true)} />이
               범위로 넘기는 데 동의해요
             </label>
@@ -204,9 +204,9 @@ function ScopeRow({
           onCheckedChange={(on) => onChange?.(on === true)}
         />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-bold">{title}</span>
+          <span className="block text-body-xl font-bold">{title}</span>
           {description ? (
-            <span className="block text-[12px] text-[#888]">{description}</span>
+            <span className="block text-body-md text-muted-foreground">{description}</span>
           ) : null}
         </span>
         {locked ? <Badge>항상 넘겨요</Badge> : null}
@@ -226,21 +226,21 @@ function HandoverResult({ card, onClose }: { card: HandoverCard; onClose: () => 
             type="button"
             aria-label="닫기"
             onClick={onClose}
-            className="flex size-10 items-center justify-center rounded-full text-[22px] hover:bg-muted"
+            className="flex size-10 items-center justify-center rounded-full text-title-sm hover:bg-muted"
           >
             ×
           </button>
         }
       />
       <ScreenBody>
-        <div className="rounded-[14px] border-[1.3px] border-[#ddd] p-4">
-          <h2 className="text-[17px] font-bold">인계 카드를 만들었어요</h2>
-          <p className="mt-1 text-[12.5px] text-[#888]">
+        <div className="rounded-xl border-[1.3px] border-input p-4">
+          <h2 className="text-title-xs font-bold">인계 카드를 만들었어요</h2>
+          <p className="mt-1 text-body-md text-muted-foreground">
             {formatMonthDay(ymdOf(card.expiresAt))}까지 열 수 있어요
           </p>
           <div
             ref={qrRef}
-            className="mx-auto my-4 w-fit rounded-xl border border-[#ddd] bg-white p-3"
+            className="mx-auto my-4 w-fit rounded-xl border border-input bg-white p-3"
           >
             <QRCodeSVG value={card.url} size={132} />
           </div>
@@ -267,7 +267,7 @@ function HandoverResult({ card, onClose }: { card: HandoverCard; onClose: () => 
           </div>
           <Link
             href="/settings/handover-cards"
-            className="mt-3 block text-center text-[13px] font-medium text-primary"
+            className="mt-3 block text-center text-body-lg font-medium text-primary"
           >
             보낸 카드 보기
           </Link>

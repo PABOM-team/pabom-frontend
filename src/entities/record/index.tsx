@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import { recordsApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { CARE_ITEM_LABEL, INTAKE_LABEL } from "@/shared/domain/care";
@@ -94,22 +94,22 @@ export function RecordRow({
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className={cn("block truncate text-[15px]", variant === "day" && "font-bold")}>
+          <span className={cn("block truncate text-body-xl", variant === "day" && "font-bold")}>
             {prefix ? `${prefix} · ` : null}
             {title}
           </span>
           {record.memo && !compact ? (
-            <span className="block truncate text-[13px] text-[#555]">{record.memo}</span>
+            <span className="block truncate text-body-lg text-secondary-text">{record.memo}</span>
           ) : null}
-          <span className="block text-[12px] text-[#888]">
+          <span className="block text-body-md text-muted-foreground">
             {recordMethodLabel(record)}
             {variant === "day" || !prefix ? ` · ${formatTime(record.occurredAt)}` : null}
           </span>
         </span>
         {variant === "day" ? (
-          <span className="shrink-0 text-[13px] text-[#555]">고치기</span>
+          <span className="shrink-0 text-body-lg text-secondary-text">고치기</span>
         ) : null}
-        <ChevronRight className="size-4 shrink-0 text-[#aaa]" aria-hidden />
+        <ChevronRightIcon className="size-4 shrink-0 text-subtle-foreground" aria-hidden />
       </button>
     </div>
   );

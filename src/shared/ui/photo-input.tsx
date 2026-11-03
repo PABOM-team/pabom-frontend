@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { PlusIcon } from "./icons";
 import { useEffect, useRef, useState } from "react";
 import { filesApi } from "@/shared/api/endpoints";
 import type { Photo } from "@/shared/domain/record";
@@ -82,7 +82,7 @@ export function PhotoInput({
           key={photo.id}
           type="button"
           onClick={() => onView?.(index)}
-          className={cn(box, "border border-[#ddd]")}
+          className={cn(box, "border border-input")}
           aria-label={`사진 ${index + 1} 크게 보기`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -97,21 +97,21 @@ export function PhotoInput({
           onClick={() => upload(item)}
           className={cn(
             box,
-            "flex-col gap-0.5 border-[1.5px] border-dashed text-[11px]",
+            "flex-col gap-0.5 border-[1.5px] border-dashed text-body-sm",
             item.status === "failed"
               ? "border-destructive text-destructive"
-              : "border-[#bbb] bg-placeholder",
+              : "border-input bg-placeholder",
           )}
           aria-label={item.status === "failed" ? "사진 다시 올리기" : "사진 올리는 중"}
         >
           {item.status === "uploading" ? (
             <>
               <Spinner className="scale-75" />
-              <span className="text-[#888]">올리는 중</span>
+              <span className="text-muted-foreground">올리는 중</span>
             </>
           ) : (
             <>
-              <span className="text-[15px] leading-none font-bold">!</span>
+              <span className="text-body-xl leading-none font-bold">!</span>
               다시 시도
             </>
           )}
@@ -124,10 +124,10 @@ export function PhotoInput({
           aria-label="사진 추가"
           className={cn(
             box,
-            "border-[1.5px] border-dashed border-[#bbb] bg-placeholder text-[#999]",
+            "border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
           )}
         >
-          <Plus className="size-5" />
+          <PlusIcon className="size-5" />
         </button>
       ) : null}
       <input

@@ -1,9 +1,9 @@
 "use client";
 
-import { Ellipsis } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
+import { DotsHorizontalIcon } from "./icons";
 import { usePortalContainer } from "./portal";
 
 export type MenuItem = {
@@ -32,18 +32,18 @@ export function Menu({
       <DropdownMenu.Trigger
         aria-label={label}
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-full text-[#888] hover:bg-muted data-[state=open]:bg-muted",
+          "flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted data-[state=open]:bg-muted",
           triggerClassName,
         )}
       >
-        {trigger ?? <Ellipsis className="size-5" />}
+        {trigger ?? <DotsHorizontalIcon className="size-6" />}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal container={container}>
         <DropdownMenu.Content
           align="end"
           sideOffset={2}
           collisionPadding={12}
-          className="z-50 min-w-[156px] overflow-hidden rounded-xl border border-border bg-background py-0.5 shadow-[0_6px_20px_rgba(0,0,0,0.12)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="z-50 min-w-39 overflow-hidden rounded-lg border border-border bg-background py-0.5 shadow-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           {items
             .filter((item) => !item.hidden)
@@ -52,7 +52,7 @@ export function Menu({
                 key={item.label}
                 onSelect={item.onSelect}
                 className={cn(
-                  "cursor-pointer px-4 py-3 text-[14.5px] outline-none data-highlighted:bg-muted",
+                  "cursor-pointer px-4 py-3 text-body-lg font-medium outline-none data-highlighted:bg-muted",
                   index > 0 && "border-t border-border",
                   item.tone === "danger" ? "text-destructive" : "text-foreground",
                 )}

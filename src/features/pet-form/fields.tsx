@@ -60,20 +60,20 @@ export function PetPhotoPicker({
           src={value.url}
           size={72}
           className={cn(
-            !value.url && variant !== "edit" && "border-[1.5px] border-dashed border-[#bbb]",
+            !value.url && variant !== "edit" && "border-[1.5px] border-dashed border-input",
           )}
         >
           {uploading ? (
             <Spinner />
           ) : variant === "edit" ? null : (
-            <span className="flex items-center gap-0.5 text-[11px]">+ 사진</span>
+            <span className="flex items-center gap-0.5 text-body-sm">+ 사진</span>
           )}
         </Avatar>
       </button>
       <span
         className={cn(
-          "text-[12px]",
-          variant === "edit" ? "font-medium text-primary" : "text-[#888]",
+          "text-body-md",
+          variant === "edit" ? "font-medium text-primary" : "text-muted-foreground",
         )}
       >
         {variant === "edit" ? "사진 바꾸기" : "사진 (선택)"}
@@ -144,7 +144,7 @@ export function HatchFields({
           onChange={(ymd) => onChange({ hatchedOn: ymd })}
         />
       </Field>
-      <label className="flex items-center gap-2 text-[13px] text-[#555]">
+      <label className="flex items-center gap-2 text-body-lg text-secondary-text">
         <Checkbox
           checked={hatchUnknown}
           onCheckedChange={(on) =>
@@ -174,7 +174,7 @@ export function HatchFields({
             />
           </Field>
           {canBeUncertain ? (
-            <label className="flex items-center gap-2 text-[13px] text-[#555]">
+            <label className="flex items-center gap-2 text-body-lg text-secondary-text">
               <Checkbox
                 checked={stageUncertain}
                 onCheckedChange={(on) => onChange({ stageUncertain: on === true })}
@@ -182,7 +182,7 @@ export function HatchFields({
               정확하지 않아요
             </label>
           ) : null}
-          <p className="text-[12px] text-[#888]">
+          <p className="text-body-md text-muted-foreground">
             {variant === "register"
               ? "'정확하지 않아요'는 해츨링·준성체일 때만 보여요"
               : "성체를 고르면 '정확하지 않아요'가 사라져요"}
@@ -190,15 +190,15 @@ export function HatchFields({
         </>
       ) : auto && variant === "edit" ? (
         // 정보 수정(P05)은 회색 글 두 줄
-        <div className="space-y-1.5 text-[13px] text-[#777]">
+        <div className="space-y-1.5 text-body-lg text-muted-foreground">
           <p>생애 단계 · {auto.name} (자동)</p>
-          <p className="text-[12px] leading-relaxed text-[#999]">
+          <p className="text-body-md leading-relaxed text-subtle-foreground">
             부화일을 모르면: 단계를 직접 고르고, 해츨링·준성체일 때만 &apos;정확하지 않아요&apos;를
             고를 수 있어요
           </p>
         </div>
       ) : auto ? (
-        <InfoBox tone="blue">
+        <InfoBox tone="primary">
           생애 단계 · <strong>{auto.name}</strong> (부화일 기준으로 자동)
         </InfoBox>
       ) : null}
@@ -258,7 +258,7 @@ export function MorphPicker({
             value={value ?? ""}
             onChange={(e) => onChange(e.target.value)}
           />
-          <p className="-mt-1 text-right text-[11.5px] text-[#999]">
+          <p className="-mt-1 text-right text-body-md text-subtle-foreground">
             {(value ?? "").length} / {MORPH_MAX}자
           </p>
         </Field>

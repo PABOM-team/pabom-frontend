@@ -37,28 +37,26 @@ export function ConfirmDialog({
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal container={container}>
         <AlertDialog.Overlay className="absolute inset-0 bg-black/40 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-        <AlertDialog.Content className="absolute top-1/2 left-1/2 w-[calc(100%-56px)] max-w-[334px] -translate-x-1/2 -translate-y-1/2 rounded-[18px] bg-background p-[18px] shadow-xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
-          <AlertDialog.Title className="text-[16px] leading-snug font-bold text-foreground">
-            {title}
-          </AlertDialog.Title>
+        <AlertDialog.Content className="absolute top-1/2 left-1/2 w-[calc(100%-56px)] max-w-84 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-background p-5 shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95">
+          <AlertDialog.Title className="text-title-xs text-foreground">{title}</AlertDialog.Title>
           {description ? (
-            <AlertDialog.Description className="mt-2 text-[13.5px] leading-relaxed whitespace-pre-line text-[#555]">
+            <AlertDialog.Description className="mt-2 text-body-lg leading-relaxed whitespace-pre-line text-secondary-text">
               {description}
             </AlertDialog.Description>
           ) : (
             <AlertDialog.Description className="sr-only">{title}</AlertDialog.Description>
           )}
-          <div className="mt-[18px] flex gap-2">
+          <div className="mt-5 flex gap-2">
             {cancelLabel ? (
               <AlertDialog.Cancel asChild>
-                <Button variant="outline" size="xl" className="flex-1">
+                <Button variant="outline" size="lg" className="flex-1">
                   {cancelLabel}
                 </Button>
               </AlertDialog.Cancel>
             ) : null}
             <Button
               variant={tone === "danger" ? "danger" : tone === "inverse" ? "inverse" : "default"}
-              size="xl"
+              size="lg"
               className="flex-1"
               disabled={pending}
               onClick={onConfirm}

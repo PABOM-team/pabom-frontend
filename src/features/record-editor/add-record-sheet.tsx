@@ -137,7 +137,7 @@ export function AddRecordSheet({
               )}
             </Button>
             {uploading ? (
-              <p className="text-center text-[12px] text-[#888]">
+              <p className="text-center text-body-md text-muted-foreground">
                 사진을 올리는 동안은 저장할 수 없어요
               </p>
             ) : null}

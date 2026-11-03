@@ -1,7 +1,7 @@
-import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "./button";
+import { ExclamationCircleIcon } from "./icons";
 
 /** 동그란 사진. 사진이 없으면 회색 자리 */
 export function Avatar({
@@ -20,7 +20,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#ddd] bg-placeholder text-[11.5px] text-[#666]",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-input bg-placeholder text-body-md text-muted-foreground",
         className,
       )}
       style={{ width: size, height: size }}
@@ -49,8 +49,8 @@ export function PhotoBox({
   return (
     <span
       className={cn(
-        "relative inline-flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border-[1.5px] border-dashed border-[#bbb] bg-placeholder text-[12px] text-[#999]",
-        src && "border-solid border-[#ddd]",
+        "relative inline-flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border-[1.5px] border-dashed border-input bg-placeholder text-body-md text-subtle-foreground",
+        src && "border-solid",
         className,
       )}
     >
@@ -64,25 +64,49 @@ export function PhotoBox({
   );
 }
 
-/** 작은 알약 배지 (Figma 배지: 회색·검정·파랑 테두리·회색 테두리) */
+export type BadgeTone = "primary" | "info" | "success" | "warning" | "danger" | "contrast" | "hint";
+export type BadgeSize = "sm" | "md" | "lg";
+export type BadgeShape = "pill" | "square";
+
+/** Figma Badge: 색 16% 바탕(hint 는 8%) + 같은 색 글자 */
+const BADGE_TONE: Record<BadgeTone, string> = {
+  primary: "bg-primary/16 text-primary",
+  info: "bg-info/16 text-info",
+  success: "bg-success/16 text-success",
+  warning: "bg-warning/16 text-warning",
+  danger: "bg-destructive/16 text-destructive",
+  contrast: "bg-gray-800/16 text-gray-800",
+  hint: "bg-gray-500/8 text-gray-500",
+};
+
+/** sm 20px/10 · md 24px/12 · lg 32px/14 */
+const BADGE_SIZE: Record<BadgeSize, string> = {
+  sm: "h-5 gap-0.5 px-1.5 text-body-sm",
+  md: "h-6 gap-1 px-2 text-body-md",
+  lg: "h-8 gap-1.5 px-3 text-body-lg",
+};
+
+/** 작은 배지 (Figma Badge) */
 export function Badge({
-  tone = "gray",
+  tone = "hint",
+  size = "sm",
+  shape = "pill",
   children,
   className,
 }: {
-  tone?: "gray" | "black" | "blue-outline" | "gray-outline" | "blue";
+  tone?: BadgeTone;
+  size?: BadgeSize;
+  shape?: BadgeShape;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex h-5 shrink-0 items-center rounded-full px-[7px] text-[11px] font-medium whitespace-nowrap",
-        tone === "gray" && "bg-[#eee] text-[#555]",
-        tone === "black" && "bg-inverse text-inverse-foreground",
-        tone === "blue-outline" && "border border-primary bg-background text-primary",
-        tone === "gray-outline" && "border border-[#999] bg-background text-[#555]",
-        tone === "blue" && "bg-primary-soft font-bold text-primary",
+        "inline-flex shrink-0 items-center justify-center font-medium whitespace-nowrap",
+        shape === "pill" ? "rounded-full" : "rounded-md",
+        BADGE_SIZE[size],
+        BADGE_TONE[tone],
         className,
       )}
     >
@@ -100,13 +124,13 @@ export function Spinner({
 }) {
   return (
     <span role="status" aria-label={label} className={cn("inline-flex", className)}>
-      <span className="size-6 animate-spin rounded-full border-[2.5px] border-[#ddd] border-t-primary" />
+      <span className="size-6 animate-spin rounded-full border-[2.5px] border-input border-t-primary" />
     </span>
   );
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-xl bg-[#f0f0f0]", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-lg bg-muted", className)} aria-hidden />;
 }
 
 /** 회색 안내 상자 (기록 방식 안내, 면책 문구 등) */
@@ -116,14 +140,14 @@ export function InfoBox({
   className,
 }: {
   children: ReactNode;
-  tone?: "gray" | "blue";
+  tone?: "gray" | "primary";
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "rounded-[10px] px-3 py-2.5 text-[12.5px] leading-relaxed",
-        tone === "gray" ? "bg-[#f3f3f3] text-[#555]" : "bg-primary-soft text-[#333]",
+        "rounded-md px-3 py-2.5 text-body-md leading-relaxed",
+        tone === "gray" ? "bg-muted text-secondary-text" : "bg-primary-soft text-secondary-text",
         className,
       )}
     >
@@ -159,7 +183,7 @@ export function StateMessage({
     <Button
       variant={(a.variant ?? fallback) === "primary" ? "default" : "outline"}
       size={compact ? "md" : "lg"}
-      className={cn(compact ? "mt-4 px-4" : "w-[214px]", !compact && (first ? "mt-5" : "mt-2"))}
+      className={cn(compact ? "mt-4 px-4" : "w-54", !compact && (first ? "mt-5" : "mt-2"))}
       onClick={a.onClick}
     >
       {a.label}
@@ -169,13 +193,13 @@ export function StateMessage({
   return (
     <div className={cn("flex flex-col items-center px-6 py-10 text-center", className)}>
       {icon !== null ? (
-        <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-[#f0f0f0] text-[#888]">
-          {icon ?? <CircleAlert className="size-5" />}
+        <span className="mb-3 flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          {icon ?? <ExclamationCircleIcon className="size-5" />}
         </span>
       ) : null}
-      <p className="text-[15px] font-bold text-foreground">{title}</p>
+      <p className="text-body-xl font-semibold text-foreground">{title}</p>
       {description ? (
-        <p className="mt-1.5 text-[13px] leading-relaxed whitespace-pre-line text-muted-foreground">
+        <p className="mt-1.5 text-body-lg leading-relaxed whitespace-pre-line text-muted-foreground">
           {description}
         </p>
       ) : null}
@@ -188,8 +212,8 @@ export function StateMessage({
 /** 가로 정보 줄 (생애 단계 · 준성체) */
 export function InfoRow({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex min-h-[46px] items-center border-b border-border py-2.5 text-[14.5px]">
-      <span className="w-[104px] shrink-0 text-muted-foreground">{label}</span>
+    <div className="flex min-h-11.5 items-center border-b border-border py-2.5 text-body-lg">
+      <span className="w-26 shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 flex-1 text-foreground">{children}</span>
     </div>
   );
@@ -207,14 +231,14 @@ export function StepProgress({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[13px] font-bold text-primary">
+      <p className="text-body-lg font-semibold text-primary">
         {step}/{total} · {label}
       </p>
       <div className="flex gap-1" aria-hidden>
         {Array.from({ length: total }, (_, i) => (
           <span
             key={i}
-            className={cn("h-[3px] flex-1 rounded-full", i < step ? "bg-primary" : "bg-[#e0e0e0]")}
+            className={cn("h-[3px] flex-1 rounded-full", i < step ? "bg-primary" : "bg-gray-200")}
           />
         ))}
       </div>
@@ -238,7 +262,7 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className="flex overflow-hidden rounded-[10px] border border-input"
+      className="flex overflow-hidden rounded-md border border-input"
     >
       {options.map((option, index) => {
         const selected = option.value === value;
@@ -250,9 +274,11 @@ export function Segmented<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "h-9 flex-1 text-[13.5px]",
+              "h-9 flex-1 text-body-lg",
               index > 0 && "border-l border-input",
-              selected ? "bg-primary-soft font-bold text-primary" : "bg-background text-foreground",
+              selected
+                ? "bg-primary-soft font-semibold text-primary"
+                : "bg-background text-foreground",
             )}
           >
             {option.label}
@@ -268,7 +294,7 @@ export function LoadError({ onRetry, className }: { onRetry: () => void; classNa
   return (
     <StateMessage
       compact
-      icon={<span className="text-[17px] font-bold">!</span>}
+      icon={<span className="text-body-xl font-bold">!</span>}
       title="불러오지 못했어요"
       description="인터넷 연결을 확인하고 다시 시도해 주세요."
       action={{ label: "다시 불러오기", onClick: onRetry, variant: "outline" }}

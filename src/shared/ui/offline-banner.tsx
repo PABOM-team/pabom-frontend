@@ -1,7 +1,7 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
 import { useSyncExternalStore } from "react";
+import { ExclamationIcon } from "./icons";
 
 const subscribe = (callback: () => void) => {
   window.addEventListener("online", callback);
@@ -23,10 +23,10 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="flex h-[30px] shrink-0 items-center justify-between bg-inverse px-4 text-[12px] text-inverse-foreground"
+      className="flex h-7.5 shrink-0 items-center justify-between bg-inverse px-gutter text-body-md font-medium text-inverse-foreground"
     >
       <span className="flex items-center gap-1">
-        <TriangleAlert className="size-3.5" aria-hidden />
+        <ExclamationIcon className="size-4" aria-hidden />
         인터넷 연결이 끊겼어요
       </span>
       <span className="text-white/80">연결되면 다시 불러와요</span>

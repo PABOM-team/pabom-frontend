@@ -53,14 +53,14 @@ export function SpeciesGuidelineScreen() {
           />
         ) : (
           <>
-            <p className="text-[12.5px] text-[#888]">
+            <p className="text-body-md text-muted-foreground">
               {table.data.version}
               {table.data.effectiveFrom ? ` · ${table.data.effectiveFrom} 적용` : ""}
               {table.data.isDraft ? " (예시)" : ""}
             </p>
-            <table className="mt-3 w-full text-left text-[13px]">
+            <table className="mt-3 w-full text-left text-body-lg">
               <thead>
-                <tr className="bg-[#f3f3f3] text-[12px] text-[#555]">
+                <tr className="bg-muted text-body-md text-secondary-text">
                   <th className="px-1.5 py-2 font-normal">생애 단계</th>
                   <th className="px-1.5 py-2 font-normal">항목</th>
                   <th className="px-1.5 py-2 font-normal">주기</th>
@@ -87,10 +87,10 @@ export function SpeciesGuidelineScreen() {
                 })}
               </tbody>
             </table>
-            <div className="mt-4 rounded-[12px] bg-[#f3f3f3] p-3.5 text-[12.5px]">
+            <div className="mt-4 rounded-lg bg-muted p-3.5 text-body-md">
               <p className="font-bold">이렇게 만들었어요</p>
               {table.data.references.map((ref) => (
-                <p key={ref.title} className="mt-1 flex items-center gap-1 text-[#555]">
+                <p key={ref.title} className="mt-1 flex items-center gap-1 text-secondary-text">
                   {ref.title}
                   <ArrowUpRight className="size-3.5" />
                 </p>
@@ -99,7 +99,9 @@ export function SpeciesGuidelineScreen() {
                 <p className="mt-1 text-primary">{table.data.reviewNote}</p>
               ) : null}
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-[#888]">{CARE_DISCLAIMER}</p>
+            <p className="mt-3 text-body-md leading-relaxed text-muted-foreground">
+              {CARE_DISCLAIMER}
+            </p>
           </>
         )}
       </ScreenBody>

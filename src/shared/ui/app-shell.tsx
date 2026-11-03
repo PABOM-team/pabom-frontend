@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <DesktopIntro />
       <div
         id="app-column"
-        className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-background md:mx-0 md:shadow-[0_0_24px_rgba(0,0,0,0.06)]"
+        className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-background md:mx-0 md:shadow-sm"
       >
         <PortalContainerContext value={portal}>{children}</PortalContainerContext>
         <div
@@ -41,16 +41,16 @@ function DesktopIntro() {
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[344px] shrink-0 flex-col justify-center lg:flex">
-      <div className="flex aspect-[344/400] flex-col items-center justify-center rounded-3xl bg-linear-to-b from-brand-from to-brand text-white shadow-[0_12px_40px_rgba(41,153,255,0.3)]">
+      <div className="flex aspect-[344/400] flex-col items-center justify-center rounded-2xl bg-gradient-logo text-white shadow-lg">
         <PabomLogo size="lg" className="text-white" />
-        <p className="mt-5 text-center text-[15px] leading-relaxed text-white/90">
+        <p className="mt-5 text-center text-body-xl leading-relaxed text-white/90">
           크레스티드 게코 · 레오파드 게코
           <br />
           관리 일정과 기록을 한곳에
         </p>
       </div>
       <div className="mt-8 flex items-center justify-between gap-6">
-        <p className="text-[17px] leading-relaxed font-bold text-foreground">
+        <p className="text-title-xs leading-relaxed text-foreground">
           휴대폰으로 열면
           <br />
           홈 화면에 추가해

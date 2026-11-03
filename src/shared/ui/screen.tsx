@@ -3,7 +3,7 @@ import { cn } from "@/shared/lib/utils";
 
 /**
  * 한 화면의 뼈대. 위 제목 줄과 아래 고정 영역 사이만 스크롤된다.
- * Figma의 '본문' 좌우 여백 16px을 기본으로 둔다.
+ * 좌우 여백은 디자인 시스템 Grid(375 기준 20px) 토큰 `gutter` 를 쓴다.
  */
 export function Screen({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn("flex min-h-0 flex-1 flex-col", className)}>{children}</div>;
@@ -23,7 +23,7 @@ export function ScreenBody({
     <main
       className={cn(
         "min-h-0 flex-1 overflow-y-auto overscroll-contain pt-2 pb-6",
-        !flush && "px-4",
+        !flush && "px-gutter",
         className,
       )}
     >
@@ -37,7 +37,7 @@ export function ScreenFooter({ children, className }: { children: ReactNode; cla
   return (
     <div
       className={cn(
-        "flex shrink-0 flex-col gap-2 bg-background px-4 pt-2.5 pb-[max(16px,env(safe-area-inset-bottom))]",
+        "flex shrink-0 flex-col gap-2 bg-background px-gutter pt-2.5 pb-[max(16px,env(safe-area-inset-bottom))]",
         className,
       )}
     >

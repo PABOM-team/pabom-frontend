@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
+import { ChevronDownIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { speciesQueries } from "@/entities/species";
@@ -157,7 +157,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         <Field label="모프">
           <FieldButton
             placeholder="모프를 골라 주세요"
-            icon={<ChevronDown className="size-4" />}
+            icon={<ChevronDownIcon className="size-4" />}
             onClick={() => setMorphOpen(true)}
           >
             {draft.morph}

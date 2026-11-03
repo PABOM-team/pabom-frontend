@@ -21,7 +21,7 @@ export function WelcomeScreen() {
   return (
     <Screen>
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <PabomAppIcon size={72} className="mb-5 shadow-[0_8px_24px_rgba(41,153,255,0.3)]" />
+        <PabomAppIcon size={72} className="mb-5 shadow-md" />
         <PabomLogo size="lg" />
       </div>
       <ScreenFooter className="pb-[max(26px,env(safe-area-inset-bottom))]">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
@@ -39,7 +39,7 @@ export function BasisSheet({
 
   return (
     <Sheet open={Boolean(task)} onOpenChange={onOpenChange} title="왜 이 할 일이 있나요?">
-      <dl className="text-[14.5px]">
+      <dl className="text-body-lg">
         <div className="flex border-b border-border py-2.5">
           <dt className="w-[104px] shrink-0 text-muted-foreground">할 일</dt>
           <dd>
@@ -53,32 +53,30 @@ export function BasisSheet({
         </div>
       </dl>
 
-      <div
-        className={cn("mt-3 rounded-[12px] border", expanded ? "border-primary" : "border-input")}
-      >
+      <div className={cn("mt-3 rounded-lg border", expanded ? "border-primary" : "border-input")}>
         <button
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
-          className="flex w-full items-center justify-between px-3.5 py-3 text-[14.5px]"
+          className="flex w-full items-center justify-between px-3.5 py-3 text-body-lg"
         >
           자세히 보기
           {expanded ? (
-            <ChevronUp className="size-4 text-primary" />
+            <ChevronUpIcon className="size-4 text-primary" />
           ) : (
-            <ChevronDown className="size-4 text-[#888]" />
+            <ChevronDownIcon className="size-4 text-muted-foreground" />
           )}
         </button>
         {/* 펼치면 종 가이드라인(S04-3)으로 가는 링크만 있다 (Figma H04 펼침) */}
         {expanded && detail ? (
-          <div className="px-3.5 pb-3.5 text-[13px]">
+          <div className="px-3.5 pb-3.5 text-body-lg">
             {detail ? (
               <Link
                 href={`/settings/guidelines/${detail.pet.speciesId}`}
                 className="inline-flex items-center gap-0.5 font-medium text-primary"
               >
                 이러한 기준을 기반으로 제안을 드렸어요
-                <ChevronRight className="size-3.5" />
+                <ChevronRightIcon className="size-3.5" />
               </Link>
             ) : null}
           </div>

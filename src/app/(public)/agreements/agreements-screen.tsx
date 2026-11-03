@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -76,12 +77,12 @@ export function AgreementsScreen() {
     <Screen>
       {/* 저장 중에는 입력을 흐리게 잠근다 (C2-2) */}
       <ScreenBody className={cn("pt-6", agree.isPending && "pointer-events-none opacity-50")}>
-        <h1 className="text-[22px] leading-snug font-bold">
+        <h1 className="text-title-sm leading-snug font-bold">
           파봄을 쓰려면
           <br />
           동의가 필요해요
         </h1>
-        <label className="mt-7 flex items-center gap-2.5 border-b-[1.5px] border-foreground pb-3.5 text-[15px] font-bold">
+        <label className="mt-7 flex items-center gap-2.5 border-b-[1.5px] border-foreground pb-3.5 text-body-xl font-bold">
           <Checkbox
             checked={allChecked}
             onCheckedChange={(on) =>
@@ -96,7 +97,7 @@ export function AgreementsScreen() {
               key={agreement.type}
               className="flex h-[50px] items-center gap-2.5 border-b border-border"
             >
-              <label className="flex min-w-0 flex-1 items-center gap-2.5 text-[14.5px]">
+              <label className="flex min-w-0 flex-1 items-center gap-2.5 text-body-lg">
                 <Checkbox
                   checked={checked.has(agreement.type)}
                   onCheckedChange={(on) => toggle(agreement.type, on === true)}
@@ -108,11 +109,11 @@ export function AgreementsScreen() {
               {agreement.href ? (
                 <Link
                   href={agreement.href}
-                  className="flex items-center gap-1 text-[13px] text-[#888]"
+                  className="flex items-center gap-1 text-body-lg text-muted-foreground"
                   aria-label={`${agreement.label} 보기`}
                 >
                   보기
-                  <ChevronRight className="size-3.5" />
+                  <ChevronRightIcon className="size-3.5" />
                 </Link>
               ) : null}
             </li>

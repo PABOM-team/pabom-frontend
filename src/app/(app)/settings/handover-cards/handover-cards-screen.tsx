@@ -52,19 +52,19 @@ export function HandoverCardsScreen() {
           <LoadError onRetry={() => refetch()} />
         ) : (
           data.map((card) => (
-            <article key={card.code} className="rounded-[14px] border-[1.3px] border-[#ddd] p-3.5">
+            <article key={card.code} className="rounded-xl border-[1.3px] border-input p-3.5">
               <div className="flex items-center gap-2">
                 <Avatar size={28} />
-                <h2 className="text-[15px] font-bold">{card.petName}</h2>
-                <Badge tone={card.status === "unused" ? "gray-outline" : "gray"}>
+                <h2 className="text-body-xl font-bold">{card.petName}</h2>
+                <Badge tone={card.status === "unused" ? "primary" : "hint"}>
                   {HANDOVER_STATUS_LABEL[card.status]}
                 </Badge>
               </div>
-              <p className="mt-1.5 text-[12.5px] text-[#666]">
+              <p className="mt-1.5 text-body-md text-muted-foreground">
                 만든 날 {formatMonthDay(ymdOf(card.createdAt))} ·{" "}
                 {formatMonthDay(ymdOf(card.expiresAt))}까지
               </p>
-              <p className="text-[12px] text-[#888]">{scopeLine(card)}</p>
+              <p className="text-body-md text-muted-foreground">{scopeLine(card)}</p>
               {card.status === "unused" ? (
                 <div className="mt-2.5 grid grid-cols-3 gap-2">
                   <Button
@@ -105,10 +105,7 @@ export function HandoverCardsScreen() {
           </Button>
         }
       >
-        <div
-          ref={qrRef}
-          className="mx-auto my-2 w-fit rounded-xl border border-[#ddd] bg-white p-3"
-        >
+        <div ref={qrRef} className="mx-auto my-2 w-fit rounded-xl border border-input bg-white p-3">
           {qrCard ? <QRCodeSVG value={qrCard.url} size={180} /> : null}
         </div>
       </Sheet>

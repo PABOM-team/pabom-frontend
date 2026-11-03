@@ -1,9 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
+import { XIcon } from "./icons";
 import { usePortalContainer } from "./portal";
 
 type SheetProps = {
@@ -34,19 +34,17 @@ export function Sheet({
         <Dialog.Overlay className="absolute inset-0 bg-black/40 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <Dialog.Content
           className={cn(
-            "absolute inset-x-0 bottom-0 flex max-h-[92%] flex-col rounded-t-[20px] bg-background shadow-xl outline-none",
+            "absolute inset-x-0 bottom-0 flex max-h-[92%] flex-col rounded-t-2xl bg-background shadow-lg outline-none",
             "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:animate-in data-[state=open]:duration-200 data-[state=open]:slide-in-from-bottom",
             className,
           )}
         >
-          <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-[#d4d4d4]" aria-hidden />
-          <div className="flex shrink-0 items-start gap-2 px-4 pt-3 pb-2">
+          <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-input" aria-hidden />
+          <div className="flex shrink-0 items-start gap-2 px-gutter pt-3 pb-2">
             <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-[17px] leading-snug font-bold text-foreground">
-                {title}
-              </Dialog.Title>
+              <Dialog.Title className="text-title-xs text-foreground">{title}</Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+                <Dialog.Description className="mt-1.5 text-body-lg leading-relaxed text-muted-foreground">
                   {description}
                 </Dialog.Description>
               ) : (
@@ -55,16 +53,16 @@ export function Sheet({
             </div>
             <Dialog.Close
               aria-label="닫기"
-              className="-mt-1 -mr-1 flex size-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
+              className="-mt-1 -mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
             >
-              <X className="size-5" />
+              <XIcon className="size-6" />
             </Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-2">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-gutter pb-2">
             {children}
           </div>
           {footer ? (
-            <div className="flex shrink-0 gap-2 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+            <div className="flex shrink-0 gap-2 px-gutter pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
               {footer}
             </div>
           ) : (
@@ -79,6 +77,8 @@ export function Sheet({
 /** 시트 안 칸 제목 (예: 얼마나 먹었나요?) */
 export function SheetLabel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn("mt-3 mb-2 text-[13px] font-medium text-foreground", className)}>{children}</p>
+    <p className={cn("mt-3 mb-2 text-body-xl font-medium text-secondary-text", className)}>
+      {children}
+    </p>
   );
 }

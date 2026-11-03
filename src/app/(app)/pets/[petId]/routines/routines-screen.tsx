@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -56,20 +56,20 @@ export function RoutinesScreen() {
           />
         ) : (
           <>
-            <div className="flex items-center gap-3 rounded-[14px] border-[1.3px] border-[#ddd] p-3.5">
+            <div className="flex items-center gap-3 rounded-xl border-[1.3px] border-input p-3.5">
               <Avatar src={pet.photoUrl} size={52} />
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 text-[17px] font-bold">
+                <p className="flex items-center gap-1 text-title-xs font-bold">
                   {pet.name}
-                  <span className="text-[13px] text-primary">{SEX_SYMBOL[pet.sex]}</span>
+                  <span className="text-body-lg text-primary">{SEX_SYMBOL[pet.sex]}</span>
                 </p>
-                <p className="truncate text-[12.5px] text-muted-foreground">
+                <p className="truncate text-body-md text-muted-foreground">
                   {petSpeciesLine(pet)} · {stage}
                 </p>
               </div>
               <Link
                 href={`/pets/${pet.id}/edit`}
-                className="shrink-0 text-[13px] font-medium text-primary"
+                className="shrink-0 text-body-lg font-medium text-primary"
               >
                 정보 수정
               </Link>
@@ -77,7 +77,7 @@ export function RoutinesScreen() {
 
             {routines.data.length ? (
               <>
-                <p className="mt-3.5 text-[13px] leading-relaxed text-[#555]">
+                <p className="mt-3.5 text-body-lg leading-relaxed text-secondary-text">
                   {SPECIES_LABEL[pet.speciesId]}·{stage}에 맞춘 체크 리스트예요.{" "}
                   {offCount ? `${offCount}개 항목이 꺼져 있어요.` : "모두 켜져 있어요."} 필요 없는
                   항목만 꺼 주세요.
@@ -98,13 +98,13 @@ export function RoutinesScreen() {
               <StateMessage compact title="아직 체크 리스트가 없어요" />
             )}
 
-            <p className="mt-4 text-[12px] leading-relaxed text-[#888]">
+            <p className="mt-4 text-body-md leading-relaxed text-muted-foreground">
               <Link
                 href={`/settings/guidelines/${pet.speciesId}`}
                 className="inline-flex items-center font-medium text-primary"
               >
                 관리 가이드라인 보기
-                <ChevronRight className="size-3" />
+                <ChevronRightIcon className="size-3" />
               </Link>{" "}
               · {CARE_DISCLAIMER}
             </p>

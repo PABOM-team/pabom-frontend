@@ -1,9 +1,9 @@
 "use client";
 
-import { ChevronLeft, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
+import { ChevronLeftIcon, XIcon } from "./icons";
 
 type TopBarProps = {
   title?: ReactNode;
@@ -16,7 +16,7 @@ type TopBarProps = {
   className?: string;
 };
 
-/** 화면 위 제목 줄 (Figma 52px) */
+/** 화면 위 제목 줄 (52px). 좌우 여백은 그리드 20에 맞추고, 아이콘 버튼은 44px 터치 타깃 */
 export function TopBar({
   title,
   leading = "back",
@@ -35,8 +35,8 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "flex h-[52px] shrink-0 items-center gap-1 bg-background px-2 pt-[env(safe-area-inset-top)]",
-        leading === "none" && "pl-4",
+        "flex h-13 shrink-0 items-center gap-1 bg-background px-2 pt-[env(safe-area-inset-top)]",
+        leading === "none" && "pl-gutter",
         className,
       )}
     >
@@ -45,12 +45,16 @@ export function TopBar({
           type="button"
           onClick={goBack}
           aria-label={leading === "back" ? "뒤로" : "닫기"}
-          className="flex size-10 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
+          className="flex size-11 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
         >
-          {leading === "back" ? <ChevronLeft className="size-6" /> : <X className="size-6" />}
+          {leading === "back" ? (
+            <ChevronLeftIcon className="size-6" />
+          ) : (
+            <XIcon className="size-6" />
+          )}
         </button>
       )}
-      <h1 className="min-w-0 flex-1 truncate text-[17px] font-bold text-foreground">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-title-xs text-foreground">{title}</h1>
       {trailing ? <div className="flex shrink-0 items-center gap-1 pr-2">{trailing}</div> : null}
     </header>
   );
@@ -62,7 +66,7 @@ export function TopBarAction({ children, className, ...props }: React.ComponentP
     <button
       type="button"
       className={cn(
-        "rounded-md px-2 py-1 text-[15px] font-medium text-primary disabled:text-subtle-foreground",
+        "min-h-11 rounded-md px-2 text-body-xl font-medium text-primary disabled:text-disabled-foreground",
         className,
       )}
       {...props}

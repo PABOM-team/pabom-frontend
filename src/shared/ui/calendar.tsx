@@ -10,7 +10,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { useState, type ReactNode } from "react";
 import { formatFullDate, fromYmd, toYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
@@ -48,22 +48,22 @@ export function Calendar({
           aria-label="이전 달"
           disabled={!canPrev}
           onClick={() => setMonth((m) => subMonths(m, 1))}
-          className="flex size-8 items-center justify-center rounded-full text-[#888] disabled:opacity-30"
+          className="flex size-8 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30"
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon className="size-4" />
         </button>
-        <p className="text-[15px] font-bold">{format(month, "yyyy년 M월")}</p>
+        <p className="text-body-xl font-bold">{format(month, "yyyy년 M월")}</p>
         <button
           type="button"
           aria-label="다음 달"
           disabled={!canNext}
           onClick={() => setMonth((m) => addMonths(m, 1))}
-          className="flex size-8 items-center justify-center rounded-full text-[#888] disabled:opacity-30"
+          className="flex size-8 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30"
         >
-          <ChevronRight className="size-4" />
+          <ChevronRightIcon className="size-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 text-center text-[12px] text-[#888]">
+      <div className="grid grid-cols-7 text-center text-body-md text-muted-foreground">
         {WEEKDAYS.map((d) => (
           <span key={d} className="py-1.5">
             {d}
@@ -88,8 +88,8 @@ export function Calendar({
               aria-label={formatFullDate(day)}
               onClick={() => onChange(ymd)}
               className={cn(
-                "mx-auto flex size-9 items-center justify-center rounded-full text-[14.5px]",
-                disabled ? "text-[#ccc]" : "text-foreground hover:bg-muted",
+                "mx-auto flex size-9 items-center justify-center rounded-full text-body-lg",
+                disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
                 isToday && !selected && "border-[1.5px] border-primary font-bold text-primary",
                 selected && "bg-primary font-bold text-white hover:bg-primary",
               )}
@@ -154,9 +154,9 @@ export function DatePickerSheet({
       }
     >
       <Calendar value={draft} onChange={setDraft} min={min} max={max} />
-      {hint ? <p className="mt-3 text-[12px] text-[#888]">{hint}</p> : null}
+      {hint ? <p className="mt-3 text-body-md text-muted-foreground">{hint}</p> : null}
       {draft && previewText ? (
-        <p className="mt-2 text-[13px] font-medium text-primary">{previewText(draft)}</p>
+        <p className="mt-2 text-body-lg font-medium text-primary">{previewText(draft)}</p>
       ) : null}
     </Sheet>
   );
@@ -197,7 +197,7 @@ export function DateField({
         disabled={disabled}
         aria-invalid={invalid || undefined}
         placeholder={placeholder}
-        icon={<CalendarIcon className="size-[18px]" />}
+        icon={<CalendarIcon />}
         onClick={() => setOpen(true)}
       >
         {value ? format(value) : null}

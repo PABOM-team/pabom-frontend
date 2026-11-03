@@ -2,7 +2,7 @@
 
 import { addDays, format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { PlusIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import type { Pet } from "@/shared/domain/pet";
 import { fromYmd, toYmd } from "@/shared/lib/date";
@@ -39,25 +39,29 @@ export function WeekStrip({
               aria-pressed={isSelected}
               aria-label={format(date, "M월 d일 EEEE", { locale: ko })}
               className={cn(
-                "mx-auto flex w-full max-w-[51px] flex-col items-center gap-0.5 rounded-[10px] py-1",
+                "mx-auto flex w-full max-w-[51px] flex-col items-center gap-0.5 rounded-md py-1",
                 isToday && "bg-primary text-white",
                 isSelected && !isToday && "bg-primary-soft text-primary",
               )}
             >
               <span
                 className={cn(
-                  "text-[11px]",
-                  isToday ? "text-white" : isSelected ? "text-primary" : "text-[#888]",
+                  "text-body-sm",
+                  isToday ? "text-white" : isSelected ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {format(date, "EEEEE", { locale: ko })}
               </span>
-              <span className="text-[15px] font-medium">{format(date, "d")}</span>
+              <span className="text-body-xl font-medium">{format(date, "d")}</span>
               <span
                 aria-hidden
                 className={cn(
                   "size-[5px] rounded-full",
-                  marked.has(ymd) ? (isToday ? "bg-white" : "bg-[#bbb]") : "bg-transparent",
+                  marked.has(ymd)
+                    ? isToday
+                      ? "bg-white"
+                      : "bg-subtle-foreground"
+                    : "bg-transparent",
                 )}
               />
             </button>
@@ -82,7 +86,10 @@ export function PetFilterRow({
 }) {
   const item = "flex w-14 shrink-0 flex-col items-center gap-1.5";
   const label = (active: boolean) =>
-    cn("max-w-full truncate text-[11.5px]", active ? "font-bold text-primary" : "text-[#888]");
+    cn(
+      "max-w-full truncate text-body-md",
+      active ? "font-bold text-primary" : "text-muted-foreground",
+    );
 
   // 불러오는 동안은 동그라미 자리만 (C1-1)
   if (loading) {
@@ -108,7 +115,7 @@ export function PetFilterRow({
         >
           <span
             className={cn(
-              "flex size-[52px] items-center justify-center rounded-full bg-[#e8e8e8] text-[11.5px] text-[#555]",
+              "flex size-[52px] items-center justify-center rounded-full bg-muted text-body-md text-secondary-text",
               selected === null && "ring-[2.5px] ring-primary",
             )}
           >
@@ -134,7 +141,7 @@ export function PetFilterRow({
             {pet.todayRemaining > 0 ? (
               <span
                 aria-label="남은 할 일 있음"
-                className="absolute top-0.5 right-0.5 size-2 rounded-full border border-white bg-[#e5484d]"
+                className="absolute top-0.5 right-0.5 size-2 rounded-full border border-white bg-destructive"
               />
             ) : null}
           </span>
@@ -142,8 +149,8 @@ export function PetFilterRow({
         </button>
       ))}
       <Link href="/pets/new" className={item}>
-        <span className="flex size-[52px] items-center justify-center rounded-full border-[1.5px] border-dashed border-[#bbb] text-[#888]">
-          <Plus className="size-5" />
+        <span className="flex size-[52px] items-center justify-center rounded-full border-[1.5px] border-dashed border-input text-muted-foreground">
+          <PlusIcon className="size-5" />
         </span>
         <span className={label(false)}>추가</span>
       </Link>

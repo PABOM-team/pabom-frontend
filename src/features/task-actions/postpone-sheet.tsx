@@ -67,11 +67,11 @@ export function PostponeSheet({
       >
         {already?.originalDueOn ? (
           <>
-            <InfoBox tone="blue" className="mb-3 text-[13px]">
+            <InfoBox tone="primary" className="mb-3 text-body-lg">
               이미 미룬 할 일이에요 · 원래 {formatShortDay(already.originalDueOn)} → 지금{" "}
               {formatShortDay(already.dueOn)}
             </InfoBox>
-            <p className="mb-3 text-[13px] text-[#555]">
+            <p className="mb-3 text-body-lg text-secondary-text">
               {already.petName} · {CARE_ITEM_LABEL[already.careItem]} · 한 번 더 미룰 수 있어요.
             </p>
           </>
@@ -89,7 +89,7 @@ export function PostponeSheet({
           </Chip>
         </div>
         {date ? (
-          <p className="mt-3 text-[13px] font-medium text-primary">
+          <p className="mt-3 text-body-lg font-medium text-primary">
             {formatShortDay(date)}로 옮겨요
           </p>
         ) : null}

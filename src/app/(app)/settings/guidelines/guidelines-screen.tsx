@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { speciesQueries } from "@/entities/species";
@@ -21,7 +21,7 @@ export function GuidelinesScreen() {
       <Screen>
         <TopBar title={SPECIES_GROUP_LABEL[group]} fallbackHref="/settings/guidelines" />
         <ScreenBody>
-          <h2 className="mb-2 text-[18px] font-bold">어떤 종인가요?</h2>
+          <h2 className="mb-2 text-title-xs font-bold">어떤 종인가요?</h2>
           {isPending ? <Skeleton className="h-32" /> : null}
           <ul>
             {list.map((s) => (
@@ -30,7 +30,7 @@ export function GuidelinesScreen() {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[12px] text-[#888]">종이 늘면 이 목록만 길어져요</p>
+          <p className="mt-3 text-body-md text-muted-foreground">종이 늘면 이 목록만 길어져요</p>
         </ScreenBody>
       </Screen>
     );
@@ -40,7 +40,7 @@ export function GuidelinesScreen() {
     <Screen>
       <TopBar title="관리 가이드라인" fallbackHref="/settings" />
       <ScreenBody>
-        <h2 className="mb-2 text-[18px] font-bold">어떤 친구의 가이드라인을 볼까요?</h2>
+        <h2 className="mb-2 text-title-xs font-bold">어떤 친구의 가이드라인을 볼까요?</h2>
         <ul>
           {SPECIES_GROUPS.map((g) => {
             const count = (data ?? []).filter((s) => s.group === g).length;
@@ -66,10 +66,12 @@ function Row({ href, title, description }: { href?: string; title: string; descr
     <>
       <PhotoBox />
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-bold">{title}</span>
-        {description ? <span className="block text-[12px] text-[#888]">{description}</span> : null}
+        <span className="block text-body-xl font-bold">{title}</span>
+        {description ? (
+          <span className="block text-body-md text-muted-foreground">{description}</span>
+        ) : null}
       </span>
-      <ChevronRight className="size-4 text-[#aaa]" />
+      <ChevronRightIcon className="size-4 text-subtle-foreground" />
     </>
   );
   const className = "flex items-center gap-3 border-b border-border py-3";

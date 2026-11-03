@@ -2,7 +2,14 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  PlusIcon,
+} from "@/shared/ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -53,29 +60,29 @@ export function HomeScreen() {
   return (
     <>
       <header className="flex h-[52px] shrink-0 items-center gap-1 px-4">
-        <h1 className="text-[17px] font-bold">{format(fromYmd(selected), "yyyy년 M월")}</h1>
+        <h1 className="text-title-xs font-bold">{format(fromYmd(selected), "yyyy년 M월")}</h1>
         <button
           type="button"
           aria-label="이전 주"
           onClick={() => moveWeek(-7)}
-          className="p-1 text-[#888]"
+          className="p-1 text-muted-foreground"
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeftIcon className="size-4" />
         </button>
         <button
           type="button"
           aria-label="다음 주"
           onClick={() => moveWeek(7)}
-          className="-ml-1 p-1 text-[#888]"
+          className="-ml-1 p-1 text-muted-foreground"
         >
-          <ChevronRight className="size-4" />
+          <ChevronRightIcon className="size-4" />
         </button>
         <div className="flex flex-1 justify-center">
           {mode !== "today" ? (
             <button
               type="button"
               onClick={() => select(today)}
-              className="h-6 rounded-full border border-primary px-2.5 text-[12px] font-medium text-primary"
+              className="h-6 rounded-full border border-primary px-2.5 text-body-md font-medium text-primary"
             >
               오늘
             </button>
@@ -85,9 +92,9 @@ export function HomeScreen() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="flex items-center gap-0.5 text-[14px] font-medium text-primary"
+            className="flex items-center gap-0.5 text-body-lg font-medium text-primary"
           >
-            <Plus className="size-4" />
+            <PlusIcon className="size-4" />
             기록
           </button>
         ) : null}
@@ -113,13 +120,13 @@ export function HomeScreen() {
         ) : noPets ? (
           <Link
             href="/pets/new"
-            className="flex flex-col items-center rounded-[14px] border-[1.3px] border-dashed border-[#ccc] px-4 py-6 text-center"
+            className="flex flex-col items-center rounded-xl border-[1.3px] border-dashed border-input px-4 py-6 text-center"
           >
-            <span className="flex size-11 items-center justify-center rounded-full border-[1.5px] border-dashed border-[#bbb] text-[#888]">
-              <Plus className="size-5" />
+            <span className="flex size-11 items-center justify-center rounded-full border-[1.5px] border-dashed border-input text-muted-foreground">
+              <PlusIcon className="size-5" />
             </span>
-            <span className="mt-3 text-[15px] font-bold">개체를 등록해 보세요</span>
-            <span className="mt-1.5 text-[13px] text-muted-foreground">
+            <span className="mt-3 text-body-xl font-bold">개체를 등록해 보세요</span>
+            <span className="mt-1.5 text-body-lg text-muted-foreground">
               등록하면 오늘 할 일이 여기에 생겨요
             </span>
           </Link>
@@ -183,7 +190,7 @@ function TaskList({
   if (mode === "future") {
     return (
       <section className="space-y-3">
-        <h2 className="text-[15px] font-bold">
+        <h2 className="text-body-xl font-bold">
           {formatDayLabel(date)} · 예정된 할 일 {data.items.length}
         </h2>
         {data.items.map((task) => (
@@ -195,7 +202,9 @@ function TaskList({
           />
         ))}
         {data.items.length ? (
-          <p className="pt-1 text-center text-[12px] text-[#888]">예정일이 되면 체크할 수 있어요</p>
+          <p className="pt-1 text-center text-body-md text-muted-foreground">
+            예정일이 되면 체크할 수 있어요
+          </p>
         ) : null}
       </section>
     );
@@ -209,7 +218,7 @@ function TaskList({
   return (
     <section className="space-y-3">
       {todo.length > 0 ? (
-        <h2 className="text-[15px] font-bold">
+        <h2 className="text-body-xl font-bold">
           오늘의 할 일 <span className="text-primary">{todo.length}개 남음</span>
         </h2>
       ) : null}
@@ -224,10 +233,10 @@ function TaskList({
         />
       ))}
       {todo.length === 0 && finished.length > 0 ? (
-        <div className="flex flex-col items-center rounded-[14px] border-[1.3px] border-[#ddd] px-4 py-6 text-center">
-          <Check className="size-7 text-foreground" strokeWidth={1.6} aria-hidden />
-          <p className="mt-2 text-[15px] font-bold">오늘 할 일을 모두 마쳤어요</p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+        <div className="flex flex-col items-center rounded-xl border-[1.3px] border-input px-4 py-6 text-center">
+          <CheckIcon className="size-7 text-foreground" strokeWidth={1.6} aria-hidden />
+          <p className="mt-2 text-body-xl font-bold">오늘 할 일을 모두 마쳤어요</p>
+          <p className="mt-1 text-body-lg text-muted-foreground">
             완료 {doneCount}
             {skipCount ? ` · 건너뜀 ${skipCount}` : ""}
           </p>
@@ -239,13 +248,13 @@ function TaskList({
             type="button"
             aria-expanded={showFinished}
             onClick={() => setShowFinished((v) => !v)}
-            className="flex w-full items-center justify-between rounded-[14px] border-[1.3px] border-[#ddd] px-3.5 py-3 text-[14px] text-[#333]"
+            className="flex w-full items-center justify-between rounded-xl border-[1.3px] border-input px-3.5 py-3 text-body-lg text-secondary-text"
           >
             완료·건너뜀 {finished.length}개 {showFinished ? "접기" : "보기"}
             {showFinished ? (
-              <ChevronUp className="size-4 text-[#888]" />
+              <ChevronUpIcon className="size-4 text-muted-foreground" />
             ) : (
-              <ChevronDown className="size-4 text-[#888]" />
+              <ChevronDownIcon className="size-4 text-muted-foreground" />
             )}
           </button>
           {showFinished
@@ -286,7 +295,7 @@ function PastDay({
 
   return (
     <section>
-      <h2 className="mb-1 text-[15px] font-bold">
+      <h2 className="mb-1 text-body-xl font-bold">
         {formatDayLabel(date)} · 기록 {data.items.length}
       </h2>
       {data.items.map((record) => (
@@ -302,9 +311,9 @@ function PastDay({
         <button
           type="button"
           onClick={onAdd}
-          className="mt-3 flex items-center gap-0.5 text-[14px] font-bold text-primary"
+          className="mt-3 flex items-center gap-0.5 text-body-lg font-bold text-primary"
         >
-          <Plus className="size-4" />
+          <PlusIcon className="size-4" />
           이날 기록 추가
         </button>
       ) : null}

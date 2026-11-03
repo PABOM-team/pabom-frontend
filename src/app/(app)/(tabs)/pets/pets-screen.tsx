@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { PlusIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
 import { AddPetCard, PetCard, petQueries } from "@/entities/pet";
 import { stageName, useSpeciesMap } from "@/entities/species";
@@ -44,7 +44,7 @@ export function PetsScreen() {
         ) : data.length === 0 ? (
           <StateMessage
             compact
-            icon={<Plus className="size-5" />}
+            icon={<PlusIcon className="size-5" />}
             title="아직 등록한 개체가 없어요"
             description="개체를 등록하면 체크 리스트와 오늘 할 일이 생겨요."
             action={{ label: "개체 등록하기", onClick: () => router.push("/pets/new") }}

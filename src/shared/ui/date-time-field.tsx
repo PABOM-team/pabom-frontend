@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar as CalendarIcon } from "lucide-react";
+import { CalendarIcon } from "./icons";
 import { useState } from "react";
 import { formatDateTime, timeOf, toYmd, withTime, ymdOf } from "@/shared/lib/date";
 import { Button } from "./button";
@@ -25,7 +25,7 @@ const fromClock = ({ pm, hour, minute }: Clock) =>
 const roParticle = (iso: string) => (/[036]$/.test(timeOf(iso)) ? "으로" : "로");
 
 const wheel =
-  "h-10 w-full appearance-none rounded-[8px] bg-background text-center text-[16px] font-bold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+  "h-10 w-full appearance-none rounded-md bg-background text-center text-body-xl font-bold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
 
 /**
  * 기록한 시각 칸 (D3 날짜 + 시각).
@@ -49,7 +49,7 @@ export function DateTimeField({
   return (
     <>
       <FieldButton
-        icon={<CalendarIcon className="size-[18px]" />}
+        icon={<CalendarIcon />}
         onClick={() => {
           setDay(ymdOf(value));
           setClock(toClock(timeOf(value)));
@@ -76,7 +76,7 @@ export function DateTimeField({
         }
       >
         <Calendar value={day} onChange={setDay} max={toYmd(new Date())} />
-        <div className="mt-3 grid grid-cols-3 gap-2 rounded-[12px] bg-[#f3f3f3] p-2.5">
+        <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-muted p-2.5">
           <select
             aria-label="오전·오후"
             className={wheel}
@@ -111,7 +111,9 @@ export function DateTimeField({
             ))}
           </select>
         </div>
-        <p className="mt-2 text-[12px] text-[#888]">지금보다 뒤 날짜·시각은 고를 수 없어요</p>
+        <p className="mt-2 text-body-md text-muted-foreground">
+          지금보다 뒤 날짜·시각은 고를 수 없어요
+        </p>
       </Sheet>
     </>
   );

@@ -52,14 +52,14 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute inset-x-4 bottom-[calc(80px+env(safe-area-inset-bottom))] z-[60] flex justify-center"
+      className="pointer-events-none absolute inset-x-gutter bottom-[calc(80px+env(safe-area-inset-bottom))] z-60 flex justify-center"
     >
       {current ? (
         <div
           key={current.id}
           role="status"
           className={cn(
-            "pointer-events-auto flex min-h-[42px] w-full items-center gap-3 rounded-xl bg-inverse px-3.5 py-2.5 text-[13.5px] text-inverse-foreground shadow-lg",
+            "pointer-events-auto flex min-h-11 w-full items-center gap-3 rounded-lg bg-inverse px-4 py-2.5 text-body-lg font-medium text-inverse-foreground shadow-md",
             "animate-in fade-in-0 slide-in-from-bottom-2",
           )}
         >
@@ -67,7 +67,7 @@ export function Toaster() {
           {current.action ? (
             <button
               type="button"
-              className="shrink-0 font-bold text-[#7aa5ff]"
+              className="shrink-0 font-semibold text-sub-300"
               onClick={() => {
                 current.action?.onClick();
                 dismiss();

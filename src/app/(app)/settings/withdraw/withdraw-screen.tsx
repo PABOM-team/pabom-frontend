@@ -35,15 +35,15 @@ export function WithdrawScreen() {
     <Screen>
       <TopBar title="회원 탈퇴" fallbackHref="/settings" />
       <ScreenBody>
-        <h2 className="text-[18px] font-bold">탈퇴하기 전에 확인해 주세요</h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-[#555]">
+        <h2 className="text-title-xs font-bold">탈퇴하기 전에 확인해 주세요</h2>
+        <p className="mt-2 text-body-lg leading-relaxed text-secondary-text">
           개체·기록·사진이 모두 삭제되고 되돌릴 수 없어요.
         </p>
-        <InfoBox className="mt-3 space-y-0.5 text-[12.5px]">
+        <InfoBox className="mt-3 space-y-0.5 text-body-md">
           <p>· 개체 {pets?.length ?? 0}마리와 기록</p>
           <p>· 사진</p>
         </InfoBox>
-        <label className="mt-6 flex items-center gap-2.5 text-[14px]">
+        <label className="mt-6 flex items-center gap-2.5 text-body-lg">
           <Checkbox checked={checked} onCheckedChange={(on) => setChecked(on === true)} />위 내용을
           확인했어요
         </label>

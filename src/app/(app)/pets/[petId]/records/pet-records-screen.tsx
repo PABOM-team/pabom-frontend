@@ -9,7 +9,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { Check, EllipsisVertical } from "lucide-react";
+import { CheckIcon, DotsVerticalIcon } from "@/shared/ui/icons";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { petQueries } from "@/entities/pet";
@@ -64,7 +64,7 @@ export function PetRecordsScreen() {
             onClick={() => setPeriodOpen(true)}
             className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
           >
-            <EllipsisVertical className="size-5" />
+            <DotsVerticalIcon className="size-5" />
           </button>
         }
       />
@@ -73,7 +73,7 @@ export function PetRecordsScreen() {
           ref={tablistRef}
           role="tablist"
           aria-label="달"
-          className="relative scrollbar-none flex overflow-x-auto rounded-[10px] border border-input"
+          className="relative scrollbar-none flex overflow-x-auto rounded-md border border-input"
         >
           {months.map((m, i) => (
             <button
@@ -83,7 +83,7 @@ export function PetRecordsScreen() {
               aria-selected={i === selectedIndex}
               onClick={() => setMonthIndex(i)}
               className={cn(
-                "h-9 min-w-[64px] flex-1 text-[13.5px]",
+                "h-9 min-w-[64px] flex-1 text-body-lg",
                 i > 0 && "border-l border-input",
                 i === selectedIndex ? "bg-primary-soft font-bold text-primary" : "bg-background",
               )}
@@ -92,7 +92,7 @@ export function PetRecordsScreen() {
             </button>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-[#888]">
+        <p className="mt-2 text-body-md text-muted-foreground">
           최근 {period}개월 · {format(rangeStart, "M월 d일")} ~ {format(today, "M월 d일")}
         </p>
       </div>
@@ -121,10 +121,10 @@ export function PetRecordsScreen() {
                   setMonthIndex(null);
                   setPeriodOpen(false);
                 }}
-                className="flex h-12 w-full items-center justify-between border-b border-border text-[15px]"
+                className="flex h-12 w-full items-center justify-between border-b border-border text-body-xl"
               >
                 최근 {p}개월
-                {p === period ? <Check className="size-4 text-primary" /> : null}
+                {p === period ? <CheckIcon className="size-4 text-primary" /> : null}
               </button>
             </li>
           ))}
@@ -185,7 +185,7 @@ function MonthRecords({
     <ScreenBody flush className="pt-0">
       {[...groups.entries()].map(([day, items]) => (
         <section key={day}>
-          <h2 className="bg-[#f3f3f3] px-4 py-1.5 text-[13px] text-[#555]">
+          <h2 className="bg-muted px-4 py-1.5 text-body-lg text-secondary-text">
             {formatDayLabel(day)}
           </h2>
           <div className="px-4">
@@ -203,7 +203,7 @@ function MonthRecords({
       ))}
       <div
         ref={sentinel}
-        className="flex flex-col items-center py-5 text-center text-[12px] text-[#888]"
+        className="flex flex-col items-center py-5 text-center text-body-md text-muted-foreground"
       >
         {isFetchingNextPage ? (
           <Spinner />

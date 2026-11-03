@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { CheckIcon } from "@/shared/ui/icons";
 import { todayApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { formatInterval } from "@/shared/domain/care";
@@ -18,12 +18,12 @@ export const todayQueries = {
 };
 
 function TaskBadge({ task }: { task: Task }) {
-  if (task.state === "skipped") return <Badge tone="gray-outline">건너뜀</Badge>;
+  if (task.state === "skipped") return <Badge tone="hint">건너뜀</Badge>;
   if (task.originalDueOn && (task.state === "todo" || task.state === "planned")) {
-    return <Badge tone="blue-outline">미룸</Badge>;
+    return <Badge tone="primary">미룸</Badge>;
   }
   if (task.state !== "todo") return null;
-  if (task.overdueDays > 0) return <Badge tone="black">{task.overdueDays}일 지남</Badge>;
+  if (task.overdueDays > 0) return <Badge tone="contrast">{task.overdueDays}일 지남</Badge>;
   return <Badge>오늘</Badge>;
 }
 
@@ -67,7 +67,7 @@ export function TaskCard({
   const finished = task.state === "done" || task.state === "skipped";
 
   return (
-    <article className="flex items-center gap-2.5 rounded-[14px] border-[1.3px] border-[#ddd] bg-background py-2.5 pr-1 pl-3">
+    <article className="flex items-center gap-2.5 rounded-xl border-[1.3px] border-input bg-background py-2.5 pr-1 pl-3">
       <CheckCircle task={task} onCheck={onCheck} checking={checking} />
       <button
         type="button"
@@ -76,13 +76,13 @@ export function TaskCard({
         className="flex min-w-0 flex-1 flex-col gap-0.5 py-1 text-left"
       >
         <span className="flex min-w-0 items-center gap-1.5">
-          <Badge tone="blue" className={cn(finished && "opacity-60")}>
+          <Badge tone="primary" className={cn(finished && "opacity-60")}>
             {task.petName}
           </Badge>
           <span
             className={cn(
-              "truncate text-[15px] font-bold",
-              task.state === "done" ? "text-[#999]" : "text-foreground",
+              "truncate text-body-xl font-bold",
+              task.state === "done" ? "text-subtle-foreground" : "text-foreground",
             )}
           >
             {task.title}
@@ -91,8 +91,8 @@ export function TaskCard({
         </span>
         <span
           className={cn(
-            "truncate text-[12.5px]",
-            task.state === "done" ? "text-[#aaa]" : "text-[#777]",
+            "truncate text-body-md",
+            task.state === "done" ? "text-subtle-foreground" : "text-muted-foreground",
           )}
         >
           {taskSubline(task)}
@@ -119,7 +119,7 @@ function CheckCircle({
   if (task.state === "done") {
     return (
       <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-white">
-        <Check className="size-4" strokeWidth={3} aria-label="완료" />
+        <CheckIcon className="size-4" strokeWidth={3} aria-label="완료" />
       </span>
     );
   }
@@ -127,7 +127,7 @@ function CheckCircle({
     return (
       <span
         aria-label="건너뜀"
-        className="size-7 shrink-0 rounded-full border-[1.8px] border-dashed border-[#aaa]"
+        className="size-7 shrink-0 rounded-full border-[1.8px] border-dashed border-input"
       />
     );
   }
@@ -135,7 +135,7 @@ function CheckCircle({
     return (
       <span
         aria-label="예정"
-        className="size-7 shrink-0 rounded-full border-[1.5px] border-[#ccc] bg-[#f3f3f3]"
+        className="size-7 shrink-0 rounded-full border-[1.5px] border-input bg-muted"
       />
     );
   }
@@ -146,7 +146,7 @@ function CheckCircle({
       onClick={onCheck}
       disabled={checking}
       className={cn(
-        "size-7 shrink-0 rounded-full border-[1.8px] border-[#222] transition-colors hover:bg-primary-soft",
+        "size-7 shrink-0 rounded-full border-[1.8px] border-foreground transition-colors hover:bg-primary-soft",
         checking && "animate-pulse border-primary",
       )}
     />

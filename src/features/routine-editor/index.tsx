@@ -9,6 +9,7 @@ import { invalidateCareData } from "@/shared/api/query-keys";
 import { isRoutineFoodNameSupported } from "@/shared/config/env";
 import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@/shared/domain/care";
 import { ROUTINE_INTERVAL_MAX, ROUTINE_INTERVAL_MIN, type Routine } from "@/shared/domain/routine";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Badge, InfoBox } from "@/shared/ui/display";
 import { Input, Switch } from "@/shared/ui/form";
@@ -39,7 +40,7 @@ export function RoutineRow({ routine, onEdit }: { routine: Routine; onEdit: () =
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-body-xl font-bold">
           {label}
-          {routine.customized ? <Badge tone="primary">내가 바꿈</Badge> : null}
+          {routine.customized ? <Badge tone="primary">내가 정한 주기</Badge> : null}
         </p>
         <p className="truncate text-body-md text-muted-foreground">{routineSummary(routine)}</p>
       </div>
@@ -79,6 +80,12 @@ export function RoutineEditSheet({
   const days = Number(intervalText);
   const invalid =
     !Number.isInteger(days) || days < ROUTINE_INTERVAL_MIN || days > ROUTINE_INTERVAL_MAX;
+  // 가이드라인 범위 안내 (v1.2 P03): 직접 바꾼 주기는 범위를 숨기고 되돌리기만 보여 준다
+  const range =
+    current && !current.customized && current.minDays && current.maxDays
+      ? { min: current.minDays, max: current.maxDays }
+      : null;
+  const outOfRange = range !== null && !invalid && (days < range.min || days > range.max);
 
   const save = useMutation({
     mutationFn: () =>
@@ -96,7 +103,7 @@ export function RoutineEditSheet({
     mutationFn: () => routinesApi.reset(current!.id),
     onSuccess: (next) => {
       onOpenChange(false);
-      toast(`기준 주기(${formatInterval(next.intervalDays)})로 되돌렸어요`);
+      toast(`가이드라인 주기(${formatInterval(next.intervalDays)})로 되돌렸어요`);
     },
     onError: (error) => toast(getErrorMessage(error, "되돌리지 못했어요.")),
     onSettled: refresh,
@@ -118,7 +125,7 @@ export function RoutineEditSheet({
               disabled={pending}
               onClick={() => reset.mutate()}
             >
-              기준으로 되돌리기
+              가이드라인 주기로 되돌리기
             </Button>
           ) : null}
           <Button
@@ -144,6 +151,16 @@ export function RoutineEditSheet({
         aria-invalid={(intervalText !== "" && invalid) || undefined}
         onChange={(e) => setIntervalText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
       />
+      {range ? (
+        <p
+          className={cn(
+            "mt-1.5 text-body-md",
+            outOfRange ? "text-primary" : "text-muted-foreground",
+          )}
+        >
+          {outOfRange ? "가이드라인 범위 밖 · " : ""}가이드라인 범위: {range.min}~{range.max}일
+        </p>
+      ) : null}
       {feed ? (
         <>
           <SheetLabel>

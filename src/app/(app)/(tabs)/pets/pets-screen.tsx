@@ -4,8 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { isPetStatusChangeSupported } from "@/shared/config/env";
 import { PlusIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { AddPetCard, PetCard, petQueries } from "@/entities/pet";
 import { stageName, useSpeciesMap } from "@/entities/species";
+import { todayQueries } from "@/entities/task";
+import { todayYmd } from "@/shared/lib/date";
 import { LoadError, Skeleton, StateMessage } from "@/shared/ui/display";
 import { Menu } from "@/shared/ui/menu";
 import { ScreenBody } from "@/shared/ui/screen";
@@ -16,6 +19,11 @@ export function PetsScreen() {
   const router = useRouter();
   const species = useSpeciesMap();
   const { data, isPending, isError, refetch } = useQuery(petQueries.list("active"));
+  // 오늘 할 일 수는 개체 목록 응답에 없어 GET /today 로 센다 [백엔드 요청]
+  const [today] = useState(() => todayYmd());
+  const todayList = useQuery(todayQueries.byDate(today));
+  const remainingOf = (petId: string) =>
+    todayList.data?.items.filter((t) => t.petId === petId && t.state === "todo").length ?? 0;
 
   return (
     <>
@@ -56,7 +64,7 @@ export function PetsScreen() {
             {data.map((pet) => (
               <PetCard
                 key={pet.id}
-                pet={pet}
+                pet={{ ...pet, todayRemaining: remainingOf(pet.id) }}
                 href={`/pets/${pet.id}`}
                 stageName={stageName(species.get(pet.speciesId), pet.lifeStageCode)}
               />

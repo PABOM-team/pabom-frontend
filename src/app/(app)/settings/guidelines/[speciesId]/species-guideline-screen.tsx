@@ -48,7 +48,7 @@ export function SpeciesGuidelineScreen() {
         ) : (
           <>
             <p className="text-body-md text-muted-foreground">
-              {table.data.version}
+              가이드라인 v{table.data.version}
               {table.data.effectiveFrom ? ` · ${table.data.effectiveFrom} 적용` : ""}
               {table.data.isDraft ? " (예시)" : ""}
             </p>

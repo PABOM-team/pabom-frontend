@@ -1,10 +1,10 @@
 import { addDays, format, setHours, setMinutes, subDays } from "date-fns";
-import type { CareItem, Intake, RoutineCareItem } from "@/shared/domain/care";
+import type { Intake } from "@/shared/domain/care";
 import type { HandoverScope } from "@/shared/domain/handover";
 import type { EndReason, Sex } from "@/shared/domain/pet";
 import type { SpeciesId } from "@/shared/domain/species";
 import type { AuthProvider } from "@/shared/domain/user";
-import { SPECIES_DATA, standardIntervals } from "./data";
+import { standardItems, type CareRecordType } from "./data";
 
 /**
  * 목업 서버의 저장소. 브라우저에서는 localStorage에 저장해 새로고침해도 이어진다.
@@ -44,7 +44,10 @@ export type DbPet = {
 export type DbRoutine = {
   id: string;
   petId: string;
-  careItem: RoutineCareItem;
+  /** 백엔드 관리 항목 코드 (FEED·MIST·WEIGHT·…) */
+  careItem: string;
+  careItemName: string;
+  recordType: CareRecordType;
   intervalDays: number;
   standardIntervalDays: number;
   enabled: boolean;
@@ -58,7 +61,8 @@ export type DbRecord = {
   id: string;
   petId: string;
   routineId: string | null;
-  careItem: CareItem;
+  /** 백엔드 관리 항목 코드. 메모만 남긴 기록은 MEMO */
+  careItem: string;
   type: "done" | "skipped";
   method: "routine" | "manual";
   occurredAt: string;
@@ -107,7 +111,7 @@ export type DbState = {
 
 const STORAGE_KEY = "pabom-mock-db";
 // 시드가 바뀌면 올린다. 저장된 목업 데이터가 이 버전과 다르면 새 시드로 시작한다
-const VERSION = 3;
+const VERSION = 4;
 
 export const ymd = (date: Date) => format(date, "yyyy-MM-dd");
 const at = (date: Date, hour: number, minute = 0) =>
@@ -195,22 +199,27 @@ export function createSeed(today = new Date()): DbState {
     createdAt: d(250).toISOString(),
   });
 
-  // 콩이(어린 개체 크레): 분무는 1일 지남, 급여는 오늘, 나머지는 앞으로
+  // 콩이(어린 개체 크레): 분무는 1일 지남, 급여·물 갈기는 오늘, 나머지는 앞으로
   const kong = addRoutines(state, "1", "crested_gecko", "juvenile", d(60));
-  // 달이(성체 레오): 급여 오늘
+  // 달이(성체 레오): 급여·물 갈기 오늘
   const dal = addRoutines(state, "2", "leopard_gecko", "adult", d(58));
   // 분양 보낸 초코: 인계 카드 예시(DEMO2026)에 넘길 체크 리스트
   addRoutines(state, "4", "crested_gecko", "adult", d(250));
+  // 루틴 ID → 마지막으로 한 날(며칠 전). 꺼진 항목(FEED_INSECT·UVB_LAMP)은 기록이 없다
   const lastDone: Record<string, number> = {
-    [kong.misting!]: 2,
-    [kong.feeding!]: 2,
-    [kong.weight!]: 5,
-    [kong.cleaning!]: 3,
-    [kong.shed!]: 4,
-    [dal.feeding!]: 3,
-    [dal.weight!]: 10,
-    [dal.cleaning!]: 2,
-    [dal.shed!]: 6,
+    [kong.MIST!]: 2,
+    [kong.FEED!]: 1,
+    [kong.WATER!]: 1,
+    [kong.WEIGHT!]: 5,
+    [kong.CLEAN!]: 3,
+    [kong.SHED_CHECK!]: 4,
+    [dal.FEED!]: 3,
+    [dal.WATER!]: 1,
+    [dal.HUMID_HIDE!]: 1,
+    [dal.MULTIVITAMIN!]: 5,
+    [dal.WEIGHT!]: 10,
+    [dal.CLEAN!]: 2,
+    [dal.SHED_CHECK!]: 6,
   };
 
   const intakes: Intake[] = ["all", "partial", "all", "all", "none", "partial", "all"];
@@ -229,11 +238,11 @@ export function createSeed(today = new Date()): DbState {
         careItem: routine.careItem,
         type: "done",
         method: "routine",
-        occurredAt: at(day, routine.careItem === "misting" ? 8 : 20, (n * 7) % 60),
-        createdAt: at(day, routine.careItem === "misting" ? 8 : 20, ((n * 7) % 60) + 1),
-        intake: routine.careItem === "feeding" ? intakes[n % intakes.length] : null,
+        occurredAt: at(day, routine.careItem === "MIST" ? 8 : 20, (n * 7) % 60),
+        createdAt: at(day, routine.careItem === "MIST" ? 8 : 20, ((n * 7) % 60) + 1),
+        intake: routine.recordType === "FEED" ? intakes[n % intakes.length] : null,
         weightG:
-          routine.careItem === "weight" ? Math.round((weightBase - ago * 0.08) * 10) / 10 : null,
+          routine.recordType === "WEIGHT" ? Math.round((weightBase - ago * 0.08) * 10) / 10 : null,
         memo: null,
         foodName: routine.foodName,
         skipReason: null,
@@ -245,7 +254,7 @@ export function createSeed(today = new Date()): DbState {
   }
 
   // 직접 기록 몇 건
-  const manual = (petId: string, careItem: CareItem, ago: number, memo: string | null) =>
+  const manual = (petId: string, careItem: string, ago: number, memo: string | null) =>
     state.records.push({
       id: String(state.seq++),
       petId,
@@ -264,8 +273,8 @@ export function createSeed(today = new Date()): DbState {
       deletedAt: null,
       revisions: [],
     });
-  manual("1", "shed", 4, "탈피를 시작했어요. 꼬리 쪽이 하얘요.");
-  manual("2", "memo", 9, "은신처를 새로 바꿔 줬어요.");
+  manual("1", "SHED_CHECK", 4, "탈피를 시작했어요. 꼬리 쪽이 하얘요.");
+  manual("2", "MEMO", 9, "은신처를 새로 바꿔 줬어요.");
 
   // 함께했던 개체의 지난 기록
   for (const [petId, endAgo, count] of [
@@ -277,7 +286,7 @@ export function createSeed(today = new Date()): DbState {
         id: String(state.seq++),
         petId,
         routineId: null,
-        careItem: i % 3 === 0 ? "memo" : "feeding",
+        careItem: i % 3 === 0 ? "MEMO" : "FEED",
         type: "done",
         method: i % 3 === 0 ? "manual" : "routine",
         occurredAt: at(d(endAgo + 1 + i * 3), 20),
@@ -307,29 +316,33 @@ export function createSeed(today = new Date()): DbState {
   return state;
 }
 
+/**
+ * 종·단계 기본 항목으로 체크 리스트를 만든다. 기본 꺼짐 항목(defaultEnabled=false)은 꺼진 채로 만든다.
+ * override는 항목 코드 → 주기. 만든 루틴 ID를 항목 코드별로 돌려준다
+ */
 export function addRoutines(
   state: DbState,
   petId: string,
   speciesId: SpeciesId,
   stageCode: string,
   start: Date,
-  override?: Partial<Record<RoutineCareItem, number>>,
+  override?: Partial<Record<string, number>>,
 ) {
-  const species = SPECIES_DATA.find((s) => s.id === speciesId)!;
-  const ids: Partial<Record<RoutineCareItem, string>> = {};
-  for (const [careItem, standard] of Object.entries(standardIntervals(speciesId, stageCode))) {
-    const item = careItem as RoutineCareItem;
+  const ids: Partial<Record<string, string>> = {};
+  for (const item of standardItems(speciesId, stageCode)) {
     const id = String(state.seq++);
-    ids[item] = id;
+    ids[item.code] = id;
     state.routines.push({
       id,
       petId,
-      careItem: item,
-      intervalDays: override?.[item] ?? standard,
-      standardIntervalDays: standard,
-      enabled: true,
+      careItem: item.code,
+      careItemName: item.name,
+      recordType: item.recordType,
+      intervalDays: override?.[item.code] ?? item.intervalDays,
+      standardIntervalDays: item.intervalDays,
+      enabled: item.defaultEnabled ?? true,
       startDate: ymd(start),
-      foodName: item === "feeding" ? species.defaultFoodName : null,
+      foodName: item.defaultFoodName ?? null,
       postponedTo: null,
       reason: null,
     });

@@ -3,7 +3,6 @@ import { delay, http, HttpResponse } from "msw";
 import { apiBaseUrl } from "@/shared/api/client";
 import { getStoredAccount } from "@/shared/api/session";
 import {
-  CARE_ITEM_CODE,
   FILE_PURPOSE,
   type BackendCompleteRequest,
   type BackendPostponeRequest,
@@ -12,7 +11,7 @@ import {
   type BackendRoutineUpdate,
   type BackendSkipRequest,
 } from "@/shared/domain/backend";
-import { CARE_ITEM_LABEL } from "@/shared/domain/care";
+import { careItemLabel, MEMO_CODE } from "@/shared/domain/care";
 import type { HandoverAcceptInput, HandoverPreview, HandoverScope } from "@/shared/domain/handover";
 import type {
   PetCreateInput,
@@ -23,6 +22,7 @@ import type {
 import { LIFE_STAGE_UNKNOWN, LIFE_STAGES } from "@/shared/domain/species";
 import { authProviderSchema } from "@/shared/domain/user";
 import {
+  careItemSeedOf,
   careStandardsOf,
   MORPHS,
   serverIdOf,
@@ -43,8 +43,8 @@ import {
 } from "./db";
 import { careStageOf, revisionNoOf, serializePet, stageCodeOf } from "./logic";
 import {
-  CARE_ITEM_OF,
   INTAKE_OF,
+  isIntakeRecord,
   recordFields,
   restorableUntil,
   skipReasonOf,
@@ -642,7 +642,7 @@ export const routineHandlers = [
       return success({
         record: wireRecordLite(record),
         routine: wireRoutineState(routine),
-        todayStatus: record.careItem === "feeding" && !record.intake ? "NEEDS_RESULT" : "DONE",
+        todayStatus: isIntakeRecord(record) && !record.intake ? "NEEDS_RESULT" : "DONE",
       });
     }),
   ),
@@ -738,7 +738,7 @@ export const recordHandlers = [
         .filter((r) => myPetIds.has(r.petId))
         .filter((r) => !r.deletedAt || (includeDeleted && r.deletedAt >= since))
         .filter((r) => !petId || r.petId === petId)
-        .filter((r) => !itemCodes.length || itemCodes.includes(CARE_ITEM_CODE[r.careItem]))
+        .filter((r) => !itemCodes.length || itemCodes.includes(r.careItem))
         .filter((r) => !recordType || (r.type === "done" ? "DONE" : "SKIPPED") === recordType)
         .filter((r) => !from || ymd(parseISO(r.occurredAt)) >= from)
         .filter((r) => !to || ymd(parseISO(r.occurredAt)) <= to)
@@ -762,8 +762,11 @@ export const recordHandlers = [
       if (pet.status !== "active") {
         return fail(409, "PET_NOT_ACTIVE", "활성 상태의 개체만 기록할 수 있습니다.");
       }
-      const careItem = CARE_ITEM_OF[input.itemCode];
-      if (!careItem) return fail(422, "CARE_ITEM_INVALID", "유효한 관리 항목이 아닙니다.");
+      // 종의 기본 항목이거나 메모만 받는다. 메모는 백엔드 항목 목록에 없다 [백엔드 확인 필요]
+      const careItem = input.itemCode;
+      if (careItem !== MEMO_CODE && !careItemSeedOf(pet.speciesId, careItem)) {
+        return fail(422, "CARE_ITEM_INVALID", "유효한 관리 항목이 아닙니다.");
+      }
       if (isFuture(input.occurredAt)) {
         return fail(422, "FUTURE_TIME", "앞으로의 시각은 기록할 수 없어요.");
       }
@@ -1059,7 +1062,11 @@ export const appHandlers = [
         usable && card.scope.routines
           ? db.routines
               .filter((r) => r.petId === pet.id && r.enabled)
-              .map((r) => ({ careItem: r.careItem, intervalDays: r.intervalDays }))
+              .map((r) => ({
+                careItem: r.careItem,
+                careItemName: r.careItemName,
+                intervalDays: r.intervalDays,
+              }))
           : [],
       records:
         usable && card.scope.recordWeeks > 0
@@ -1070,7 +1077,7 @@ export const appHandlers = [
               .slice(0, 12)
               .map((r) => ({
                 occurredAt: r.occurredAt,
-                careItem: CARE_ITEM_LABEL[r.careItem],
+                careItem: careItemLabel(r.careItem),
                 intake: r.intake,
                 weightG: r.weightG,
                 memo: r.memo,

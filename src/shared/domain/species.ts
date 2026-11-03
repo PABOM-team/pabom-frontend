@@ -1,6 +1,6 @@
 import { differenceInMonths } from "date-fns";
 import { z } from "zod";
-import { routineCareItemSchema } from "./care";
+import { recordKindSchema } from "./care";
 
 /** MVP에서 지원하는 종. 볼파이톤은 신고 요건이 달라 초기 출시에서 제외 (10/6 IA 피드백 1번) */
 export const SPECIES = ["crested_gecko", "leopard_gecko"] as const;
@@ -154,7 +154,12 @@ export const CARE_LABEL_TEXT: Record<CareLabel, string> = {
 
 export const careStandardSchema = z.object({
   lifeStageCode: z.string(),
-  careItem: routineCareItemSchema,
+  /** 백엔드 관리 항목 코드 */
+  careItem: z.string(),
+  careItemName: z.string(),
+  recordKind: recordKindSchema,
+  /** false면 기본 항목이지만 처음엔 꺼진 채로 만들어진다 */
+  defaultEnabled: z.boolean(),
   intervalDays: z.number().int().min(1),
   /** 바꿀 수 있는 범위 (백엔드 minDays·maxDays) */
   minDays: z.number().int().min(1),

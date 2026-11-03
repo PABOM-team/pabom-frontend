@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { recordQueries } from "@/entities/record";
-import { INTAKE_LABEL, INTAKES, RECORD_KIND, type Intake } from "@/shared/domain/care";
+import { INTAKE_LABEL, INTAKES, WEIGHT_CODE, type Intake } from "@/shared/domain/care";
 import { MEMO_MAX, type CompleteInput } from "@/shared/domain/record";
 import type { Task } from "@/shared/domain/today";
 import { nowIso } from "@/shared/lib/date";
@@ -44,9 +44,9 @@ export function CompleteSheet({
   }
 
   const current = task ?? shown;
-  const kind = current ? RECORD_KIND[current.careItem] : null;
+  const kind = current?.recordKind ?? null;
   const { data: lastWeight } = useQuery({
-    ...recordQueries.list({ petId: current?.petId, careItem: "weight", limit: 1 }),
+    ...recordQueries.list({ petId: current?.petId, careItem: WEIGHT_CODE, limit: 1 }),
     enabled: kind === "weight" && Boolean(task),
   });
   const lastWeightG = lastWeight?.items[0]?.weightG;

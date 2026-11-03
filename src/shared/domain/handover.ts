@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { intakeSchema, routineCareItemSchema } from "./care";
+import { intakeSchema } from "./care";
 import { speciesIdSchema } from "./species";
 
 /** 넘길 최근 기록 범위(주). 0이면 넘기지 않음 */
@@ -51,11 +51,19 @@ export const handoverPreviewSchema = z.object({
       handedOverOn: z.iso.date(),
     })
     .nullable(),
-  routines: z.array(z.object({ careItem: routineCareItemSchema, intervalDays: z.number().int() })),
+  routines: z.array(
+    z.object({
+      /** 관리 항목 코드 */
+      careItem: z.string(),
+      careItemName: z.string(),
+      intervalDays: z.number().int(),
+    }),
+  ),
   records: z
     .array(
       z.object({
         occurredAt: z.iso.datetime(),
+        /** 항목 이름 (목업이 이름으로 준다) */
         careItem: z.string(),
         intake: intakeSchema.nullable(),
         weightG: z.number().nullable(),

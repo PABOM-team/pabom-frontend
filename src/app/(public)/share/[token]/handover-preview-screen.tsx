@@ -9,13 +9,7 @@ import { UnavailableCard } from "@/features/handover";
 import { handoverQueries } from "@/entities/handover";
 import { meQueries } from "@/entities/session";
 import { stageName, useSpeciesMap } from "@/entities/species";
-import {
-  CARE_ITEM_LABEL,
-  formatInterval,
-  INTAKE_LABEL,
-  ROUTINE_LABEL,
-  type CareItem,
-} from "@/shared/domain/care";
+import { formatInterval, INTAKE_LABEL } from "@/shared/domain/care";
 import { SPECIES_LABEL } from "@/shared/domain/pet";
 import { formatMonthDay, ymdOf } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
@@ -70,7 +64,7 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
                   key={r.careItem}
                   className="flex justify-between border-b border-border py-2.5 text-body-lg"
                 >
-                  {ROUTINE_LABEL[r.careItem]}
+                  {r.careItemName}
                   <span className="text-muted-foreground">{formatInterval(r.intervalDays)}</span>
                 </li>
               ))}
@@ -100,9 +94,8 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
                 {/* 사진이 붙은 기록은 왼쪽에 사진 자리 (U7) */}
                 {r.photoCount ? <PhotoBox /> : null}
                 <span className="min-w-0 flex-1">
-                  {/* 백엔드는 항목 코드로 줄 수 있어 라벨로 바꾼다 [백엔드 확인 필요] */}
-                  {formatMonthDay(ymdOf(r.occurredAt))}{" "}
-                  {CARE_ITEM_LABEL[r.careItem as CareItem] ?? r.careItem}
+                  {/* 인계 API는 스웨거에 없어 목업이 항목 이름으로 준다 [백엔드 확인 필요] */}
+                  {formatMonthDay(ymdOf(r.occurredAt))} {r.careItem}
                   {r.intake ? ` · ${INTAKE_LABEL[r.intake]}` : ""}
                   {r.weightG ? ` · ${r.weightG.toFixed(1)} g` : ""}
                   {r.memo ? (

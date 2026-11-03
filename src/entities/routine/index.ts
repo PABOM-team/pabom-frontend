@@ -1,12 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { routinesApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import {
-  formatInterval,
-  RECORD_KIND,
-  RECORD_KIND_LABEL,
-  ROUTINE_LABEL,
-} from "@/shared/domain/care";
+import { formatInterval, RECORD_KIND_LABEL } from "@/shared/domain/care";
 import type { Routine } from "@/shared/domain/routine";
 
 export const routineQueries = {
@@ -21,7 +16,7 @@ export const routineQueries = {
 export function routineSummary(routine: Routine) {
   return [
     formatInterval(routine.intervalDays),
-    RECORD_KIND_LABEL[RECORD_KIND[routine.careItem]],
+    RECORD_KIND_LABEL[routine.recordKind],
     routine.foodName ? `먹이: ${routine.foodName}` : null,
   ]
     .filter(Boolean)
@@ -34,7 +29,7 @@ export function routinesShortLine(routines: Routine[]) {
     .filter((r) => r.enabled)
     .map(
       (r) =>
-        `${ROUTINE_LABEL[r.careItem].replace(" 확인", "")} ${r.intervalDays === 1 ? "매일" : `${r.intervalDays}일`}`,
+        `${r.careItemName.replace(" 확인", "")} ${r.intervalDays === 1 ? "매일" : `${r.intervalDays}일`}`,
     )
     .join(" · ");
 }

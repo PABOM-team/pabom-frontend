@@ -1,5 +1,5 @@
 import { addDays, differenceInCalendarDays, format, max as maxDate, parseISO } from "date-fns";
-import { careTitle, ROUTINE_CARE_ITEMS } from "@/shared/domain/care";
+import { careTitle, compareCareItems, recordKindOf } from "@/shared/domain/care";
 import type { Pet } from "@/shared/domain/pet";
 import { getOccurrences } from "@/shared/domain/routine";
 import { LIFE_STAGE_UNKNOWN, lifeStageFromHatch, lifeStageName } from "@/shared/domain/species";
@@ -109,12 +109,15 @@ export function buildToday(userId: string, date: string, petId?: string): Today 
   for (const pet of pets) {
     for (const routine of db.routines.filter((r) => r.petId === pet.id && r.enabled)) {
       const { dueOn, originalDueOn } = dueOf(routine);
+      const recordKind = recordKindOf({ code: routine.careItem, recordType: routine.recordType });
       const base = {
         routineId: routine.id,
         petId: pet.id,
         petName: pet.name,
         careItem: routine.careItem,
-        title: careTitle(routine.careItem, routine.foodName),
+        careItemName: routine.careItemName,
+        recordKind,
+        title: careTitle(routine.careItemName, recordKind, routine.foodName),
         intervalDays: routine.intervalDays,
         dueOn,
         originalDueOn,
@@ -163,7 +166,7 @@ export function buildToday(userId: string, date: string, petId?: string): Today 
       order[a.state] - order[b.state] ||
       b.overdueDays - a.overdueDays ||
       a.petName.localeCompare(b.petName) ||
-      ROUTINE_CARE_ITEMS.indexOf(a.careItem) - ROUTINE_CARE_ITEMS.indexOf(b.careItem),
+      compareCareItems(a, b),
   );
   return { date, items };
 }

@@ -5,7 +5,6 @@ import { useState } from "react";
 import { recordsApi, routinesApi } from "@/shared/api/endpoints";
 import { getApiError, getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import { CARE_ITEM_LABEL, RECORD_KIND } from "@/shared/domain/care";
 import type { CompleteInput } from "@/shared/domain/record";
 import type { Task } from "@/shared/domain/today";
 import { formatShortDay } from "@/shared/lib/date";
@@ -50,7 +49,7 @@ export function useTaskActions({
     onMutate: ({ task }) => setCheckingId(task.routineId),
     onSuccess: ({ record }, { task }) => {
       setCompleting(null);
-      toast(`'${CARE_ITEM_LABEL[task.careItem]}' 기록을 저장했어요`, {
+      toast(`'${task.careItemName}' 기록을 저장했어요`, {
         action: { label: "되돌리기", onClick: () => undoRecord(record.id) },
       });
     },
@@ -106,9 +105,9 @@ export function useTaskActions({
     onSettled: refresh,
   });
 
-  /** 체크 동그라미: 값이 필요 없는 항목(분무 등)은 시트 없이 바로 저장 */
+  /** 체크 동그라미: 값이 필요 없는 O/X 항목(분무·청소·모르는 항목 등)은 시트 없이 바로 저장 */
   const check = (task: Task) => {
-    if (RECORD_KIND[task.careItem] === "check") complete.mutate({ task, input: {} });
+    if (task.recordKind === "check") complete.mutate({ task, input: {} });
     else setCompleting(task);
   };
 
@@ -173,7 +172,7 @@ export function useTaskActions({
       <ConfirmDialog
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={deleting ? `'${CARE_ITEM_LABEL[deleting.careItem]}' 할 일을 삭제할까요?` : ""}
+        title={deleting ? `'${deleting.careItemName}' 할 일을 삭제할까요?` : ""}
         description="앞으로 오늘 할 일에 뜨지 않아요. 체크 리스트에서 다시 켤 수 있어요."
         confirmLabel="삭제"
         tone="danger"

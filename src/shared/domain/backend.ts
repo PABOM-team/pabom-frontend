@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { SKIP_REASONS, type CareItem, type Intake } from "./care";
+import { SKIP_REASONS, type Intake } from "./care";
 
 /**
  * 백엔드 응답·요청 모양 (스웨거 dev.api.pabom.app/v3/api-docs, components.schemas).
  * 화면은 이 모양을 직접 쓰지 않고 src/shared/api/adapters.ts가 화면용 도메인 모델로 바꾼다.
- * 백엔드는 숫자 ID와 대문자 코드를 쓰고, 프론트 도메인은 문자열 ID와 소문자 값을 쓴다.
+ * 백엔드는 숫자 ID와 대문자 코드를 쓰고, 프론트 도메인은 문자열 ID와 소문자 값을 쓴다 (관리 항목 코드는 그대로).
  * 종·개체 응답은 src/shared/domain/species.ts·pet.ts에 있다.
  */
 
@@ -22,18 +22,10 @@ export const backendMetaSchema = z.object({ timestamp: dateTime, path: z.string(
 // ── 코드 대응표 ───────────────────────────────────────────
 
 /**
- * 관리 항목 코드(itemCode·careItemCode). 스웨거에서 확인한 값은 FEEDING(예시)·SHED(detail 설명)뿐이다.
- * [백엔드 확인 필요] MISTING·WEIGHT·CLEANING·MEMO는 스웨거에 전체 목록이 없어 이름을 추정했다
+ * 관리 항목 코드(itemCode·careItemCode)는 대응표 없이 그대로 쓴다. 종마다 항목이 다르고(dev 백엔드:
+ * CLEAN·FEED·FEED_INSECT·MIST·SHED_CHECK·UVB_LAMP·WATER·WEIGHT·HUMID_HIDE·MULTIVITAMIN) 앞으로 늘 수 있다.
+ * 이름은 careItemName·itemName, 기록 방식은 recordType(OX·FEED·WEIGHT)으로 받는다
  */
-export const CARE_ITEM_CODE: Record<CareItem, string> = {
-  feeding: "FEEDING",
-  misting: "MISTING",
-  weight: "WEIGHT",
-  cleaning: "CLEANING",
-  shed: "SHED",
-  memo: "MEMO",
-};
-
 export const backendOutcomeSchema = z.enum(["ATE_ALL", "ATE_PART", "REFUSED", "NOT_OBSERVED"]);
 export type BackendOutcome = z.infer<typeof backendOutcomeSchema>;
 export const OUTCOME_CODE: Record<Intake, BackendOutcome> = {
@@ -96,9 +88,11 @@ export const backendPetRoutineSchema = z.object({
   minDays: z.number().int(),
   maxDays: z.number().int(),
   isOutOfRange: z.boolean(),
-  nextDueAt: dateTime,
-  startDate: date,
+  /** 꺼진 루틴(active=false)은 둘 다 null로 온다 */
+  nextDueAt: dateTime.nullable(),
+  startDate: date.nullable(),
   guidelineVersion: z.string(),
+  /** OX·FEED·WEIGHT. 모르는 값이 와도 어댑터가 O/X로 다룬다 */
   recordType: z.string(),
   /** 적용 조건 설명 (H04 '적용 조건'에 그대로 보여 준다) */
   description: z.string().nullish(),
@@ -116,9 +110,12 @@ export const backendRoutineDetailsSchema = z.object({
   intervalDays: z.number().int(),
   isEnabled: z.boolean(),
   cycleSource: cycleSourceSchema,
-  startDate: date,
-  nextDueAt: dateTime,
+  /** 꺼진 루틴이면 null일 수 있다 (PetRoutineResult와 같은 규칙으로 본다) [백엔드 확인 필요] */
+  startDate: date.nullable(),
+  nextDueAt: dateTime.nullable(),
   versionLabel: z.string(),
+  /** 기록 방식. 스웨거 RoutineDetailsResult에는 없어 코드로 짐작한다 [백엔드 확인 필요] */
+  recordType: z.string().nullish(),
   defaultCycleDays: z.number().int(),
   minDays: z.number().int(),
   maxDays: z.number().int(),
@@ -137,7 +134,7 @@ export const backendRoutineMutationSchema = z.object({
     .object({
       intervalDays: z.number().int(),
       isEnabled: z.boolean(),
-      startDate: date,
+      startDate: date.nullable(),
       cycleSource: cycleSourceSchema,
       versionLabel: z.string(),
     })
@@ -219,7 +216,9 @@ export const backendTaskSchema = z.object({
   itemName: z.string(),
   status: todayStatusSchema,
   dueDate: date,
-  overdueDays: z.number().int().default(0),
+  /** 지나지 않은 할 일은 null로 온다 */
+  overdueDays: z.number().int().nullish(),
+  /** OX·FEED·WEIGHT (루틴의 recordType과 같다) */
   resultType: z.string().nullish(),
   unit: z.string().nullish(),
   lastRecord: z
@@ -421,12 +420,16 @@ export const backendCareItemStandardSchema = z.object({
   defaultCycleDays: z.number().int(),
   minDays: z.number().int(),
   maxDays: z.number().int(),
+  /** false면 종 기본 항목이지만 처음엔 꺼진 채로 만들어진다 (크레 FEED_INSECT·UVB_LAMP 등) */
   defaultEnabled: z.boolean(),
+  /** OX·FEED·WEIGHT */
   recordType: z.string().nullish(),
+  /** 급여형이면 DIET·INSECT */
   feedResultSet: z.string().nullish(),
   defaultFoodName: z.string().nullish(),
-  /** [백엔드 확인 필요] 값 목록과 '권고/참고 정보' 대응이 스웨거에 없다 */
+  /** VET_SOURCE·TEAM_JUDGMENT·TEXTBOOK. '권고/참고 정보' 대응은 [백엔드 확인 필요] */
   evidenceLevel: z.string().nullish(),
+  /** "RVC, RSPCA"처럼 쉼표로 이은 출처 */
   sourceRefs: z.string().nullish(),
   description: z.string().nullish(),
 });
@@ -438,6 +441,7 @@ export const backendCareStandardsSchema = z.object({
   speciesId: id,
   speciesCode: z.string(),
   speciesName: z.string(),
+  /** JUVENILE·ADULT에 더해 UNKNOWN(appliedLifeStage=JUVENILE)이 온다. 표에는 UNKNOWN을 빼고 보인다 */
   lifeStages: z.array(
     z.object({
       lifeStage: z.string(),

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { careItemSchema, intakeSchema } from "./care";
+import { intakeSchema, recordKindSchema } from "./care";
 
 export const photoSchema = z.object({ id: z.string(), url: z.string() });
 export type Photo = z.infer<typeof photoSchema>;
@@ -16,7 +16,11 @@ export const careRecordSchema = z.object({
   petId: z.string(),
   petName: z.string(),
   routineId: z.string().nullable(),
-  careItem: careItemSchema,
+  /** 백엔드 관리 항목 코드. 메모만 남긴 기록은 MEMO */
+  careItem: z.string(),
+  /** 요약에 보이는 항목 이름 */
+  careItemName: z.string(),
+  recordKind: recordKindSchema,
   type: z.enum(["done", "skipped"]),
   /** routine: 할 일 체크, manual: 직접 기록 */
   method: z.enum(["routine", "manual"]),
@@ -39,7 +43,15 @@ export type CareRecord = z.infer<typeof careRecordSchema>;
 export type RoutineActionResult = {
   record: Pick<
     CareRecord,
-    "id" | "careItem" | "type" | "occurredAt" | "intake" | "weightG" | "memo" | "skipReason"
+    | "id"
+    | "careItem"
+    | "recordKind"
+    | "type"
+    | "occurredAt"
+    | "intake"
+    | "weightG"
+    | "memo"
+    | "skipReason"
   >;
   routine: RoutineState;
   todayState: "todo" | "done" | "skipped" | null;
@@ -62,7 +74,8 @@ export const MEMO_MAX = 200;
 
 export type RecordQuery = {
   petId?: string;
-  careItem?: z.infer<typeof careItemSchema>;
+  /** 관리 항목 코드 */
+  careItem?: string;
   /** YYYY-MM-DD, 양 끝 포함 (최대 366일) */
   from?: string;
   to?: string;
@@ -73,7 +86,8 @@ export type RecordQuery = {
 
 export type RecordCreateInput = {
   petId: string;
-  careItem: z.infer<typeof careItemSchema>;
+  /** 관리 항목 코드 (백엔드 itemCode 그대로) */
+  careItem: string;
   occurredAt: string;
   intake?: z.infer<typeof intakeSchema> | null;
   weightG?: number | null;

@@ -4,18 +4,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
+import { routineQueries } from "@/entities/routine";
 import { recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
 import {
-  CARE_ITEM_LABEL,
-  CARE_ITEMS,
+  careItemLabel,
+  compareCareItems,
   INTAKE_LABEL,
   INTAKES,
-  RECORD_KIND,
-  type CareItem,
+  MEMO_CODE,
   type Intake,
+  type RecordKind,
 } from "@/shared/domain/care";
+import type { Routine } from "@/shared/domain/routine";
 import { MEMO_MAX, type Photo } from "@/shared/domain/record";
 import {
   formatShortDay,
@@ -33,8 +35,15 @@ import { PhotoViewer } from "@/shared/ui/photo-viewer";
 import { Sheet, SheetLabel } from "@/shared/ui/sheet";
 import { toast } from "@/shared/ui/toast";
 
-/** 기록 추가에서 고를 항목 순서 (Figma R03: 급여·체중·탈피·분무·청소·메모) */
-const ITEM_ORDER: CareItem[] = ["feeding", "weight", "shed", "misting", "cleaning", "memo"];
+type ItemOption = { value: string; label: string; kind: RecordKind };
+
+/** 항목 칩은 고른 개체의 체크 리스트(백엔드 항목) 순서대로, 마지막에 메모 (Figma R03) */
+function itemOptions(routines: Routine[] | undefined): ItemOption[] {
+  const fromRoutines = [...(routines ?? [])]
+    .sort(compareCareItems)
+    .map((r) => ({ value: r.careItem, label: r.careItemName, kind: r.recordKind }));
+  return [...fromRoutines, { value: MEMO_CODE, label: careItemLabel(MEMO_CODE), kind: "memo" }];
+}
 
 type When = { kind: "now" } | { kind: "yesterday" } | { kind: "date"; ymd: string };
 
@@ -49,15 +58,15 @@ export function AddRecordSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultPetId?: string;
-  /** 홈 '체중 재기' 제안 카드처럼 항목을 정해 두고 열 때 */
-  defaultItem?: CareItem;
+  /** 홈 '체중 재기' 제안 카드처럼 항목(코드)을 정해 두고 열 때 */
+  defaultItem?: string;
   /** 홈 지난 날짜에서 '+ 이날 기록 추가'로 열면 그 날짜 */
   defaultDate?: string;
 }) {
   const queryClient = useQueryClient();
   const { data: pets } = useQuery({ ...petQueries.list("active"), enabled: open });
   const [petId, setPetId] = useState<string | null>(null);
-  const [item, setItem] = useState<CareItem | null>(null);
+  const [item, setItem] = useState<string | null>(null);
   const [intake, setIntake] = useState<Intake | null>(null);
   const [weight, setWeight] = useState("");
   const [when, setWhen] = useState<When>({ kind: "now" });
@@ -86,7 +95,14 @@ export function AddRecordSheet({
   }
   // 개체가 한 마리면 자동으로 고른다
   const selectedPet = petId ?? (pets?.length === 1 ? pets[0]!.id : null);
-  const kind = item ? RECORD_KIND[item] : null;
+  const { data: routines } = useQuery({
+    ...routineQueries.list(selectedPet ?? ""),
+    enabled: open && Boolean(selectedPet),
+  });
+  const options = itemOptions(routines);
+  // 개체를 바꾸면 그 개체에 없는 항목은 고른 상태에서 빠진다
+  const selected = options.find((o) => o.value === item) ?? null;
+  const kind = selected?.kind ?? null;
   const weightValue = weight ? Number(weight) : null;
   const weightInvalid =
     kind === "weight" && (!weightValue || weightValue <= 0 || weightValue > 5000);
@@ -117,7 +133,7 @@ export function AddRecordSheet({
 
   const canSave =
     selectedPet &&
-    item &&
+    selected &&
     !weightInvalid &&
     !memoMissing &&
     !intakeMissing &&
@@ -157,11 +173,8 @@ export function AddRecordSheet({
         <SheetLabel>무엇을 기록할까요?</SheetLabel>
         <ChipGroup
           label="항목"
-          options={ITEM_ORDER.filter((i) => CARE_ITEMS.includes(i)).map((value) => ({
-            value,
-            label: CARE_ITEM_LABEL[value],
-          }))}
-          value={item}
+          options={options.map(({ value, label }) => ({ value, label }))}
+          value={selected?.value ?? null}
           onChange={setItem}
         />
         {kind === "intake" ? (

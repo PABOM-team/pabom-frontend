@@ -18,7 +18,7 @@ import { recordQueries, RecordRow } from "@/entities/record";
 import { SuggestionCard, TaskCard, todayQueries } from "@/entities/task";
 import { AddRecordSheet, EditRecordSheet } from "@/features/record-editor";
 import { useTaskActions } from "@/features/task-actions";
-import { CARE_ITEM_LABEL, type CareItem } from "@/shared/domain/care";
+import { isWeightItem, WEIGHT_CODE } from "@/shared/domain/care";
 import type { Pet } from "@/shared/domain/pet";
 import { isKnownStage } from "@/shared/domain/species";
 import type { CareRecord } from "@/shared/domain/record";
@@ -37,7 +37,7 @@ export function HomeScreen() {
   const [selected, setSelected] = useState(today);
   const [weekStart, setWeekStart] = useState(weekStartOf(today));
   const [petId, setPetId] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState<{ petId?: string; item?: CareItem } | null>(null);
+  const [addOpen, setAddOpen] = useState<{ petId?: string; item?: string } | null>(null);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
 
   const pets = useQuery(petQueries.list("active"));
@@ -47,7 +47,7 @@ export function HomeScreen() {
   // 단계를 모르는(잘 모르겠어요) 개체 중 오늘 체중을 아직 안 잰 개체 → '체중 재기' 제안 카드 (v1.2 H01)
   const weighedToday = new Set(
     (weekRecords.data?.items ?? [])
-      .filter((r) => r.careItem === "weight" && ymdOf(r.occurredAt) === today)
+      .filter((r) => isWeightItem(r.careItem) && ymdOf(r.occurredAt) === today)
       .map((r) => r.petId),
   );
   const stageUnknownPets = (pets.data ?? []).filter(
@@ -159,7 +159,7 @@ export function HomeScreen() {
             mode={mode}
             actions={actions}
             suggestions={mode === "today" ? stageUnknownPets : []}
-            onWeigh={(pet) => setAddOpen({ petId: pet.id, item: "weight" })}
+            onWeigh={(pet) => setAddOpen({ petId: pet.id, item: WEIGHT_CODE })}
           />
         )}
       </ScreenBody>
@@ -364,7 +364,7 @@ function PastDay({
           viewing ? (
             <>
               <p className="font-bold">
-                {viewing.petName} · {CARE_ITEM_LABEL[viewing.careItem]} ·{" "}
+                {viewing.petName} · {viewing.careItemName} ·{" "}
                 {formatDayLabel(ymdOf(viewing.occurredAt))}
               </p>
               {viewing.memo ? <p>{viewing.memo}</p> : null}

@@ -1,6 +1,5 @@
 import { addDays, parseISO } from "date-fns";
 import {
-  CARE_ITEM_CODE,
   invert,
   OUTCOME_CODE,
   SKIP_REASON_CODE,
@@ -17,12 +16,12 @@ import {
   type SkipReasonCode,
   type TodayStatus,
 } from "@/shared/domain/backend";
-import { CARE_ITEM_LABEL, INTAKE_LABEL, ROUTINE_LABEL, SKIP_REASONS } from "@/shared/domain/care";
+import { careItemLabel, INTAKE_LABEL, recordKindOf, SKIP_REASONS } from "@/shared/domain/care";
 import type { z } from "zod";
 import { lifeStageIdOf, petResponseSchema, toServerSex } from "@/shared/domain/pet";
 import { LIFE_STAGE_UNKNOWN_ID, SPECIES_LABEL } from "@/shared/domain/species";
 import type { Task } from "@/shared/domain/today";
-import { CARE_STANDARD_VERSION, intervalRange, MORPHS, RECORD_TYPE_CODE, serverIdOf } from "./data";
+import { CARE_STANDARD_VERSION, intervalRange, MORPHS, serverIdOf } from "./data";
 import { db, type DbPet, type DbRecord, type DbRoutine } from "./db";
 import {
   buildToday,
@@ -40,7 +39,6 @@ import {
  * 목업 모드와 라이브 모드가 같은 어댑터를 탄다.
  */
 
-export const CARE_ITEM_OF = invert(CARE_ITEM_CODE);
 export const INTAKE_OF = invert(OUTCOME_CODE);
 const SKIP_REASON_OF = invert(SKIP_REASON_CODE);
 
@@ -49,6 +47,28 @@ const SOURCE = { manual: "MANUAL", routine: "ROUTINE" } as const;
 
 /** 자정 기준 시각. 어댑터가 날짜만 꺼낸다 */
 const atMidnight = (ymd: string) => parseISO(`${ymd}T00:00:00`).toISOString();
+
+/** 백엔드처럼 꺼진 루틴은 다음 예정일·시작일을 비운다 */
+const nextDueAtOf = (routine: DbRoutine) =>
+  routine.enabled ? atMidnight(dueOf(routine).dueOn) : null;
+
+/** 기록의 항목 이름 (RecordResponse.itemName). 일정이 있으면 그 이름, 없으면 앱이 아는 이름 */
+function itemNameOf(record: DbRecord) {
+  const routine = record.routineId ? db.routines.find((r) => r.id === record.routineId) : null;
+  return careItemLabel(record.careItem, routine?.careItemName);
+}
+
+/** 급여형(먹은 정도) 기록인지. 일정의 recordType을 따르고, 직접 기록은 코드·값으로 짐작한다 */
+export function isIntakeRecord(record: DbRecord) {
+  const routine = record.routineId ? db.routines.find((r) => r.id === record.routineId) : null;
+  return (
+    recordKindOf({
+      code: record.careItem,
+      recordType: routine?.recordType,
+      outcome: record.intake,
+    }) === "intake"
+  );
+}
 
 // ── 개체 ──────────────────────────────────────────────────
 
@@ -99,8 +119,8 @@ export function wireRoutine(routine: DbRoutine): BackendPetRoutine {
   return {
     routineId: Number(routine.id),
     petId: Number(routine.petId),
-    careItemCode: CARE_ITEM_CODE[routine.careItem],
-    careItemName: ROUTINE_LABEL[routine.careItem],
+    careItemCode: routine.careItem,
+    careItemName: routine.careItemName,
     active: routine.enabled,
     intervalDays: routine.intervalDays,
     cycleSource:
@@ -108,10 +128,10 @@ export function wireRoutine(routine: DbRoutine): BackendPetRoutine {
     defaultCycleDays: routine.standardIntervalDays,
     ...intervalRange(routine.standardIntervalDays),
     isOutOfRange: false,
-    nextDueAt: atMidnight(dueOf(routine).dueOn),
-    startDate: routine.startDate,
+    nextDueAt: nextDueAtOf(routine),
+    startDate: routine.enabled ? routine.startDate : null,
     guidelineVersion: CARE_STANDARD_VERSION,
-    recordType: RECORD_TYPE_CODE[routine.careItem],
+    recordType: routine.recordType,
     description: `${SPECIES_LABEL[pet.speciesId]} · ${stageNameOf(pet)}`,
     foodName: routine.foodName,
   };
@@ -122,14 +142,14 @@ export function wireRoutineDetails(routine: DbRoutine): BackendRoutineDetails {
   return {
     id: Number(routine.id),
     petId: Number(routine.petId),
-    itemCode: CARE_ITEM_CODE[routine.careItem],
-    itemName: ROUTINE_LABEL[routine.careItem],
+    itemCode: routine.careItem,
+    itemName: routine.careItemName,
     intervalDays: routine.intervalDays,
     isEnabled: routine.enabled,
     cycleSource:
       routine.intervalDays === routine.standardIntervalDays ? "GUIDELINE" : "USER_CUSTOM",
-    startDate: routine.startDate,
-    nextDueAt: atMidnight(dueOf(routine).dueOn),
+    startDate: routine.enabled ? routine.startDate : null,
+    nextDueAt: nextDueAtOf(routine),
     versionLabel: CARE_STANDARD_VERSION,
     defaultCycleDays: routine.standardIntervalDays,
     ...intervalRange(routine.standardIntervalDays),
@@ -153,7 +173,7 @@ export function wireRecordLite(record: DbRecord): BackendRecordLite {
   return {
     id: Number(record.id),
     recordType: record.type === "done" ? "DONE" : "SKIPPED",
-    itemCode: CARE_ITEM_CODE[record.careItem],
+    itemCode: record.careItem,
     occurredAt: record.occurredAt,
     timePrecision: "EXACT",
     outcome: toOutcome(record),
@@ -168,7 +188,7 @@ export function wireRecordLite(record: DbRecord): BackendRecordLite {
 
 function todayStatusOf(task: Task): TodayStatus {
   if (task.state === "done") {
-    return task.careItem === "feeding" && !task.record?.intake ? "NEEDS_RESULT" : "DONE";
+    return task.recordKind === "intake" && !task.record?.intake ? "NEEDS_RESULT" : "DONE";
   }
   if (task.state === "skipped") return "SKIPPED";
   return task.overdueDays > 0 ? "OVERDUE" : "DUE";
@@ -178,13 +198,14 @@ function wireTask(task: Task): BackendTask {
   const record = task.record;
   return {
     routineId: Number(task.routineId),
-    itemCode: CARE_ITEM_CODE[task.careItem],
-    itemName: ROUTINE_LABEL[task.careItem],
+    itemCode: task.careItem,
+    itemName: task.careItemName,
     status: todayStatusOf(task),
     dueDate: task.dueOn,
-    overdueDays: task.overdueDays,
-    resultType: RECORD_TYPE_CODE[task.careItem],
-    unit: task.careItem === "weight" ? "g" : null,
+    // 백엔드는 지나지 않은 할 일의 overdueDays를 null로 준다
+    overdueDays: task.overdueDays > 0 ? task.overdueDays : null,
+    resultType: db.routines.find((r) => r.id === task.routineId)?.recordType ?? "OX",
+    unit: task.recordKind === "weight" ? "g" : null,
     lastRecord: record
       ? {
           recordId: Number(record.id),
@@ -282,8 +303,8 @@ export function wireRecord(record: DbRecord): BackendRecord {
     petId: Number(record.petId),
     petName: pet?.name ?? "",
     routineId: record.routineId ? Number(record.routineId) : null,
-    itemCode: CARE_ITEM_CODE[record.careItem],
-    itemName: CARE_ITEM_LABEL[record.careItem],
+    itemCode: record.careItem,
+    itemName: itemNameOf(record),
     recordType: skipped ? "SKIPPED" : "DONE",
     source: SOURCE[record.method],
     occurredAt: record.occurredAt,
@@ -324,14 +345,14 @@ export function wireRecordListItem(record: DbRecord): BackendRecordListItem {
     id: Number(record.id),
     petId: Number(record.petId),
     petName: pet?.name ?? "",
-    itemCode: CARE_ITEM_CODE[record.careItem],
-    itemName: CARE_ITEM_LABEL[record.careItem],
+    itemCode: record.careItem,
+    itemName: itemNameOf(record),
     recordType: skipped ? "SKIPPED" : "DONE",
     occurredAt: record.occurredAt,
     timePrecision: "EXACT",
     createdAt: record.createdAt,
     outcome: toOutcome(record),
-    needsResult: record.careItem === "feeding" && record.type === "done" && !record.intake,
+    needsResult: isIntakeRecord(record) && record.type === "done" && !record.intake,
     valueNum: record.weightG,
     unit: record.weightG === null ? null : "g",
     detailSummary: record.intake ? INTAKE_LABEL[record.intake] : "",

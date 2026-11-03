@@ -2,7 +2,7 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import { recordsApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { CARE_ITEM_LABEL, INTAKE_LABEL } from "@/shared/domain/care";
+import { INTAKE_LABEL } from "@/shared/domain/care";
 import type { CareRecord, RecordQuery } from "@/shared/domain/record";
 import { formatTime } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
@@ -30,9 +30,9 @@ export const recordQueries = {
 
 /** 급여 · 일부 먹음 / 체중 · 45.0 g / 메모 */
 export function describeRecord(
-  record: Pick<CareRecord, "careItem" | "intake" | "weightG" | "photos" | "type">,
+  record: Pick<CareRecord, "careItemName" | "intake" | "weightG" | "photos" | "type">,
 ) {
-  const parts: string[] = [CARE_ITEM_LABEL[record.careItem]];
+  const parts: string[] = [record.careItemName];
   if (record.type === "skipped") parts.push("건너뜀");
   if (record.intake) parts.push(INTAKE_LABEL[record.intake]);
   if (record.weightG) parts.push(`${record.weightG.toFixed(1)} g`);

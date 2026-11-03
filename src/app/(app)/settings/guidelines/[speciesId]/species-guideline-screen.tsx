@@ -5,13 +5,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useParams } from "next/navigation";
 import { Fragment } from "react";
 import { speciesQueries } from "@/entities/species";
-import {
-  CARE_DISCLAIMER,
-  formatInterval,
-  RECORD_KIND,
-  RECORD_KIND_LABEL,
-  ROUTINE_LABEL,
-} from "@/shared/domain/care";
+import { CARE_DISCLAIMER, formatInterval, RECORD_KIND_LABEL } from "@/shared/domain/care";
 import { speciesIdSchema } from "@/shared/domain/species";
 import { Skeleton, StateMessage } from "@/shared/ui/display";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
@@ -75,11 +69,16 @@ export function SpeciesGuidelineScreen() {
                       {rows.map((row, i) => (
                         <tr key={row.careItem} className="border-b border-border">
                           <td className="px-1.5 py-2.5">{i === 0 ? stage.name : ""}</td>
-                          <td className="px-1.5 py-2.5">{ROUTINE_LABEL[row.careItem]}</td>
-                          <td className="px-1.5 py-2.5">{formatInterval(row.intervalDays)}</td>
                           <td className="px-1.5 py-2.5">
-                            {RECORD_KIND_LABEL[RECORD_KIND[row.careItem]]}
+                            {row.careItemName}
+                            {row.defaultEnabled ? null : (
+                              <span className="block text-body-md text-muted-foreground">
+                                기본 꺼짐
+                              </span>
+                            )}
                           </td>
+                          <td className="px-1.5 py-2.5">{formatInterval(row.intervalDays)}</td>
+                          <td className="px-1.5 py-2.5">{RECORD_KIND_LABEL[row.recordKind]}</td>
                         </tr>
                       ))}
                     </Fragment>

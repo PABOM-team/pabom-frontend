@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { intakeSchema, routineCareItemSchema } from "./care";
+import { intakeSchema, recordKindSchema } from "./care";
 
 export const taskStateSchema = z.enum(["todo", "done", "skipped", "planned"]);
 export type TaskState = z.infer<typeof taskStateSchema>;
@@ -9,7 +9,10 @@ export const taskSchema = z.object({
   routineId: z.string(),
   petId: z.string(),
   petName: z.string(),
-  careItem: routineCareItemSchema,
+  /** 백엔드 관리 항목 코드 */
+  careItem: z.string(),
+  careItemName: z.string(),
+  recordKind: recordKindSchema,
   title: z.string(),
   /** N일마다. 백엔드 오늘 할 일 응답(Task)에는 아직 없어 null일 수 있다 [백엔드 요청] */
   intervalDays: z.number().int().nullable(),

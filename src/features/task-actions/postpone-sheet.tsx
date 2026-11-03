@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CARE_ITEM_LABEL, SKIP_REASONS } from "@/shared/domain/care";
+import { SKIP_REASONS } from "@/shared/domain/care";
 import type { Task } from "@/shared/domain/today";
 import { addDays, formatShortDay, toYmd } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
@@ -52,7 +52,7 @@ export function PostponeSheet({
         title="다른 날로 미루기"
         description={
           current && !already
-            ? `${current.petName} · ${CARE_ITEM_LABEL[current.careItem]} · 할 일을 고른 날짜로 옮겨요. 기록은 남지 않아요.`
+            ? `${current.petName} · ${current.careItemName} · 할 일을 고른 날짜로 옮겨요. 기록은 남지 않아요.`
             : undefined
         }
         footer={
@@ -72,7 +72,7 @@ export function PostponeSheet({
               {formatShortDay(already.dueOn)}
             </InfoBox>
             <p className="mb-3 text-body-lg text-secondary-text">
-              {already.petName} · {CARE_ITEM_LABEL[already.careItem]} · 한 번 더 미룰 수 있어요.
+              {already.petName} · {already.careItemName} · 한 번 더 미룰 수 있어요.
             </p>
           </>
         ) : null}
@@ -140,7 +140,7 @@ export function SkipSheet({
       title="이번엔 건너뛰기"
       description={
         current
-          ? `${current.petName} · ${CARE_ITEM_LABEL[current.careItem]} · 이번 회차를 하지 않기로 기록해요. 다음 예정일은 주기대로 다시 계산돼요.`
+          ? `${current.petName} · ${current.careItemName} · 이번 회차를 하지 않기로 기록해요. 다음 예정일은 주기대로 다시 계산돼요.`
           : undefined
       }
       footer={

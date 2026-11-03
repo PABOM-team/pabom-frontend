@@ -11,6 +11,7 @@ import { petsApi, recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
 import { isPetPhotoDisabled, isRoutineDetached } from "@/shared/config/env";
+import { WEIGHT_CODE } from "@/shared/domain/care";
 import {
   morphFields,
   serverFileId,
@@ -129,7 +130,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
         await recordsApi
           .create({
             petId: pet.id,
-            careItem: "weight",
+            careItem: WEIGHT_CODE,
             occurredAt: nowIso(),
             weightG: draft.weightG,
           })

@@ -8,13 +8,7 @@ import { recordQueries } from "@/entities/record";
 import { recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import {
-  CARE_ITEM_LABEL,
-  INTAKE_LABEL,
-  INTAKES,
-  RECORD_KIND,
-  type Intake,
-} from "@/shared/domain/care";
+import { INTAKE_LABEL, INTAKES, type Intake } from "@/shared/domain/care";
 import { MEMO_MAX, type CareRecord, type Photo } from "@/shared/domain/record";
 import { formatDayLabel } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
@@ -76,7 +70,7 @@ export function EditRecordSheet({
     setDraft(toDraft(record));
   }
 
-  const kind = record ? RECORD_KIND[record.careItem] : null;
+  const kind = record?.recordKind ?? null;
   const original = record ? toDraft(record) : null;
   const dirty = Boolean(draft && original && JSON.stringify(draft) !== JSON.stringify(original));
   const weightValue = draft?.weight ? Number(draft.weight) : null;
@@ -111,7 +105,7 @@ export function EditRecordSheet({
   });
 
   const title = record
-    ? `${record.petName} · ${CARE_ITEM_LABEL[record.careItem]} · ${formatDayLabel(format(parseISO(record.occurredAt), "yyyy-MM-dd"))}`
+    ? `${record.petName} · ${record.careItemName} · ${formatDayLabel(format(parseISO(record.occurredAt), "yyyy-MM-dd"))}`
     : "기록";
 
   return (

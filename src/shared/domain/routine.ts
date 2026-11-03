@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, isAfter, isBefore, startOfDay } from "date-fns";
 import { z } from "zod";
-import { routineCareItemSchema } from "./care";
+import { recordKindSchema } from "./care";
 import { careLabelSchema } from "./species";
 
 export const ROUTINE_INTERVAL_MIN = 1;
@@ -10,17 +10,22 @@ export const ROUTINE_INTERVAL_MAX = 365;
 export const routineSchema = z.object({
   id: z.string(),
   petId: z.string(),
-  careItem: routineCareItemSchema,
+  /** 백엔드 관리 항목 코드 (FEED·MIST·WEIGHT·…) */
+  careItem: z.string(),
+  /** 백엔드가 주는 항목 이름 (급여·탈피 확인·습식 은신처 적시기·…) */
+  careItemName: z.string(),
+  recordKind: recordKindSchema,
   /** N일마다 반복 */
   intervalDays: z.number().int().min(ROUTINE_INTERVAL_MIN).max(ROUTINE_INTERVAL_MAX),
   /** 기준표 값. 바꾸면 customized가 켜진다 */
   standardIntervalDays: z.number().int().min(1),
   customized: z.boolean(),
   enabled: z.boolean(),
-  startDate: z.iso.date(),
+  /** 꺼진 일정은 시작일·다음 예정일이 없다 */
+  startDate: z.iso.date().nullable(),
   /** 급여일 때 먹이 이름 */
   foodName: z.string().nullable(),
-  nextDueOn: z.iso.date(),
+  nextDueOn: z.iso.date().nullable(),
   /** 미룬 날짜. 미루기 전 예정일은 originalDueOn */
   postponedTo: z.iso.date().nullable(),
   originalDueOn: z.iso.date().nullable(),
@@ -50,7 +55,7 @@ export function getOccurrences(
   from: Date,
   to: Date,
 ): Date[] {
-  if (!routine.enabled) return [];
+  if (!routine.enabled || !routine.startDate) return [];
 
   const start = startOfDay(new Date(`${routine.startDate}T00:00:00`));
   const rangeStart = startOfDay(from);

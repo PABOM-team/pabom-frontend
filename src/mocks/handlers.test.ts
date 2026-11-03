@@ -111,13 +111,15 @@ describe("목업 API", () => {
     const todo = today.items.filter((t) => t.state === "todo");
     expect(todo[0]).toMatchObject({
       petName: "콩이",
-      careItem: "misting",
+      careItem: "MIST",
+      careItemName: "분무",
+      recordKind: "check",
       overdueDays: 1,
       intervalDays: 1,
     });
 
     const result = await routinesApi.complete(todo[0]!.routineId, {});
-    expect(result.record).toMatchObject({ careItem: "misting", type: "done" });
+    expect(result.record).toMatchObject({ careItem: "MIST", type: "done" });
     expect(result.routine.nextDueOn).toBeTruthy();
     const after = await todayApi.get(todayYmd());
     expect(after.items.find((t) => t.routineId === todo[0]!.routineId)).toMatchObject({
@@ -134,7 +136,7 @@ describe("목업 API", () => {
   it("같은 날 두 번 체크하면 409로 막는다", async () => {
     await login("kakao");
     const { items } = await todayApi.get(todayYmd());
-    const feeding = items.find((t) => t.careItem === "feeding" && t.state === "todo")!;
+    const feeding = items.find((t) => t.careItem === "FEED" && t.state === "todo")!;
     await routinesApi.complete(feeding.routineId, { intake: "all" });
     await expect(routinesApi.complete(feeding.routineId, {})).rejects.toMatchObject({
       response: { status: 409 },
@@ -172,28 +174,154 @@ describe("목업 API", () => {
     );
   });
 
-  it("체크 리스트는 백엔드 루틴 모양(careItemCode·active·defaultCycleDays)을 앱 일정으로 바꾸고, 수정·초기화한다", async () => {
+  it("체크 리스트는 백엔드 루틴 모양(careItemCode·careItemName·recordType·active)을 앱 일정으로 바꾸고, 수정·초기화한다", async () => {
     await login("kakao");
     const routines = await routinesApi.list(KONG);
-    const feeding = routines.find((r) => r.careItem === "feeding")!;
+    // 크레스티드 게코 기본 항목 8개. 기본 꺼짐 항목(FEED_INSECT·UVB_LAMP)은 꺼진 채로 온다
+    expect(routines.map((r) => [r.careItem, r.enabled])).toEqual([
+      ["CLEAN", true],
+      ["FEED", true],
+      ["FEED_INSECT", false],
+      ["MIST", true],
+      ["SHED_CHECK", true],
+      ["UVB_LAMP", false],
+      ["WATER", true],
+      ["WEIGHT", true],
+    ]);
+    const feeding = routines.find((r) => r.careItem === "FEED")!;
     expect(feeding).toMatchObject({
       petId: KONG,
-      intervalDays: 2,
-      standardIntervalDays: 2,
+      careItemName: "급여",
+      recordKind: "intake",
+      intervalDays: 1,
+      standardIntervalDays: 1,
       customized: false,
       enabled: true,
       foodName: "인공 사료",
-      basis: { condition: "크레스티드 게코 · 어린 개체", version: "v0.1" },
+      basis: { condition: "크레스티드 게코 · 어린 개체", version: "1.2" },
+    });
+    // 꺼진 루틴은 nextDueAt·startDate가 null로 와도 깨지지 않는다
+    expect(routines.find((r) => r.careItem === "UVB_LAMP")).toMatchObject({
+      careItemName: "UVB 램프 교체",
+      recordKind: "check",
+      nextDueOn: null,
+      startDate: null,
     });
 
     const updated = await routinesApi.update(feeding.id, { intervalDays: 5, enabled: false });
-    expect(updated).toMatchObject({ intervalDays: 5, customized: true, enabled: false });
+    expect(updated).toMatchObject({
+      intervalDays: 5,
+      customized: true,
+      enabled: false,
+      careItemName: "급여",
+      recordKind: "intake",
+      nextDueOn: null,
+    });
     await expect(routinesApi.update(feeding.id, { intervalDays: 400 })).rejects.toMatchObject({
       response: { status: 400 },
     });
 
     const reset = await routinesApi.reset(feeding.id);
-    expect(reset).toMatchObject({ intervalDays: 2, customized: false });
+    expect(reset).toMatchObject({ intervalDays: 1, customized: false });
+  });
+
+  it("모르는 관리 항목 코드도 백엔드 이름·기록 방식 그대로 일정·오늘 할 일·기록으로 흘러간다", async () => {
+    const routine = {
+      routineId: 77,
+      petId: 12,
+      careItemCode: "NEW_ITEM",
+      careItemName: "새 항목",
+      active: true,
+      intervalDays: 2,
+      cycleSource: "GUIDELINE",
+      defaultCycleDays: 2,
+      minDays: 1,
+      maxDays: 4,
+      isOutOfRange: false,
+      nextDueAt: "2026-11-03T12:00:00+09:00",
+      startDate: "2026-11-03",
+      guidelineVersion: "1.2",
+      recordType: "OX",
+      description: null,
+    };
+    server.use(
+      http.get(`${apiBaseUrl}/pets/12/routines`, () => envelope([routine])),
+      http.get(`${apiBaseUrl}/today`, () =>
+        envelope({
+          date: "2026-11-03",
+          summary: null,
+          emptyReason: null,
+          nextUpcoming: null,
+          pets: [
+            {
+              petId: 12,
+              name: "모치",
+              tasks: [
+                {
+                  routineId: 77,
+                  itemCode: "NEW_ITEM",
+                  itemName: "새 항목",
+                  status: "DUE",
+                  dueDate: "2026-11-03",
+                  overdueDays: null,
+                  resultType: "OX",
+                  unit: null,
+                  lastRecord: null,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+      http.get(`${apiBaseUrl}/records`, () =>
+        envelope({
+          items: [
+            {
+              id: 5,
+              petId: 12,
+              petName: "모치",
+              itemCode: "NEW_ITEM",
+              itemName: "새 항목",
+              recordType: "DONE",
+              occurredAt: "2026-11-03T09:00:00+09:00",
+              timePrecision: "EXACT",
+              createdAt: "2026-11-03T09:00:00+09:00",
+              outcome: null,
+              needsResult: false,
+              valueNum: null,
+              unit: null,
+              detailSummary: null,
+              memoPreview: null,
+              reasonCode: null,
+              hasPhoto: false,
+              isEdited: false,
+              source: "ROUTINE",
+              deletedAt: null,
+            },
+          ],
+          nextCursor: null,
+          lastFeeding: null,
+        }),
+      ),
+    );
+    await login("google");
+    expect(await routinesApi.list("12")).toMatchObject([
+      { careItem: "NEW_ITEM", careItemName: "새 항목", recordKind: "check" },
+    ]);
+    const today = await todayApi.get("2026-11-03");
+    expect(today.items).toMatchObject([
+      {
+        careItem: "NEW_ITEM",
+        careItemName: "새 항목",
+        title: "새 항목",
+        recordKind: "check",
+        overdueDays: 0,
+      },
+    ]);
+    const { items } = await recordsApi.list({ petId: "12" });
+    expect(items).toMatchObject([
+      { careItem: "NEW_ITEM", careItemName: "새 항목", recordKind: "check", weightG: null },
+    ]);
   });
 
   // ── 종·가이드라인 ───────────────────────────────────────
@@ -209,15 +337,33 @@ describe("목업 API", () => {
     await expect(speciesApi.morphs(999)).rejects.toMatchObject({ response: { status: 404 } });
   });
 
-  it("관리 가이드라인은 백엔드 종 ID로 부르고 어린 개체·성체 기준표로 바꾼다", async () => {
+  it("관리 가이드라인은 백엔드 종 ID로 부르고, 종의 모든 항목을 어린 개체·성체 기준표로 바꾼다", async () => {
     const table = await speciesApi.careStandards("leopard_gecko");
-    expect(table).toMatchObject({ speciesId: "leopard_gecko", version: "v0.1", isDraft: false });
-    expect(table.standards.map((s) => s.lifeStageCode)).not.toContain("hatchling");
+    expect(table).toMatchObject({ speciesId: "leopard_gecko", version: "1.2", isDraft: false });
+    // UNKNOWN 단계(어린 개체 기준 적용)는 표에서 뺀다
+    expect([...new Set(table.standards.map((s) => s.lifeStageCode))]).toEqual([
+      "juvenile",
+      "adult",
+    ]);
     expect(
-      table.standards.find((s) => s.lifeStageCode === "adult" && s.careItem === "feeding"),
-    ).toMatchObject({ intervalDays: 3, label: "reference" });
+      table.standards.find((s) => s.lifeStageCode === "adult" && s.careItem === "FEED"),
+    ).toMatchObject({
+      careItemName: "급여",
+      recordKind: "intake",
+      intervalDays: 3,
+      defaultEnabled: true,
+      label: "reference",
+    });
+    expect(
+      table.standards.find((s) => s.lifeStageCode === "juvenile" && s.careItem === "HUMID_HIDE"),
+    ).toMatchObject({ careItemName: "습식 은신처 적시기", recordKind: "check", intervalDays: 3 });
+    expect(
+      table.standards.find((s) => s.lifeStageCode === "adult" && s.careItem === "UVB_LAMP"),
+    ).toMatchObject({ defaultEnabled: false });
     // 레오파드 게코는 분무 일정이 없다
-    expect(table.standards.some((s) => s.careItem === "misting")).toBe(false);
+    expect(table.standards.some((s) => s.careItem === "MIST")).toBe(false);
+    // 출처는 쉼표로 나눠 한 번씩만
+    expect(table.references.map((r) => r.title)).toEqual(["RSPCA", "RVC"]);
   });
 
   it("공개 API에는 access 토큰을 싣지 않는다", async () => {
@@ -264,7 +410,7 @@ describe("목업 API", () => {
     const detail = await petsApi.get(pet.id);
     expect(detail.pet).toEqual(pet);
     // 목업은 등록 때 기준표대로 체크 리스트를 만든다
-    expect(detail.routines.map((r) => r.careItem)).toContain("feeding");
+    expect(detail.routines.map((r) => r.careItem)).toContain("FEED");
   });
 
   it("개체 상세는 개체·체크 리스트·최근 기록을 따로 불러 합친다", async () => {
@@ -399,8 +545,13 @@ describe("목업 API", () => {
     const many = await recordsApi.list({ petId: KONG, limit: 80 });
     expect(many.items.length).toBeGreaterThan(50);
 
-    const weights = await recordsApi.list({ petId: KONG, careItem: "weight", limit: 50 });
-    expect(weights.items.every((r) => r.careItem === "weight" && r.weightG !== null)).toBe(true);
+    const weights = await recordsApi.list({ petId: KONG, careItem: "WEIGHT", limit: 50 });
+    expect(weights.items.length).toBeGreaterThan(0);
+    expect(
+      weights.items.every(
+        (r) => r.careItem === "WEIGHT" && r.careItemName === "체중" && r.weightG !== null,
+      ),
+    ).toBe(true);
   });
 
   it("직접 기록은 itemCode·outcome·photoFileId로 보내고, 사진은 한 장만 싣는다", async () => {
@@ -411,7 +562,7 @@ describe("목업 API", () => {
 
     const record = await recordsApi.create({
       petId: KONG,
-      careItem: "feeding",
+      careItem: "FEED",
       occurredAt: new Date().toISOString(),
       intake: "partial",
       memo: "조금 남겼어요",
@@ -420,7 +571,9 @@ describe("목업 API", () => {
     expect(record).toMatchObject({
       petId: KONG,
       petName: "콩이",
-      careItem: "feeding",
+      careItem: "FEED",
+      careItemName: "급여",
+      recordKind: "intake",
       type: "done",
       method: "manual",
       intake: "partial",
@@ -436,15 +589,23 @@ describe("목업 API", () => {
     await expect(
       recordsApi.create({
         petId: KONG,
-        careItem: "memo",
+        careItem: "MEMO",
         occurredAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }),
+    ).rejects.toMatchObject({ response: { status: 422 } });
+    // 종에 없는 항목은 422 (CARE_ITEM_INVALID)
+    await expect(
+      recordsApi.create({
+        petId: KONG,
+        careItem: "HUMID_HIDE",
+        occurredAt: new Date().toISOString(),
       }),
     ).rejects.toMatchObject({ response: { status: 422 } });
   });
 
   it("정정은 revisionNo로 낙관적 잠금을 하고 정정 이력을 남긴다", async () => {
     await login("kakao");
-    const { items } = await recordsApi.list({ petId: KONG, careItem: "feeding", limit: 1 });
+    const { items } = await recordsApi.list({ petId: KONG, careItem: "FEED", limit: 1 });
     const detail = await recordsApi.get(items[0]!.id);
     expect(detail.revisionNo).toBe(1);
 

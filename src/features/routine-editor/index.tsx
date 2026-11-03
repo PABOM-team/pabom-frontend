@@ -6,7 +6,7 @@ import { routineSummary } from "@/entities/routine";
 import { routinesApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import { RECORD_KIND, RECORD_KIND_HINT, ROUTINE_LABEL } from "@/shared/domain/care";
+import { isFeedItem, RECORD_KIND_HINT } from "@/shared/domain/care";
 import { ROUTINE_INTERVAL_MAX, ROUTINE_INTERVAL_MIN, type Routine } from "@/shared/domain/routine";
 import { Button } from "@/shared/ui/button";
 import { Badge, InfoBox } from "@/shared/ui/display";
@@ -24,7 +24,7 @@ function useRoutineMutation() {
 /** 체크 리스트 한 줄 (SCR-P03): 항목·주기·기록 방식 · 수정 · 켜기/끄기 */
 export function RoutineRow({ routine, onEdit }: { routine: Routine; onEdit: () => void }) {
   const { refresh } = useRoutineMutation();
-  const label = ROUTINE_LABEL[routine.careItem];
+  const label = routine.careItemName;
   const toggle = useMutation({
     mutationFn: (enabled: boolean) => routinesApi.update(routine.id, { enabled }),
     // 켜고 끈 결과는 스위치로 보이니 토스트는 실패할 때만 (C3-4)
@@ -72,7 +72,8 @@ export function RoutineEditSheet({
     setFood(routine.foodName ?? "");
   }
   const current = routine ?? shown;
-  const label = current ? ROUTINE_LABEL[current.careItem] : "";
+  const label = current?.careItemName ?? "";
+  const feed = current ? isFeedItem(current.recordKind) : false;
   const days = Number(intervalText);
   const invalid =
     !Number.isInteger(days) || days < ROUTINE_INTERVAL_MIN || days > ROUTINE_INTERVAL_MAX;
@@ -81,7 +82,7 @@ export function RoutineEditSheet({
     mutationFn: () =>
       routinesApi.update(current!.id, {
         intervalDays: days,
-        foodName: current!.careItem === "feeding" ? food.trim() || null : undefined,
+        foodName: feed ? food.trim() || null : undefined,
       }),
     onSuccess: () => onOpenChange(false),
     onError: (error) => toast(getErrorMessage(error, "저장하지 못했어요.")),
@@ -111,7 +112,7 @@ export function RoutineEditSheet({
         aria-invalid={(intervalText !== "" && invalid) || undefined}
         onChange={(e) => setIntervalText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
       />
-      {current?.careItem === "feeding" ? (
+      {feed ? (
         <>
           <SheetLabel>
             <label htmlFor="routine-food">먹이 이름</label>
@@ -126,9 +127,7 @@ export function RoutineEditSheet({
         </>
       ) : null}
       {current ? (
-        <InfoBox className="mt-4">
-          기록 방식 · {RECORD_KIND_HINT[RECORD_KIND[current.careItem]]}
-        </InfoBox>
+        <InfoBox className="mt-4">기록 방식 · {RECORD_KIND_HINT[current.recordKind]}</InfoBox>
       ) : null}
     </Sheet>
   );

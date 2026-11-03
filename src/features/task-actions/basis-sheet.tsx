@@ -7,6 +7,7 @@ import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
 import { CARE_DISCLAIMER, formatInterval } from "@/shared/domain/care";
+import { EVIDENCE_LEVEL_LABEL } from "@/shared/domain/species";
 import type { Task } from "@/shared/domain/today";
 import { cn } from "@/shared/lib/utils";
 import { InfoBox } from "@/shared/ui/display";
@@ -96,8 +97,15 @@ export function BasisSheet({
         {/* 펼치면 근거 수준·출처(있을 때)와 종 가이드라인(S04-3) 링크 (Figma H04 펼침, v1.2 5-1) */}
         {expanded ? (
           <div className="space-y-1.5 px-3.5 pb-3.5 text-body-lg">
-            {/* [백엔드 확인 필요] 근거 수준(교재 근거·수의 기관 자료·팀 판단)과 출처는 루틴 응답에 아직 없다 */}
-            {routine?.basis.sourceText ? (
+            {/* 근거 수준(교재 근거·수의 기관 자료·팀 판단)과 출처는 종 가이드라인 항목에서 가져온다 (v1.2 5-1) */}
+            {standard?.evidenceLevel ? (
+              <p className="text-secondary-text">
+                근거 수준 · {EVIDENCE_LEVEL_LABEL[standard.evidenceLevel]}
+              </p>
+            ) : null}
+            {standard?.sourceRefs ? (
+              <p className="text-secondary-text">출처 · {standard.sourceRefs}</p>
+            ) : routine?.basis.sourceText ? (
               <p className="text-secondary-text">{routine.basis.sourceText}</p>
             ) : null}
             {detail ? (

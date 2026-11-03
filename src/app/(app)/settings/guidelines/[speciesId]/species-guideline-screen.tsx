@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { Fragment } from "react";
 import { speciesQueries } from "@/entities/species";
 import { CARE_DISCLAIMER, formatInterval, RECORD_KIND_LABEL } from "@/shared/domain/care";
-import { speciesIdSchema } from "@/shared/domain/species";
+import { EVIDENCE_LEVEL_LABEL, speciesIdSchema } from "@/shared/domain/species";
 import { Skeleton, StateMessage } from "@/shared/ui/display";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { TopBar } from "@/shared/ui/top-bar";
@@ -48,7 +48,7 @@ export function SpeciesGuidelineScreen() {
         ) : (
           <>
             <p className="text-body-md text-muted-foreground">
-              가이드라인 v{table.data.version}
+              관리 가이드라인 v{table.data.version}
               {table.data.effectiveFrom ? ` · ${table.data.effectiveFrom} 적용` : ""}
               {table.data.isDraft ? " (예시)" : ""}
             </p>
@@ -59,6 +59,7 @@ export function SpeciesGuidelineScreen() {
                   <th className="px-1.5 py-2 font-normal">항목</th>
                   <th className="px-1.5 py-2 font-normal">주기</th>
                   <th className="px-1.5 py-2 font-normal">기록</th>
+                  <th className="px-1.5 py-2 font-normal">근거</th>
                 </tr>
               </thead>
               <tbody>
@@ -79,6 +80,9 @@ export function SpeciesGuidelineScreen() {
                           </td>
                           <td className="px-1.5 py-2.5">{formatInterval(row.intervalDays)}</td>
                           <td className="px-1.5 py-2.5">{RECORD_KIND_LABEL[row.recordKind]}</td>
+                          <td className="px-1.5 py-2.5 text-body-md text-secondary-text">
+                            {row.evidenceLevel ? EVIDENCE_LEVEL_LABEL[row.evidenceLevel] : "-"}
+                          </td>
                         </tr>
                       ))}
                     </Fragment>
@@ -86,7 +90,15 @@ export function SpeciesGuidelineScreen() {
                 })}
               </tbody>
             </table>
+            {/* 성체로 보는 기준 (v1.2 명세 S04): 참고 체중·최소 나이는 프론트 상수 [백엔드 확인 필요] */}
             <div className="mt-4 rounded-lg bg-muted p-3.5 text-body-md">
+              <p className="font-bold">성체로 보는 기준</p>
+              <p className="mt-1 leading-relaxed text-secondary-text">
+                체중이 더 늘지 않거나 {species.adultWeightG}g을 넘으면 다 자란 것으로 봐요.{" "}
+                {species.adultCheckMinAgeMonths}개월 전에는 묻지 않아요.
+              </p>
+            </div>
+            <div className="mt-3 rounded-lg bg-muted p-3.5 text-body-md">
               <p className="font-bold">이렇게 만들었어요</p>
               {table.data.references.map((ref) => (
                 <p key={ref.title} className="mt-1 flex items-center gap-1 text-secondary-text">

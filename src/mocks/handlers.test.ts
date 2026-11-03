@@ -366,6 +366,17 @@ describe("목업 API", () => {
     expect(table.references.map((r) => r.title)).toEqual(["RSPCA", "RVC"]);
   });
 
+  it("급여 항목은 먹이 묶음을 싣는다: 크레 인공 사료는 DIET, 레오 급여·크레 곤충 급여는 INSECT", async () => {
+    const crested = await speciesApi.careStandards("crested_gecko");
+    const leopard = await speciesApi.careStandards("leopard_gecko");
+    const feedOf = (standards: typeof crested.standards, careItem: string) =>
+      standards.find((s) => s.lifeStageCode === "adult" && s.careItem === careItem)?.feedResultSet;
+    expect(feedOf(crested.standards, "FEED")).toBe("DIET");
+    expect(feedOf(crested.standards, "FEED_INSECT")).toBe("INSECT");
+    expect(feedOf(leopard.standards, "FEED")).toBe("INSECT");
+    expect(feedOf(leopard.standards, "WEIGHT")).toBeNull();
+  });
+
   it("공개 API에는 access 토큰을 싣지 않는다", async () => {
     let authorization: string | null = "unset";
     server.use(
@@ -602,6 +613,24 @@ describe("목업 API", () => {
         occurredAt: new Date().toISOString(),
       }),
     ).rejects.toMatchObject({ response: { status: 422 } });
+  });
+
+  it("완료 체크·직접 기록은 먹은 정도 네 값(all·partial·none·unobserved)을 모두 받는다", async () => {
+    await login("kakao");
+    const today = await todayApi.get(todayYmd());
+    const feed = today.items.find((t) => t.petId === KONG && t.careItem === "FEED");
+    if (!feed) throw new Error("콩이의 급여 할 일이 있어야 한다");
+    const done = await routinesApi.complete(feed.routineId, { intake: "unobserved" });
+    expect(done.record.intake).toBe("unobserved");
+    for (const intake of ["all", "partial", "none", "unobserved"] as const) {
+      const record = await recordsApi.create({
+        petId: KONG,
+        careItem: "FEED",
+        occurredAt: new Date(Date.now() - 60_000).toISOString(),
+        intake,
+      });
+      expect(record.intake).toBe(intake);
+    }
   });
 
   it("정정은 revisionNo로 낙관적 잠금을 하고 정정 이력을 남긴다", async () => {

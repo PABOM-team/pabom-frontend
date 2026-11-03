@@ -15,12 +15,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { recordQueries, RecordRow } from "@/entities/record";
+import { useFeedResultSetResolver } from "@/entities/species";
 import { SuggestionCard, TaskCard, todayQueries } from "@/entities/task";
 import { AddRecordSheet, EditRecordSheet } from "@/features/record-editor";
 import { useTaskActions } from "@/features/task-actions";
 import { isWeightItem, WEIGHT_CODE } from "@/shared/domain/care";
 import type { Pet } from "@/shared/domain/pet";
-import { isKnownStage } from "@/shared/domain/species";
+import { isKnownStage, type FeedResultSet, type SpeciesId } from "@/shared/domain/species";
 import type { CareRecord } from "@/shared/domain/record";
 import { formatDayLabel, fromYmd, toYmd, todayYmd, ymdOf } from "@/shared/lib/date";
 import { LoadError, Skeleton } from "@/shared/ui/display";
@@ -29,6 +30,9 @@ import { ScreenBody } from "@/shared/ui/screen";
 import { PetFilterRow, WeekStrip } from "./week-strip";
 
 const weekStartOf = (ymd: string) => toYmd(startOfWeek(fromYmd(ymd), { weekStartsOn: 0 }));
+
+/** (개체, 항목) → 급여 먹이 묶음. 먹은 정도 이름을 묶음에 맞춰 보여 주려고 */
+type FeedResultSetFor = (petId: string, careItem: string) => FeedResultSet | null;
 
 /** SCR-H01 오늘 할 일(홈). 지난 날은 기록, 앞 날은 예정된 할 일 (IA 5번 C안) */
 export function HomeScreen() {
@@ -41,6 +45,12 @@ export function HomeScreen() {
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
 
   const pets = useQuery(petQueries.list("active"));
+  const resolveFeedResultSet = useFeedResultSetResolver();
+  const speciesOfPet = new Map<string, SpeciesId>(
+    (pets.data ?? []).map((p) => [p.id, p.speciesId]),
+  );
+  const feedResultSetFor: FeedResultSetFor = (petId, careItem) =>
+    resolveFeedResultSet(speciesOfPet.get(petId), careItem);
   const weekEnd = toYmd(addDays(fromYmd(weekStart), 6));
   const weekRecords = useQuery(recordQueries.list({ from: weekStart, to: weekEnd, limit: 200 }));
   const marked = new Set((weekRecords.data?.items ?? []).map((r) => ymdOf(r.occurredAt)));
@@ -149,6 +159,7 @@ export function HomeScreen() {
           <PastDay
             date={selected}
             petId={petId}
+            feedResultSetFor={feedResultSetFor}
             onEdit={setEditRecordId}
             onAdd={() => setAddOpen({ petId: petId ?? undefined })}
           />
@@ -158,6 +169,7 @@ export function HomeScreen() {
             petId={petId}
             mode={mode}
             actions={actions}
+            feedResultSetFor={feedResultSetFor}
             suggestions={mode === "today" ? stageUnknownPets : []}
             onWeigh={(pet) => setAddOpen({ petId: pet.id, item: WEIGHT_CODE })}
           />
@@ -196,6 +208,7 @@ function TaskList({
   petId,
   mode,
   actions,
+  feedResultSetFor,
   suggestions,
   onWeigh,
 }: {
@@ -203,6 +216,7 @@ function TaskList({
   petId: string | null;
   mode: "today" | "future";
   actions: ReturnType<typeof useTaskActions>;
+  feedResultSetFor: FeedResultSetFor;
   /** 단계를 모르는 개체: '체중 재기' 제안 카드 */
   suggestions: Pet[];
   onWeigh: (pet: Pet) => void;
@@ -225,6 +239,7 @@ function TaskList({
           <TaskCard
             key={task.routineId}
             task={task}
+            feedResultSet={feedResultSetFor(task.petId, task.careItem)}
             onOpen={() => actions.openBasis(task)}
             menu={actions.menuFor(task)}
           />
@@ -265,6 +280,7 @@ function TaskList({
         <TaskCard
           key={task.routineId}
           task={task}
+          feedResultSet={feedResultSetFor(task.petId, task.careItem)}
           checking={actions.checkingId === task.routineId}
           onCheck={() => actions.check(task)}
           onOpen={() => actions.openBasis(task)}
@@ -301,6 +317,7 @@ function TaskList({
                 <TaskCard
                   key={task.routineId}
                   task={task}
+                  feedResultSet={feedResultSetFor(task.petId, task.careItem)}
                   onOpen={() => actions.openBasis(task)}
                   menu={actions.menuFor(task)}
                 />
@@ -316,11 +333,13 @@ function TaskList({
 function PastDay({
   date,
   petId,
+  feedResultSetFor,
   onEdit,
   onAdd,
 }: {
   date: string;
   petId: string | null;
+  feedResultSetFor: FeedResultSetFor;
   onEdit: (recordId: string) => void;
   onAdd: () => void;
 }) {
@@ -342,6 +361,7 @@ function PastDay({
           key={record.id}
           record={record}
           variant="day"
+          feedResultSet={feedResultSetFor(record.petId, record.careItem)}
           onClick={() => onEdit(record.id)}
           onPhotoClick={() => setViewing(record)}
         />

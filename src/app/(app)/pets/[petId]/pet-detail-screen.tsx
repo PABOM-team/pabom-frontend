@@ -8,7 +8,7 @@ import { useState } from "react";
 import { petQueries, petSpeciesLine } from "@/entities/pet";
 import { RecordRow } from "@/entities/record";
 import { routinesShortLine } from "@/entities/routine";
-import { stageName, useSpeciesMap } from "@/entities/species";
+import { feedResultSetOf, speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
 import { ChangeStatusSheet, DeletePetDialog, useRevertPetStatus } from "@/features/pet-lifecycle";
 import { EditRecordSheet } from "@/features/record-editor";
 import { petsApi } from "@/shared/api/endpoints";
@@ -33,6 +33,10 @@ export function PetDetailScreen() {
   const router = useRouter();
   const species = useSpeciesMap();
   const { data, isPending, isError, error, refetch } = useQuery(petQueries.detail(petId));
+  const { data: careStandards } = useQuery({
+    ...speciesQueries.careStandards(data?.pet.speciesId ?? "crested_gecko"),
+    enabled: Boolean(data),
+  });
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
@@ -172,6 +176,7 @@ export function PetDetailScreen() {
             record={record}
             variant="list"
             prefix={format(parseISO(record.occurredAt), "M월 d일")}
+            feedResultSet={feedResultSetOf(careStandards, record.careItem)}
             onClick={() => setEditRecordId(record.id)}
           />
         ))}
@@ -192,6 +197,7 @@ export function PetDetailScreen() {
       <DeletePetDialog pet={pet} open={deleteOpen} onOpenChange={setDeleteOpen} />
       <EditRecordSheet
         recordId={editRecordId}
+        speciesId={pet.speciesId}
         onOpenChange={(open) => !open && setEditRecordId(null)}
       />
     </Screen>

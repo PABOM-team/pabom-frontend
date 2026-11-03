@@ -3,8 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
+import { petQueries } from "@/entities/pet";
 import { recordQueries } from "@/entities/record";
-import { INTAKE_LABEL, INTAKES, WEIGHT_CODE, type Intake } from "@/shared/domain/care";
+import { useFeedResultSet } from "@/entities/species";
+import { intakeOptionsFor, WEIGHT_CODE, type Intake } from "@/shared/domain/care";
 import { MEMO_MAX, type CompleteInput } from "@/shared/domain/record";
 import type { Task } from "@/shared/domain/today";
 import { nowIso } from "@/shared/lib/date";
@@ -45,6 +47,12 @@ export function CompleteSheet({
 
   const current = task ?? shown;
   const kind = current?.recordKind ?? null;
+  // 급여 칩은 그 개체 종의 먹이 묶음(인공 사료·곤충·통먹이)에 맞춘다 (D2)
+  const { data: pets } = useQuery({ ...petQueries.list("active"), enabled: kind === "intake" });
+  const feedResultSet = useFeedResultSet(
+    pets?.find((p) => p.id === current?.petId)?.speciesId,
+    kind === "intake" ? current?.careItem : null,
+  );
   const { data: lastWeight } = useQuery({
     ...recordQueries.list({ petId: current?.petId, careItem: WEIGHT_CODE, limit: 1 }),
     enabled: kind === "weight" && Boolean(task),
@@ -89,7 +97,7 @@ export function CompleteSheet({
             label="먹은 정도"
             columns={2}
             allowDeselect
-            options={INTAKES.map((value) => ({ value, label: INTAKE_LABEL[value] }))}
+            options={intakeOptionsFor(feedResultSet)}
             value={intake}
             onChange={setIntake}
           />

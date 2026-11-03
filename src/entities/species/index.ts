@@ -1,7 +1,14 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQueries, useQuery } from "@tanstack/react-query";
 import { speciesApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { lifeStageName, type Species, type SpeciesId } from "@/shared/domain/species";
+import {
+  lifeStageName,
+  SPECIES,
+  type CareStandardTable,
+  type FeedResultSet,
+  type Species,
+  type SpeciesId,
+} from "@/shared/domain/species";
 
 export const speciesQueries = {
   list: () =>
@@ -35,4 +42,45 @@ export function useSpeciesMap() {
 /** 단계 이름. 종 API에 단계 이름이 없어 공통 표(LIFE_STAGES)를 쓰고, 모르는 단계는 '단계 확인 전' */
 export function stageName(species: Species | undefined, code: string) {
   return species?.lifeStages.find((s) => s.code === code)?.name ?? lifeStageName(code);
+}
+
+/**
+ * 관리 항목의 먹이 묶음 (인공 사료·곤충·통먹이). 종 가이드라인에서 그 항목(코드 또는 이름)을 찾는다.
+ * 급여가 아니거나 모르는 항목이면 null
+ */
+export function feedResultSetOf(
+  table: Pick<CareStandardTable, "standards"> | undefined,
+  careItem: string,
+): FeedResultSet | null {
+  const standard = table?.standards.find(
+    (s) => s.feedResultSet && (s.careItem === careItem || s.careItemName === careItem),
+  );
+  return standard?.feedResultSet ?? null;
+}
+
+/** (개체의 종, 관리 항목)의 먹이 묶음. 종을 모르거나 아직 못 불렀으면 null (곤충 묶음으로 보인다) */
+export function useFeedResultSet(
+  speciesId: SpeciesId | undefined,
+  careItem: string | null | undefined,
+): FeedResultSet | null {
+  const { data } = useQuery({
+    ...speciesQueries.careStandards(speciesId ?? "crested_gecko"),
+    enabled: speciesId !== undefined,
+  });
+  return speciesId && careItem ? feedResultSetOf(data, careItem) : null;
+}
+
+/**
+ * 여러 개체·종의 기록을 한 화면에 늘어놓을 때 쓰는 먹이 묶음 찾기.
+ * 지원 종 둘의 가이드라인을 미리 불러 두고 (종, 항목)으로 찾는다
+ */
+export function useFeedResultSetResolver() {
+  const tables = useQueries({
+    queries: SPECIES.map((speciesId) => speciesQueries.careStandards(speciesId)),
+  });
+  const bySpecies = new Map<SpeciesId, CareStandardTable | undefined>(
+    SPECIES.map((speciesId, i) => [speciesId, tables[i]?.data]),
+  );
+  return (speciesId: SpeciesId | undefined, careItem: string): FeedResultSet | null =>
+    speciesId ? feedResultSetOf(bySpecies.get(speciesId), careItem) : null;
 }

@@ -2,7 +2,8 @@ import { queryOptions } from "@tanstack/react-query";
 import { CheckIcon, PlusIcon } from "@/shared/ui/icons";
 import { todayApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { formatInterval, INTAKE_LABEL } from "@/shared/domain/care";
+import { formatInterval, intakeLabelFor } from "@/shared/domain/care";
+import type { FeedResultSet } from "@/shared/domain/species";
 import type { Task } from "@/shared/domain/today";
 import { formatMonthDay, formatTime, todayYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
@@ -27,13 +28,13 @@ function TaskBadge({ task }: { task: Task }) {
   return <Badge>오늘</Badge>;
 }
 
-function taskSubline(task: Task) {
+function taskSubline(task: Task, feedResultSet: FeedResultSet | null) {
   // 주기는 백엔드 오늘 할 일 응답에 아직 없어 비어 있을 수 있다
   const interval = task.intervalDays === null ? "" : formatInterval(task.intervalDays);
   if (task.state === "done" && task.record) {
     // 결과(먹은 정도·체중)가 있으면 완료 시각 앞에 같이 보여 준다
     const result = task.record.intake
-      ? INTAKE_LABEL[task.record.intake]
+      ? intakeLabelFor(feedResultSet, task.record.intake)
       : task.record.weightG !== null
         ? `${task.record.weightG} g`
         : "";
@@ -61,12 +62,15 @@ function taskSubline(task: Task) {
  */
 export function TaskCard({
   task,
+  feedResultSet = null,
   onCheck,
   onOpen,
   menu,
   checking,
 }: {
   task: Task;
+  /** 급여 할 일의 먹이 묶음. 완료 결과(먹은 정도) 이름이 묶음에 맞춰 보인다 */
+  feedResultSet?: FeedResultSet | null;
   onCheck?: () => void;
   onOpen?: () => void;
   menu?: MenuItem[];
@@ -103,7 +107,7 @@ export function TaskCard({
             task.state === "done" ? "text-subtle-foreground" : "text-muted-foreground",
           )}
         >
-          {taskSubline(task)}
+          {taskSubline(task, feedResultSet)}
         </span>
       </button>
       {menu && menu.length ? (

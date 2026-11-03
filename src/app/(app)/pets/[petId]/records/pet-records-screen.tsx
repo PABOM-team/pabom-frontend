@@ -14,8 +14,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { recordQueries, RecordRow } from "@/entities/record";
+import { feedResultSetOf, speciesQueries } from "@/entities/species";
 import { EditRecordSheet } from "@/features/record-editor";
 import type { CareRecord } from "@/shared/domain/record";
+import type { SpeciesId } from "@/shared/domain/species";
 import { addDays, formatDayLabel, toYmd, ymdOf } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
 import { LoadError, Spinner } from "@/shared/ui/display";
@@ -99,6 +101,7 @@ export function PetRecordsScreen() {
       <MonthRecords
         key={`${from}-${to}`}
         petId={petId}
+        speciesId={detail?.pet.speciesId}
         from={from}
         to={to}
         isOldest={selectedIndex === 0}
@@ -136,6 +139,7 @@ export function PetRecordsScreen() {
 
 function MonthRecords({
   petId,
+  speciesId,
   from,
   to,
   isOldest,
@@ -143,6 +147,7 @@ function MonthRecords({
   onExtend,
 }: {
   petId: string;
+  speciesId: SpeciesId | undefined;
   from: string;
   to: string;
   isOldest: boolean;
@@ -153,6 +158,11 @@ function MonthRecords({
   const [viewing, setViewing] = useState<CareRecord | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const query = useInfiniteQuery(recordQueries.infinite({ petId, from, to, limit: 20 }));
+  // 급여 기록의 먹은 정도 이름을 종의 먹이 묶음에 맞춘다
+  const { data: careStandards } = useQuery({
+    ...speciesQueries.careStandards(speciesId ?? "crested_gecko"),
+    enabled: speciesId !== undefined,
+  });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
 
   useEffect(() => {
@@ -194,6 +204,7 @@ function MonthRecords({
                 key={record.id}
                 record={record}
                 variant="list"
+                feedResultSet={feedResultSetOf(careStandards, record.careItem)}
                 onClick={() => setEditId(record.id)}
                 onPhotoClick={() => setViewing(record)}
               />
@@ -216,7 +227,11 @@ function MonthRecords({
           </p>
         ) : null}
       </div>
-      <EditRecordSheet recordId={editId} onOpenChange={(open) => !open && setEditId(null)} />
+      <EditRecordSheet
+        recordId={editId}
+        speciesId={speciesId}
+        onOpenChange={(open) => !open && setEditId(null)}
+      />
       <PhotoViewer
         open={Boolean(viewing)}
         onOpenChange={(o) => !o && setViewing(null)}

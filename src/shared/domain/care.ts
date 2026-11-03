@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { FeedResultSet } from "./species";
 
 /**
  * 관리 항목은 백엔드 코드(careItemCode·itemCode) 그대로 쓴다. 종마다 항목이 다르고 앞으로 늘어날 수 있어
@@ -139,6 +140,42 @@ export const INTAKE_LABEL: Record<Intake, string> = {
   none: "안 먹음",
   unobserved: "관찰 못함",
 };
+
+export type IntakeOption = { value: Intake; label: string };
+
+/**
+ * 먹이 묶음별 먹은 정도 칩 (관리 가이드라인 v1.2 메모 D2 · H02).
+ * - INSECT(곤충): 전부 먹음 · 일부 먹음 · 안 먹음 · 관찰 못함
+ * - DIET(인공 사료): 먹은 흔적 있음 · 먹은 흔적 없음 · 관찰 못함 (일부 먹음 없음)
+ * - WHOLE_PREY(통먹이): 먹음 · 안 먹음 · 관찰 못함
+ * 값(백엔드 outcome)은 같고 이름만 다르다
+ */
+const INTAKE_OPTIONS: Record<FeedResultSet, readonly IntakeOption[]> = {
+  INSECT: [
+    { value: "all", label: INTAKE_LABEL.all },
+    { value: "partial", label: INTAKE_LABEL.partial },
+    { value: "none", label: INTAKE_LABEL.none },
+    { value: "unobserved", label: INTAKE_LABEL.unobserved },
+  ],
+  DIET: [
+    { value: "all", label: "먹은 흔적 있음" },
+    { value: "none", label: "먹은 흔적 없음" },
+    { value: "unobserved", label: INTAKE_LABEL.unobserved },
+  ],
+  WHOLE_PREY: [
+    { value: "all", label: "먹음" },
+    { value: "none", label: INTAKE_LABEL.none },
+    { value: "unobserved", label: INTAKE_LABEL.unobserved },
+  ],
+};
+
+/** 먹이 묶음의 먹은 정도 칩. 묶음을 모르면(null) 곤충 묶음으로 */
+export const intakeOptionsFor = (set: FeedResultSet | null | undefined): readonly IntakeOption[] =>
+  INTAKE_OPTIONS[set ?? "INSECT"];
+
+/** 먹이 묶음에 맞는 먹은 정도 이름. 그 묶음에 없는 값(인공 사료의 '일부 먹음')은 공통 이름으로 */
+export const intakeLabelFor = (set: FeedResultSet | null | undefined, intake: Intake) =>
+  intakeOptionsFor(set).find((o) => o.value === intake)?.label ?? INTAKE_LABEL[intake];
 
 export const SKIP_REASONS = ["개체 상태를 보고 쉬기로 함", "일정이 맞지 않음", "기타"] as const;
 

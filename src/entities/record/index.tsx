@@ -2,8 +2,9 @@ import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import { recordsApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import { INTAKE_LABEL } from "@/shared/domain/care";
+import { intakeLabelFor } from "@/shared/domain/care";
 import type { CareRecord, RecordQuery } from "@/shared/domain/record";
+import type { FeedResultSet } from "@/shared/domain/species";
 import { formatTime } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
 import { Avatar, PhotoBox } from "@/shared/ui/display";
@@ -28,13 +29,14 @@ export const recordQueries = {
     }),
 };
 
-/** 급여 · 일부 먹음 / 체중 · 45.0 g / 메모 */
+/** 급여 · 일부 먹음 / 체중 · 45.0 g / 메모. 먹은 정도 이름은 먹이 묶음(인공 사료·곤충·통먹이)에 맞춘다 */
 export function describeRecord(
   record: Pick<CareRecord, "careItemName" | "intake" | "weightG" | "photos" | "type">,
+  feedResultSet: FeedResultSet | null = null,
 ) {
   const parts: string[] = [record.careItemName];
   if (record.type === "skipped") parts.push("건너뜀");
-  if (record.intake) parts.push(INTAKE_LABEL[record.intake]);
+  if (record.intake) parts.push(intakeLabelFor(feedResultSet, record.intake));
   if (record.weightG) parts.push(`${record.weightG.toFixed(1)} g`);
   if (record.photos.length) parts.push(`사진 ${record.photos.length}`);
   return parts.join(" · ");
@@ -55,6 +57,7 @@ export function RecordRow({
   record,
   variant,
   prefix,
+  feedResultSet = null,
   onClick,
   onPhotoClick,
 }: {
@@ -62,6 +65,8 @@ export function RecordRow({
   variant: "day" | "list";
   /** 줄 앞에 붙는 글 (개체 상세의 '10월 7일') */
   prefix?: string;
+  /** 급여 기록의 먹이 묶음. 먹은 정도 이름이 묶음에 맞춰 보인다 */
+  feedResultSet?: FeedResultSet | null;
   onClick: () => void;
   onPhotoClick?: () => void;
 }) {
@@ -70,8 +75,8 @@ export function RecordRow({
   // 썸네일이 보이면 '사진 N'은 제목에서 뺀다
   const title =
     variant === "day"
-      ? `${record.petName} · ${describeRecord({ ...record, photos: [] })}`
-      : describeRecord(photo ? { ...record, photos: [] } : record);
+      ? `${record.petName} · ${describeRecord({ ...record, photos: [] }, feedResultSet)}`
+      : describeRecord(photo ? { ...record, photos: [] } : record, feedResultSet);
 
   return (
     <div className="flex items-center gap-3 border-b border-border py-2.5">

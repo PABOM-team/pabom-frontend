@@ -5,14 +5,14 @@ import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { routineQueries } from "@/entities/routine";
+import { useFeedResultSet } from "@/entities/species";
 import { recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
 import {
   careItemLabel,
   compareCareItems,
-  INTAKE_LABEL,
-  INTAKES,
+  intakeOptionsFor,
   MEMO_CODE,
   type Intake,
   type RecordKind,
@@ -103,6 +103,11 @@ export function AddRecordSheet({
   // 개체를 바꾸면 그 개체에 없는 항목은 고른 상태에서 빠진다
   const selected = options.find((o) => o.value === item) ?? null;
   const kind = selected?.kind ?? null;
+  // 급여 칩은 그 개체 종의 먹이 묶음(인공 사료·곤충·통먹이)에 맞춘다 (D2)
+  const feedResultSet = useFeedResultSet(
+    pets?.find((p) => p.id === selectedPet)?.speciesId,
+    kind === "intake" ? selected?.value : null,
+  );
   const weightValue = weight ? Number(weight) : null;
   const weightInvalid =
     kind === "weight" && (!weightValue || weightValue <= 0 || weightValue > 5000);
@@ -184,7 +189,7 @@ export function AddRecordSheet({
               label="먹은 정도"
               columns={2}
               allowDeselect
-              options={INTAKES.map((value) => ({ value, label: INTAKE_LABEL[value] }))}
+              options={intakeOptionsFor(feedResultSet)}
               value={intake}
               onChange={setIntake}
             />

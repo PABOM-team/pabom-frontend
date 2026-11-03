@@ -8,8 +8,8 @@ import { FullScreenLoading, LoginButtons } from "@/features/auth";
 import { UnavailableCard } from "@/features/handover";
 import { handoverQueries } from "@/entities/handover";
 import { meQueries } from "@/entities/session";
-import { stageName, useSpeciesMap } from "@/entities/species";
-import { formatInterval, INTAKE_LABEL } from "@/shared/domain/care";
+import { feedResultSetOf, speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
+import { formatInterval, intakeLabelFor } from "@/shared/domain/care";
 import { SPECIES_LABEL } from "@/shared/domain/pet";
 import { formatMonthDay, ymdOf } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
@@ -26,6 +26,12 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
   const preview = useQuery(handoverQueries.preview(code));
   const { data: me } = useQuery({ ...meQueries.detail(), retry: false });
   const species = useSpeciesMap();
+  const previewSpeciesId = preview.data?.pet?.speciesId;
+  // 급여 기록의 먹은 정도 이름을 종의 먹이 묶음에 맞춘다 (기록의 careItem은 항목 이름이라 이름으로 찾는다)
+  const { data: careStandards } = useQuery({
+    ...speciesQueries.careStandards(previewSpeciesId ?? "crested_gecko"),
+    enabled: previewSpeciesId !== undefined,
+  });
   const registerPath = `/share/${code}/register`;
 
   if (preview.isPending) return <FullScreenLoading />;
@@ -96,7 +102,9 @@ export function HandoverPreviewScreen({ code }: { code: string }) {
                 <span className="min-w-0 flex-1">
                   {/* 인계 API는 스웨거에 없어 목업이 항목 이름으로 준다 [백엔드 확인 필요] */}
                   {formatMonthDay(ymdOf(r.occurredAt))} {r.careItem}
-                  {r.intake ? ` · ${INTAKE_LABEL[r.intake]}` : ""}
+                  {r.intake
+                    ? ` · ${intakeLabelFor(feedResultSetOf(careStandards, r.careItem), r.intake)}`
+                    : ""}
                   {r.weightG ? ` · ${r.weightG.toFixed(1)} g` : ""}
                   {r.memo ? (
                     <span className="block text-body-md text-muted-foreground">{r.memo}</span>

@@ -4,12 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
+import { petQueries } from "@/entities/pet";
 import { recordQueries } from "@/entities/record";
+import { useFeedResultSet } from "@/entities/species";
 import { recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
-import { INTAKE_LABEL, INTAKES, type Intake } from "@/shared/domain/care";
+import { intakeOptionsFor, type Intake } from "@/shared/domain/care";
 import { MEMO_MAX, type CareRecord, type Photo } from "@/shared/domain/record";
+import type { SpeciesId } from "@/shared/domain/species";
 import { formatDayLabel } from "@/shared/lib/date";
 import { Button } from "@/shared/ui/button";
 import { ChipGroup } from "@/shared/ui/chip";
@@ -44,9 +47,12 @@ const toDraft = (record: CareRecord): Draft => ({
  */
 export function EditRecordSheet({
   recordId,
+  speciesId,
   onOpenChange,
 }: {
   recordId: string | null;
+  /** 기록 개체의 종. 모르면 키우는 개체 목록에서 찾는다 (급여 칩의 먹이 묶음용) */
+  speciesId?: SpeciesId;
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
@@ -71,6 +77,14 @@ export function EditRecordSheet({
   }
 
   const kind = record?.recordKind ?? null;
+  const { data: pets } = useQuery({
+    ...petQueries.list("active"),
+    enabled: speciesId === undefined && kind === "intake",
+  });
+  const feedResultSet = useFeedResultSet(
+    speciesId ?? pets?.find((p) => p.id === record?.petId)?.speciesId,
+    kind === "intake" ? record?.careItem : null,
+  );
   const original = record ? toDraft(record) : null;
   const dirty = Boolean(draft && original && JSON.stringify(draft) !== JSON.stringify(original));
   const weightValue = draft?.weight ? Number(draft.weight) : null;
@@ -168,7 +182,7 @@ export function EditRecordSheet({
                   label="먹은 정도"
                   columns={2}
                   allowDeselect
-                  options={INTAKES.map((value) => ({ value, label: INTAKE_LABEL[value] }))}
+                  options={intakeOptionsFor(feedResultSet)}
                   value={draft.intake}
                   onChange={(intake) => setDraft({ ...draft, intake })}
                 />

@@ -42,7 +42,13 @@ import type {
   RoutineState,
 } from "@/shared/domain/record";
 import type { Routine, RoutineUpdateInput } from "@/shared/domain/routine";
-import type { CareStandard, CareStandardTable, SpeciesId } from "@/shared/domain/species";
+import {
+  type CareStandard,
+  type CareStandardTable,
+  evidenceLevelSchema,
+  feedResultSetSchema,
+  type SpeciesId,
+} from "@/shared/domain/species";
 import type { Task, TaskState, Today } from "@/shared/domain/today";
 
 /**
@@ -76,6 +82,8 @@ type RoutineFields = {
   recordType: string | null | undefined;
   intervalDays: number;
   defaultCycleDays: number | null | undefined;
+  minDays: number | null | undefined;
+  maxDays: number | null | undefined;
   cycleSource: "GUIDELINE" | "USER_CUSTOM";
   enabled: boolean;
   startDate: string | null;
@@ -94,6 +102,8 @@ function routineOf(raw: RoutineFields): Routine {
     recordKind: recordKindOf({ code: raw.careItemCode, recordType: raw.recordType }),
     intervalDays: raw.intervalDays,
     standardIntervalDays: raw.defaultCycleDays ?? null,
+    minDays: raw.minDays ?? null,
+    maxDays: raw.maxDays ?? null,
     customized: raw.cycleSource === "USER_CUSTOM",
     enabled: raw.enabled,
     startDate: raw.startDate,
@@ -122,6 +132,8 @@ export const toRoutine = (raw: BackendPetRoutine): Routine =>
     recordType: raw.recordType,
     intervalDays: raw.intervalDays,
     defaultCycleDays: raw.defaultCycleDays,
+    minDays: raw.minDays,
+    maxDays: raw.maxDays,
     cycleSource: raw.cycleSource,
     enabled: raw.active,
     startDate: raw.startDate,
@@ -144,6 +156,8 @@ export const toRoutineFromDetails = (raw: BackendRoutineDetails): Routine =>
     recordType: raw.recordType,
     intervalDays: raw.intervalDays,
     defaultCycleDays: raw.defaultCycleDays,
+    minDays: raw.minDays,
+    maxDays: raw.maxDays,
     cycleSource: raw.cycleSource,
     enabled: raw.isEnabled,
     startDate: raw.startDate,
@@ -454,8 +468,12 @@ export function toCareStandardTable(
       intervalDays: item.defaultCycleDays,
       minDays: item.minDays,
       maxDays: item.maxDays,
-      // evidenceLevel(VET_SOURCE·TEAM_JUDGMENT·TEXTBOOK) ↔ 권고/참고 대응이 정해지지 않아 모두 '참고 정보' [백엔드 확인 필요]
+      // 수의사 자문을 받지 않으므로 '권고'는 쓰지 않고 근거 수준만 보여 준다 (v1.2 명세 0장 6번)
       label: "reference" as const,
+      evidenceLevel: evidenceLevelSchema.safeParse(item.evidenceLevel).data ?? null,
+      sourceRefs: item.sourceRefs?.trim() || null,
+      feedResultSet: feedResultSetSchema.safeParse(item.feedResultSet).data ?? null,
+      defaultFoodName: item.defaultFoodName?.trim() || null,
       description: item.description ?? null,
     }));
   });

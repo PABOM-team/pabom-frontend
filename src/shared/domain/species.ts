@@ -69,7 +69,15 @@ export const lifeStageName = (code: string | null | undefined) =>
 /** 종 API가 주지 않는 값. TODO 백엔드가 단계·이름 정보를 주면 API 값으로 바꾼다 */
 const SPECIES_INFO: Record<
   SpeciesId,
-  Pick<Species, "officialName" | "scientificName" | "aliases" | "defaultFoodName" | "adultWeightG">
+  Pick<
+    Species,
+    | "officialName"
+    | "scientificName"
+    | "aliases"
+    | "defaultFoodName"
+    | "adultWeightG"
+    | "adultCheckMinAgeMonths"
+  >
 > = {
   crested_gecko: {
     officialName: "속눈썹도마뱀부치",
@@ -77,6 +85,7 @@ const SPECIES_INFO: Record<
     aliases: ["크레", "크레스티드", "볏도마뱀붙이"],
     defaultFoodName: "인공 사료",
     adultWeightG: 35,
+    adultCheckMinAgeMonths: 10,
   },
   leopard_gecko: {
     officialName: "표범도마뱀부치",
@@ -84,6 +93,7 @@ const SPECIES_INFO: Record<
     aliases: ["레오", "레오파드", "표범게코"],
     defaultFoodName: "귀뚜라미",
     adultWeightG: 45,
+    adultCheckMinAgeMonths: 9,
   },
 };
 
@@ -113,6 +123,8 @@ export type Species = {
    * [백엔드 확인 필요] care-standards 응답에 체중 범위가 없어 프론트 값으로 둔다
    */
   adultWeightG: number;
+  /** 성체 여부를 묻기 시작하는 최소 나이(개월). 그 전에는 체중 정체·참고 체중 도달을 묻지 않는다 (v1.2 명세 3-3) */
+  adultCheckMinAgeMonths: number;
 };
 
 /** 백엔드 종 목록을 앱 종 목록으로. MVP 밖의 종은 뺀다 */
@@ -144,6 +156,18 @@ export const morphSchema = z.object({
 });
 export type Morph = z.infer<typeof morphSchema>;
 
+export const evidenceLevelSchema = z.enum(["TEXTBOOK", "VET_SOURCE", "TEAM_JUDGMENT"]);
+export type EvidenceLevel = z.infer<typeof evidenceLevelSchema>;
+/** 근거 수준 표기 (v1.2 명세 1장 EvidenceLevel). '권고'·'수의사 검토' 같은 말은 쓰지 않는다 */
+export const EVIDENCE_LEVEL_LABEL: Record<EvidenceLevel, string> = {
+  TEXTBOOK: "교재 근거",
+  VET_SOURCE: "수의 기관 자료",
+  TEAM_JUDGMENT: "팀 판단",
+};
+
+export const feedResultSetSchema = z.enum(["DIET", "INSECT", "WHOLE_PREY"]);
+export type FeedResultSet = z.infer<typeof feedResultSetSchema>;
+
 export const careLabelSchema = z.enum(["recommended", "reference"]);
 export type CareLabel = z.infer<typeof careLabelSchema>;
 /** 권고는 수의학 자문을 마친 항목만. 그 전에는 모두 참고 정보 */
@@ -165,6 +189,14 @@ export const careStandardSchema = z.object({
   minDays: z.number().int().min(1),
   maxDays: z.number().int().min(1),
   label: careLabelSchema,
+  /** 근거 수준 (백엔드 evidenceLevel: TEXTBOOK·VET_SOURCE·TEAM_JUDGMENT). 모르면 null */
+  evidenceLevel: evidenceLevelSchema.nullable(),
+  /** 출처 (예: "Mader's 21장 p.161, RVC") */
+  sourceRefs: z.string().nullable(),
+  /** 급여 항목의 먹은 정도 칩 묶음 (DIET·INSECT·WHOLE_PREY). 급여가 아니면 null */
+  feedResultSet: feedResultSetSchema.nullable(),
+  /** 급여 기본 먹이 이름 */
+  defaultFoodName: z.string().nullable(),
   description: z.string().nullable(),
 });
 export type CareStandard = z.infer<typeof careStandardSchema>;

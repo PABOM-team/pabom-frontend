@@ -95,10 +95,22 @@ export function EditRecordSheet({
 
   const remove = useMutation({
     mutationFn: () => recordsApi.remove(record!.id),
-    // 삭제한 기록은 되돌릴 수 없다 (C4-2)
+    // 백엔드가 삭제 기록을 잠시 보관(restorableUntil)하므로 토스트의 '되돌리기'로 복구한다 (API-54 restore)
     onSuccess: () => {
+      const removedId = record!.id;
       setConfirmDelete(false);
       onOpenChange(false);
+      toast("기록을 삭제했어요", {
+        action: {
+          label: "되돌리기",
+          onClick: () =>
+            recordsApi
+              .restore(removedId)
+              .then(() => toast("기록을 되돌렸어요"))
+              .catch((error) => toast(getErrorMessage(error, "되돌리지 못했어요.")))
+              .finally(refresh),
+        },
+      });
     },
     onError: (error) => toast(getErrorMessage(error, "삭제하지 못했어요.")),
     onSettled: refresh,
@@ -216,7 +228,7 @@ export function EditRecordSheet({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title="이 기록을 삭제할까요?"
-        description="삭제한 기록은 되돌릴 수 없어요."
+        description="삭제 직후에는 '되돌리기'로 복구할 수 있어요."
         confirmLabel="삭제"
         tone="danger"
         pending={remove.isPending}

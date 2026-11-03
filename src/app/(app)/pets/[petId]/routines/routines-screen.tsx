@@ -7,7 +7,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { petQueries, petSpeciesLine } from "@/entities/pet";
 import { routineQueries } from "@/entities/routine";
-import { stageName, useSpeciesMap } from "@/entities/species";
+import { speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
 import { RoutineEditSheet, RoutineRow } from "@/features/routine-editor";
 import { CARE_DISCLAIMER } from "@/shared/domain/care";
 import { SEX_SYMBOL, SPECIES_LABEL } from "@/shared/domain/pet";
@@ -31,6 +31,13 @@ export function RoutinesScreen() {
   const species = useSpeciesMap();
   const detail = useQuery(petQueries.detail(petId));
   const routines = useQuery(routineQueries.list(petId));
+  const standards = useQuery({
+    ...speciesQueries.careStandards(detail.data?.pet.speciesId ?? "crested_gecko"),
+    enabled: Boolean(detail.data),
+  });
+  const defaultFoodOf = (careItem: string) =>
+    standards.data?.standards.find((s) => s.careItem === careItem && s.defaultFoodName)
+      ?.defaultFoodName ?? null;
   const pet = detail.data?.pet;
 
   const editing = routines.data?.find((r) => r.id === editId) ?? null;
@@ -92,6 +99,7 @@ export function RoutinesScreen() {
                     <RoutineRow
                       key={routine.id}
                       routine={routine}
+                      fallbackFoodName={defaultFoodOf(routine.careItem)}
                       onEdit={() => setEditId(routine.id)}
                     />
                   ))}

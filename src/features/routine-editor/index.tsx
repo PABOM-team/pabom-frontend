@@ -24,7 +24,16 @@ function useRoutineMutation() {
 }
 
 /** 체크 리스트 한 줄 (SCR-P03): 항목·주기·기록 방식 · 수정 · 켜기/끄기 */
-export function RoutineRow({ routine, onEdit }: { routine: Routine; onEdit: () => void }) {
+export function RoutineRow({
+  routine,
+  fallbackFoodName,
+  onEdit,
+}: {
+  routine: Routine;
+  /** 루틴 응답에 먹이 이름이 없을 때 보여 줄 가이드라인 기본 먹이 */
+  fallbackFoodName?: string | null;
+  onEdit: () => void;
+}) {
   const { refresh } = useRoutineMutation();
   const label = routine.careItemName;
   const toggle = useMutation({
@@ -42,7 +51,9 @@ export function RoutineRow({ routine, onEdit }: { routine: Routine; onEdit: () =
           {label}
           {routine.customized ? <Badge tone="primary">내가 정한 주기</Badge> : null}
         </p>
-        <p className="truncate text-body-md text-muted-foreground">{routineSummary(routine)}</p>
+        <p className="truncate text-body-md text-muted-foreground">
+          {routineSummary(routine, fallbackFoodName)}
+        </p>
       </div>
       <button type="button" onClick={onEdit} className="shrink-0 px-1 text-body-lg text-primary">
         수정

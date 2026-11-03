@@ -13,11 +13,12 @@ export const routineQueries = {
 };
 
 /** 2일마다 · 먹은 정도 · 먹이: 인공 사료 */
-export function routineSummary(routine: Routine) {
+export function routineSummary(routine: Routine, fallbackFoodName?: string | null) {
   return [
     formatInterval(routine.intervalDays),
     RECORD_KIND_LABEL[routine.recordKind],
-    routine.foodName ? `먹이: ${routine.foodName}` : null,
+    // 루틴 응답에 먹이 이름이 없으면 종 가이드라인의 기본 먹이로 채운다 (Figma P03 '먹이: 인공 사료')
+    routine.foodName || fallbackFoodName ? `먹이: ${routine.foodName ?? fallbackFoodName}` : null,
   ]
     .filter(Boolean)
     .join(" · ");

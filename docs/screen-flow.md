@@ -294,7 +294,7 @@ QA는 개발 서버(목업 API)에서 375×812로 직접 눌러 확인했다. �
 | API-07 | DELETE /users/me                   | S02               | 개발 서버 (`user`). 소셜 연결 해제는 MVP 제외                  |
 | API-10 | GET /species                       | P02·S04           | 개발 서버 (`species`, 로그인 없이)                             |
 | -      | GET /species/{id}/morphs           | P02·P05           | 개발 서버 (`species`, 로그인 없이)                             |
-| API-11 | GET /species/{id}/care-standards   | H04·S04           | 개발 서버 (`species`, 로그인 없이). 준성체·성체 기준만         |
+| API-11 | GET /species/{id}/care-standards   | H04·S04           | 개발 서버 (`species`, 로그인 없이). 어린 개체·성체 기준만         |
 | API-20 | GET /pets                          | P01·P08·H01       | 개발 서버 (`pets`). 함께했던 개체·할 일 수는 임시 값           |
 | API-21 | POST /pets                         | P02               | 개발 서버 (`pets`). 등록만, 일정 생성 안 함                    |
 | API-22 | GET /pets/{id}                     | P04               | 개발 서버 (`pets`). 체크 리스트·최근 기록은 API-30·50으로 따로 |

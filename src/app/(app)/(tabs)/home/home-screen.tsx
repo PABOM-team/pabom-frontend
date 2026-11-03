@@ -20,6 +20,7 @@ import { AddRecordSheet, EditRecordSheet } from "@/features/record-editor";
 import { useTaskActions } from "@/features/task-actions";
 import { CARE_ITEM_LABEL, type CareItem } from "@/shared/domain/care";
 import type { Pet } from "@/shared/domain/pet";
+import { isKnownStage } from "@/shared/domain/species";
 import type { CareRecord } from "@/shared/domain/record";
 import { formatDayLabel, fromYmd, toYmd, todayYmd, ymdOf } from "@/shared/lib/date";
 import { LoadError, Skeleton } from "@/shared/ui/display";
@@ -50,7 +51,10 @@ export function HomeScreen() {
       .map((r) => r.petId),
   );
   const stageUnknownPets = (pets.data ?? []).filter(
-    (p) => !p.lifeStageCode && !weighedToday.has(p.id) && (petId === null || p.id === petId),
+    (p) =>
+      !isKnownStage(p.lifeStageCode) &&
+      !weighedToday.has(p.id) &&
+      (petId === null || p.id === petId),
   );
 
   const actions = useTaskActions({

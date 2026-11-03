@@ -8,6 +8,31 @@ const list = (value: string | undefined) =>
   );
 
 /**
+ * 묶음 이름의 단수·복수 실수(pet → pets, records → record 등)는 바로잡아 받는다.
+ * dev 배포 환경변수에 `pet`이 들어가 개체만 목업으로 남고 기록은 진짜로 가서 상세가 깨진 적이 있다
+ */
+const GROUP_ALIAS: Record<string, ApiLiveGroup> = {
+  pet: "pets",
+  routines: "routine",
+  records: "record",
+  files: "file",
+  users: "user",
+};
+
+/** NEXT_PUBLIC_API_LIVE → 묶음 Set. 모르는 이름은 버리고 콘솔에 알린다 */
+const liveGroups = (value: string | undefined) => {
+  const known = new Set<string>(API_LIVE_GROUPS);
+  const groups = [...list(value)].map((name) => GROUP_ALIAS[name] ?? name);
+  const unknown = groups.filter((name) => !known.has(name));
+  if (unknown.length && typeof console !== "undefined") {
+    console.warn(
+      `[env] NEXT_PUBLIC_API_LIVE에 모르는 묶음이 있어요: ${unknown.join(", ")} (가능한 값: ${API_LIVE_GROUPS.join(", ")})`,
+    );
+  }
+  return new Set(groups.filter((name) => known.has(name)));
+};
+
+/**
  * NEXT_PUBLIC_API_LIVE에 적을 수 있는 묶음. 목업 핸들러 묶음(src/mocks/browser.ts)과 1:1이다.
  * - auth: 로그인·약관 동의 · user: 내 정보·회원 탈퇴 · species: 종·모프·관리 가이드라인
  * - pets: 개체 목록·등록·상세·수정·삭제 · routine: 체크 리스트·완료/건너뛰기/미루기·오늘 할 일
@@ -34,7 +59,7 @@ export const env = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
   apiMocking: process.env.NEXT_PUBLIC_API_MOCKING === "enabled",
   /** 목업 모드에서도 진짜 백엔드로 보내는 API 묶음 (API_LIVE_GROUPS). 비우면 전부 목업 */
-  apiLive: list(process.env.NEXT_PUBLIC_API_LIVE) as Set<string>,
+  apiLive: liveGroups(process.env.NEXT_PUBLIC_API_LIVE) as Set<string>,
   vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
 } as const;
 

@@ -12,6 +12,7 @@ import { stageName, useSpeciesMap } from "@/entities/species";
 import { ChangeStatusSheet, DeletePetDialog, useRevertPetStatus } from "@/features/pet-lifecycle";
 import { EditRecordSheet } from "@/features/record-editor";
 import { getHttpStatus } from "@/shared/api/errors";
+import { isPetStatusChangeSupported } from "@/shared/config/env";
 import { END_REASON_LABEL, SEX_LABEL } from "@/shared/domain/pet";
 import { isKnownStage } from "@/shared/domain/species";
 import { formatFullDate } from "@/shared/lib/date";
@@ -76,7 +77,9 @@ export function PetDetailScreen() {
                   ]
                 : [
                     { label: "정보 수정", onSelect: () => router.push(`/pets/${pet.id}/edit`) },
-                    { label: "함께했던 개체로 바꾸기", onSelect: () => setStatusOpen(true) },
+                    ...(isPetStatusChangeSupported
+                      ? [{ label: "함께했던 개체로 바꾸기", onSelect: () => setStatusOpen(true) }]
+                      : []),
                     { label: "개체 삭제", tone: "danger", onSelect: () => setDeleteOpen(true) },
                   ]
             }

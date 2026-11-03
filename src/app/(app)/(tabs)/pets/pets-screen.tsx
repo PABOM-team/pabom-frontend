@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { isPetStatusChangeSupported } from "@/shared/config/env";
 import { PlusIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
 import { AddPetCard, PetCard, petQueries } from "@/entities/pet";
@@ -23,7 +24,7 @@ export function PetsScreen() {
         title="내 개체"
         // 개체가 있을 때만 ⋯ (C1-2·C1-4에는 없다)
         trailing={
-          data?.length ? (
+          data?.length && isPetStatusChangeSupported ? (
             <Menu
               label="개체 메뉴"
               items={[

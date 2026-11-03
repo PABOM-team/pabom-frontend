@@ -85,4 +85,10 @@ export const isRoutineDetached = liveMismatch("pets", "routine");
  * 급여 먹이 이름은 스웨거 UpdateRoutineRequest에 없고, 모르는 칸을 보내면 백엔드가 400을 준다 [백엔드 요청].
  * 그래서 일정(routine)이 목업일 때만 먹이 이름을 보여 주고 저장한다
  */
+/**
+ * 함께했던 개체로 바꾸기·되돌리기는 스웨거에 없어 목업에만 있다. 개체(pets)가 진짜 백엔드면 목업이 그 개체를
+ * 몰라 404 가 나므로 메뉴에서 뺀다 [백엔드 요청]
+ */
+export const isPetStatusChangeSupported = env.apiMocking && !env.apiLive.has("pets");
+
 export const isRoutineFoodNameSupported = env.apiMocking && !env.apiLive.has("routine");

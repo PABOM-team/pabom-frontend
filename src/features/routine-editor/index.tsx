@@ -6,6 +6,7 @@ import { routineSummary } from "@/entities/routine";
 import { routinesApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
+import { isRoutineFoodNameSupported } from "@/shared/config/env";
 import { isFeedItem, RECORD_KIND_HINT } from "@/shared/domain/care";
 import { ROUTINE_INTERVAL_MAX, ROUTINE_INTERVAL_MIN, type Routine } from "@/shared/domain/routine";
 import { Button } from "@/shared/ui/button";
@@ -73,7 +74,8 @@ export function RoutineEditSheet({
   }
   const current = routine ?? shown;
   const label = current?.careItemName ?? "";
-  const feed = current ? isFeedItem(current.recordKind) : false;
+  // 먹이 이름 칸은 백엔드 일정 API에 없어 목업일 때만 보여 준다
+  const feed = current ? isFeedItem(current.recordKind) && isRoutineFoodNameSupported : false;
   const days = Number(intervalText);
   const invalid =
     !Number.isInteger(days) || days < ROUTINE_INTERVAL_MIN || days > ROUTINE_INTERVAL_MAX;

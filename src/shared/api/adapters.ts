@@ -1,4 +1,5 @@
 import { format, parseISO } from "date-fns";
+import { isRoutineFoodNameSupported } from "@/shared/config/env";
 import {
   invert,
   LIFE_STAGE_CODE_OF,
@@ -164,7 +165,7 @@ export function toRoutineUpdate(input: RoutineUpdateInput): BackendRoutineUpdate
   if (input.enabled !== undefined) out.isEnabled = input.enabled;
   // 앱의 reason은 자유 글인데 백엔드 reason은 enum이라, 글은 reasonNote(100자)로 보낸다 [백엔드 확인 필요]
   if (input.reason) out.reasonNote = input.reason.slice(0, 100);
-  if (input.foodName !== undefined) out.foodName = input.foodName;
+  if (input.foodName !== undefined && isRoutineFoodNameSupported) out.foodName = input.foodName;
   return out;
 }
 

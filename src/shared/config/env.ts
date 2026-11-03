@@ -80,3 +80,9 @@ export const isPetPhotoDisabled = liveMismatch("pets", "file");
  * 등록 뒤 체크 리스트 화면 대신 개체 상세로 가고 단계가 바뀌어도 체크 리스트 토스트를 띄우지 않는다
  */
 export const isRoutineDetached = liveMismatch("pets", "routine");
+
+/**
+ * 급여 먹이 이름은 스웨거 UpdateRoutineRequest에 없고, 모르는 칸을 보내면 백엔드가 400을 준다 [백엔드 요청].
+ * 그래서 일정(routine)이 목업일 때만 먹이 이름을 보여 주고 저장한다
+ */
+export const isRoutineFoodNameSupported = env.apiMocking && !env.apiLive.has("routine");

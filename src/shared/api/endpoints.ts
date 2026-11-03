@@ -202,7 +202,8 @@ async function toPetWithPhoto(res: PetResponse): Promise<Pet> {
 const getPet = (petId: string) =>
   api.get(`pets/${petId}`).json(successEnvelope(petResponseSchema)).then(toPetWithPhoto);
 
-export type PetDetail = { pet: Pet; routines: Routine[]; recentRecords: CareRecord[] };
+/** recentRecords 가 null 이면 최근 기록만 못 불러온 것 (C1-3 영역 오류). 개체·체크 리스트는 그대로 보여 준다 */
+export type PetDetail = { pet: Pet; routines: Routine[]; recentRecords: CareRecord[] | null };
 
 /**
  * 개체(pets)는 진짜 백엔드인데 일정(routine)은 목업이거나 그 반대면, 일정 쪽이 그 개체를 몰라 404가 난다.
@@ -214,10 +215,17 @@ const routinesOrEmpty = (petId: string) =>
     : routinesApi.list(petId);
 
 /** 개체(pets)와 기록(record)이 한쪽만 진짜 백엔드여도 마찬가지라, 그때는 최근 기록을 빈 목록으로 둔다 */
-const recentRecordsOrEmpty = (petId: string) =>
+const recentRecordsOrEmpty = (petId: string): Promise<CareRecord[] | null> =>
   env.apiMocking && env.apiLive.has("pets") !== env.apiLive.has("record")
-    ? recordsApi.list({ petId, limit: 5 }).catch(() => ({ items: [], nextCursor: null }))
-    : recordsApi.list({ petId, limit: 5 });
+    ? recordsApi.list({ petId, limit: 5 }).then(
+        (r) => r.items,
+        () => [],
+      )
+    : // 최근 기록만 실패하면 개체 상세 전체를 막지 않고 그 영역만 오류로 보여 준다 (Figma C1-3)
+      recordsApi.list({ petId, limit: 5 }).then(
+        (r) => r.items,
+        () => null,
+      );
 
 export const petsApi = {
   /**
@@ -241,7 +249,7 @@ export const petsApi = {
       routinesOrEmpty(petId),
       recentRecordsOrEmpty(petId),
     ]);
-    return { pet, routines, recentRecords: recent.items };
+    return { pet, routines, recentRecords: recent };
   },
   /** API-23 보낸 칸만 바꾼다 */
   update: (petId: string, input: PetUpdateInput): Promise<Pet> =>

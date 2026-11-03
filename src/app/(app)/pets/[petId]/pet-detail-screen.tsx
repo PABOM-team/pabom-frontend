@@ -21,7 +21,7 @@ import { isKnownStage, lifeStageFromWeight } from "@/shared/domain/species";
 import { formatFullDate } from "@/shared/lib/date";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/shared/ui/button";
-import { Avatar, InfoBox, InfoRow, LoadError, Skeleton } from "@/shared/ui/display";
+import { Avatar, InfoBox, InfoRow, LoadError, Skeleton, StateMessage } from "@/shared/ui/display";
 import { toast } from "@/shared/ui/toast";
 import { Menu } from "@/shared/ui/menu";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
@@ -78,7 +78,7 @@ export function PetDetailScreen() {
   const ended = pet.status === "ended";
   const spec = species.get(pet.speciesId);
   const stageUnknown = !isKnownStage(pet.lifeStageCode);
-  const lastWeight = recentRecords.find((r) => isWeightItem(r.careItem) && r.weightG)?.weightG;
+  const lastWeight = recentRecords?.find((r) => isWeightItem(r.careItem) && r.weightG)?.weightG;
   const suggested = stageUnknown && spec ? lifeStageFromWeight(spec, lastWeight) : null;
 
   return (
@@ -166,11 +166,19 @@ export function PetDetailScreen() {
         ) : null}
 
         <h3 className="mt-4 mb-1 text-body-lg font-medium">최근 기록</h3>
-        {/* 지금 백엔드 상세 응답에는 체크 리스트·최근 기록이 없어 빈 목록으로 온다 */}
-        {!recentRecords.length ? (
+        {recentRecords === null ? (
+          <div className="rounded-xl border-[1.3px] border-input py-2">
+            <StateMessage
+              compact
+              title="최근 기록을 불러오지 못했어요"
+              action={{ label: "다시 시도", onClick: () => refetch(), variant: "outline" }}
+            />
+          </div>
+        ) : null}
+        {recentRecords?.length === 0 ? (
           <p className="py-3 text-body-lg text-muted-foreground">아직 기록이 없어요</p>
         ) : null}
-        {recentRecords.map((record) => (
+        {(recentRecords ?? []).map((record) => (
           <RecordRow
             key={record.id}
             record={record}
@@ -180,7 +188,7 @@ export function PetDetailScreen() {
             onClick={() => setEditRecordId(record.id)}
           />
         ))}
-        {recentRecords.length ? (
+        {recentRecords?.length ? (
           <Link
             href={`/pets/${pet.id}/records`}
             className="mx-auto mt-3 flex w-fit items-center gap-0.5 py-2 text-body-lg font-bold text-primary"

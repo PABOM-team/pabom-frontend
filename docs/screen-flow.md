@@ -283,43 +283,45 @@ QA는 개발 서버(목업 API)에서 375×812로 직접 눌러 확인했다. �
 
 ## API (IA 8_개발 참고 기준, 경로 앞에 `/api/v1`)
 
-| ID     | 메서드·경로                        | 화면              | 연결                                                 |
-| ------ | ---------------------------------- | ----------------- | ---------------------------------------------------- |
-| API-01 | GET /auth/{provider}/login-url     | A01               | 개발 서버                                            |
-| API-01 | GET /auth/{provider}/callback      | A02               | 개발 서버                                            |
-| API-02 | POST /auth/refresh                 | 모든 화면(401 때) | 개발 서버                                            |
-| API-03 | POST /auth/logout                  | S01               | 개발 서버                                            |
-| API-04 | GET /users/me                      | 진입 분기·S01     | 개발 서버 (`user`)                                   |
-| API-05 | POST /me/agreements                | A03               | 개발 서버                                            |
-| API-07 | DELETE /users/me                   | S02               | 개발 서버 (`user`). 소셜 연결 해제는 MVP 제외        |
-| API-10 | GET /species                       | P02·S04           | 개발 서버 (`species`, 로그인 없이)                   |
-| -      | GET /species/{id}/morphs           | P02·P05           | 개발 서버 (`species`, 로그인 없이)                   |
-| API-11 | GET /species/{id}/care-standards   | H04·S04           | 목업                                                 |
-| API-20 | GET /pets                          | P01·P08·H01       | 개발 서버 (`pets`). 함께했던 개체·할 일 수는 임시 값 |
-| API-21 | POST /pets                         | P02               | 개발 서버 (`pets`). 등록만, 일정 생성 안 함          |
-| API-22 | GET /pets/{id}                     | P04               | 개발 서버 (`pets`). 체크 리스트·기록은 목업만        |
-| API-23 | PATCH /pets/{id}                   | P05               | 개발 서버 (`pets`)                                   |
-| API-24 | DELETE /pets/{id}                  | P05·P08           | 목업                                                 |
-| API-26 | POST /pets/{id}/status-changes     | P06·P08           | 목업                                                 |
-| API-30 | GET /pets/{id}/routines            | P03·H04           | 목업                                                 |
-| API-31 | PATCH /routines/{id}               | P03·H01           | 목업                                                 |
-| API-32 | POST /routines/{id}/reset          | P03               | 목업                                                 |
-| API-40 | GET /today                         | H01               | 목업                                                 |
-| API-41 | POST /routines/{id}/complete       | H01·H02           | 목업                                                 |
-| API-42 | POST /routines/{id}/skip           | H03               | 목업                                                 |
-| API-43 | POST /routines/{id}/postpone       | H03               | 목업                                                 |
-| API-50 | GET /records                       | H01·P07           | 목업                                                 |
-| API-51 | POST /records                      | R03               | 목업                                                 |
-| API-52 | GET /records/{id}                  | R02               | 목업                                                 |
-| API-53 | PATCH /records/{id}                | R02               | 목업                                                 |
-| API-54 | DELETE /records/{id}               | H01·R02           | 목업                                                 |
-| API-55 | POST /records/{id}/restore         | R02 되돌리기      | 목업                                                 |
-| API-60 | POST /files                        | R03·P02·P05       | 목업 (백엔드 있음, 개체·기록 API가 생기면 연결)      |
-| API-80 | POST /handover-cards               | T01               | 목업                                                 |
-| API-81 | GET /handover-cards/{code}         | T02·T03           | 목업                                                 |
-| API-82 | POST /handover-cards/{code}/accept | T03               | 목업                                                 |
-| API-83 | GET /handover-cards                | T04               | 목업                                                 |
-| API-84 | DELETE /handover-cards/{code}      | T04               | 목업                                                 |
+| ID     | 메서드·경로                        | 화면              | 연결                                                           |
+| ------ | ---------------------------------- | ----------------- | -------------------------------------------------------------- |
+| API-01 | GET /auth/{provider}/login-url     | A01               | 개발 서버                                                      |
+| API-01 | GET /auth/{provider}/callback      | A02               | 개발 서버                                                      |
+| API-02 | POST /auth/refresh                 | 모든 화면(401 때) | 개발 서버                                                      |
+| API-03 | POST /auth/logout                  | S01               | 개발 서버                                                      |
+| API-04 | GET /users/me                      | 진입 분기·S01     | 개발 서버 (`user`)                                             |
+| API-05 | POST /me/agreements                | A03               | 개발 서버                                                      |
+| API-07 | DELETE /users/me                   | S02               | 개발 서버 (`user`). 소셜 연결 해제는 MVP 제외                  |
+| API-10 | GET /species                       | P02·S04           | 개발 서버 (`species`, 로그인 없이)                             |
+| -      | GET /species/{id}/morphs           | P02·P05           | 개발 서버 (`species`, 로그인 없이)                             |
+| API-11 | GET /species/{id}/care-standards   | H04·S04           | 개발 서버 (`species`, 로그인 없이). 준성체·성체 기준만         |
+| API-20 | GET /pets                          | P01·P08·H01       | 개발 서버 (`pets`). 함께했던 개체·할 일 수는 임시 값           |
+| API-21 | POST /pets                         | P02               | 개발 서버 (`pets`). 등록만, 일정 생성 안 함                    |
+| API-22 | GET /pets/{id}                     | P04               | 개발 서버 (`pets`). 체크 리스트·최근 기록은 API-30·50으로 따로 |
+| API-23 | PATCH /pets/{id}                   | P05               | 개발 서버 (`pets`)                                             |
+| API-24 | DELETE /pets/{id}                  | P05·P08           | 개발 서버 (`pets`). 개체와 기록 소프트 삭제                    |
+| API-26 | POST /pets/{id}/status-changes     | P06·P08           | 목업 (스웨거에 없음)                                           |
+| API-30 | GET /pets/{id}/routines            | P03·H04           | 개발 서버 (`routine`)                                          |
+| API-31 | PATCH /routines/{id}               | P03·H01           | 개발 서버 (`routine`). 먹이 이름 칸은 백엔드에 없음            |
+| API-32 | POST /routines/{id}/reset          | P03               | 개발 서버 (`routine`)                                          |
+| API-40 | GET /today                         | H01               | 개발 서버 (`routine`). 주기·원래 예정일은 백엔드에 없음        |
+| API-41 | POST /routines/{id}/complete       | H01·H02           | 개발 서버 (`routine`)                                          |
+| API-42 | POST /routines/{id}/skip           | H03               | 개발 서버 (`routine`). 이유 칩 → reasonCode                    |
+| API-43 | POST /routines/{id}/postpone       | H03               | 개발 서버 (`routine`)                                          |
+| API-50 | GET /records                       | H01·P07           | 개발 서버 (`record`). 커서, 50개씩                             |
+| API-51 | POST /records                      | R03               | 개발 서버 (`record`). 사진 한 장                               |
+| API-52 | GET /records/{id}                  | R02               | 개발 서버 (`record`). 정정 이력 포함                           |
+| API-53 | PATCH /records/{id}                | R02               | 개발 서버 (`record`). revisionNo 낙관적 잠금                   |
+| API-54 | DELETE /records/{id}               | H01·R02           | 개발 서버 (`record`). 30일 안에 복구 가능                      |
+| API-55 | POST /records/{id}/restore         | R02 되돌리기      | 개발 서버 (`record`)                                           |
+| API-60 | POST /files                        | R03·P02·P05       | 개발 서버 (`file`). purpose=PET_PHOTO·RECORD_PHOTO             |
+| -      | GET /files/{id}                    | P01·P04·P07       | 개발 서버 (`file`). 사진 주소(10분 유효)                       |
+| -      | GET /health                        | -                 | 개발 서버 (봉투 없음). 화면에서는 아직 안 쓴다                 |
+| API-80 | POST /handover-cards               | T01               | 목업 (스웨거에 없음)                                           |
+| API-81 | GET /handover-cards/{code}         | T02·T03           | 목업                                                           |
+| API-82 | POST /handover-cards/{code}/accept | T03               | 목업                                                           |
+| API-83 | GET /handover-cards                | T04               | 목업                                                           |
+| API-84 | DELETE /handover-cards/{code}      | T04               | 목업                                                           |
 
 신고(API-70~75, SCR-L01~L05)는 Figma에 아직 화면이 없어서 이번 범위에서 뺐다.
 

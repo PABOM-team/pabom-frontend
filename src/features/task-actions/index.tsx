@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useWeightStageToast } from "@/features/pet-lifecycle";
 import { recordsApi, routinesApi } from "@/shared/api/endpoints";
 import { getApiError, getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
@@ -36,6 +37,7 @@ export function useTaskActions({
   const [alreadyOpen, setAlreadyOpen] = useState(false);
 
   const refresh = () => invalidateCareData(queryClient);
+  const suggestStage = useWeightStageToast();
 
   const undoRecord = (recordId: string) =>
     recordsApi
@@ -52,6 +54,10 @@ export function useTaskActions({
       toast(`'${task.careItemName}' 기록을 저장했어요`, {
         action: { label: "되돌리기", onClick: () => undoRecord(record.id) },
       });
+      // 체중을 남기면 단계 확인 전·성체 참고 체중·체중 정체에 맞춰 체크 리스트 바꾸기를 제안한다 (C3)
+      if (record.weightG) {
+        void suggestStage({ petId: task.petId, weightG: record.weightG, recordId: record.id });
+      }
     },
     onError: (error, variables) => {
       if (getApiError(error)?.code === "ALREADY_RECORDED") {

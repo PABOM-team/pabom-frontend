@@ -6,6 +6,7 @@ import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { routineQueries } from "@/entities/routine";
 import { useFeedResultSet } from "@/entities/species";
+import { useWeightStageToast } from "@/features/pet-lifecycle";
 import { recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
@@ -108,6 +109,7 @@ export function AddRecordSheet({
     pets?.find((p) => p.id === selectedPet)?.speciesId,
     kind === "intake" ? selected?.value : null,
   );
+  const suggestStage = useWeightStageToast();
   const weightValue = weight ? Number(weight) : null;
   const weightInvalid =
     kind === "weight" && (!weightValue || weightValue <= 0 || weightValue > 5000);
@@ -131,7 +133,13 @@ export function AddRecordSheet({
         memo: memo.trim() || null,
         photoFileIds: photos.map((p) => p.id),
       }),
-    onSuccess: () => onOpenChange(false),
+    onSuccess: (saved) => {
+      onOpenChange(false);
+      // 체중을 남기면 단계 확인 전·성체 참고 체중·체중 정체에 맞춰 체크 리스트 바꾸기를 제안한다 (C3)
+      if (saved.weightG) {
+        void suggestStage({ petId: saved.petId, weightG: saved.weightG, recordId: saved.id });
+      }
+    },
     onError: (error) => toast(getErrorMessage(error, "저장하지 못했어요.")),
     onSettled: () => invalidateCareData(queryClient),
   });

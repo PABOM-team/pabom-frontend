@@ -20,7 +20,7 @@ import type {
   PetUpdateInput,
   Sex,
 } from "@/shared/domain/pet";
-import { LIFE_STAGES } from "@/shared/domain/species";
+import { LIFE_STAGE_UNKNOWN, LIFE_STAGES } from "@/shared/domain/species";
 import { authProviderSchema } from "@/shared/domain/user";
 import {
   careStandardsOf,
@@ -41,7 +41,7 @@ import {
   type DbRecord,
   type DbUser,
 } from "./db";
-import { revisionNoOf, serializePet, stageCodeOf } from "./logic";
+import { careStageOf, revisionNoOf, serializePet, stageCodeOf } from "./logic";
 import {
   CARE_ITEM_OF,
   INTAKE_OF,
@@ -432,9 +432,9 @@ export const petHandlers = [
         morph,
         sex: (input.sex?.toLowerCase() ?? "unknown") as Sex,
         hatchedOn: input.hatchedAt ?? null,
-        // 부화일을 모르고 단계도 UNKNOWN이면 해츨링으로 둔다 (해츨링은 백엔드 ID가 없다)
-        manualStageCode: input.hatchedAt ? null : (stageCode ?? "hatchling"),
-        stageUncertain: !input.hatchedAt && input.stageCertainty === "ESTIMATED",
+        // 고른 단계를 그대로 둔다. 부화일이 있어도 고른 단계가 우선 (다르면 바꿔 주세요)
+        manualStageCode: stageCode ?? (input.hatchedAt ? null : LIFE_STAGE_UNKNOWN.code),
+        stageUncertain: stageCode === "juvenile" && input.stageCertainty === "ESTIMATED",
         acquiredOn: input.adoptedAt ?? null,
         photoFileId: input.photoFileId ? String(input.photoFileId) : null,
         status: "active" as const,
@@ -446,7 +446,7 @@ export const petHandlers = [
       db.pets.push(pet);
       // 백엔드가 등록 때 기본 일정을 만드는지는 [백엔드 확인 필요]. 목업은 데모 화면을 위해 기준표대로 만든다
       // (첫 예정일은 등록 당일 [제안])
-      addRoutines(db, pet.id, pet.speciesId, stageCodeOf(pet), new Date());
+      addRoutines(db, pet.id, pet.speciesId, careStageOf(pet), new Date());
       return success(wirePet(pet), { status: 201 });
     }),
   ),
@@ -489,10 +489,11 @@ export const petHandlers = [
       if (input.hatchedAt !== undefined) pet.hatchedOn = input.hatchedAt;
       if (input.lifeStageId !== undefined || input.hatchedAt !== undefined) {
         const code = LIFE_STAGES.find((s) => s.id === input.lifeStageId)?.code ?? null;
-        pet.manualStageCode = pet.hatchedOn ? null : (code ?? pet.manualStageCode ?? "hatchling");
+        pet.manualStageCode = code ?? (pet.hatchedOn ? null : LIFE_STAGE_UNKNOWN.code);
       }
       if (input.stageCertainty !== undefined) {
-        pet.stageUncertain = !pet.hatchedOn && input.stageCertainty === "ESTIMATED";
+        pet.stageUncertain =
+          stageCodeOf(pet) === "juvenile" && input.stageCertainty === "ESTIMATED";
       }
       if (input.photoFileId !== undefined) {
         if (input.photoFileId && !myFile(user, input.photoFileId)) {
@@ -1114,7 +1115,7 @@ export const appHandlers = [
           )
         : undefined;
       // 다음 예정일은 등록일 기준으로 다시 계산
-      addRoutines(db, pet.id, pet.speciesId, stageCodeOf(pet), new Date(), override);
+      addRoutines(db, pet.id, pet.speciesId, careStageOf(pet), new Date(), override);
       card.status = "accepted";
       return HttpResponse.json(serializePet(pet), { status: 201 });
     }),

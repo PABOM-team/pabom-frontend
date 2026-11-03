@@ -2,7 +2,7 @@ import { addDays, differenceInCalendarDays, format, max as maxDate, parseISO } f
 import { careTitle, ROUTINE_CARE_ITEMS } from "@/shared/domain/care";
 import type { Pet } from "@/shared/domain/pet";
 import { getOccurrences } from "@/shared/domain/routine";
-import { lifeStageFromHatch } from "@/shared/domain/species";
+import { LIFE_STAGE_UNKNOWN, lifeStageFromHatch, lifeStageName } from "@/shared/domain/species";
 import type { Task, Today } from "@/shared/domain/today";
 import { SPECIES_DATA } from "./data";
 import { db, ymd, type DbPet, type DbRecord, type DbRoutine } from "./db";
@@ -20,14 +20,20 @@ export function speciesOf(pet: Pick<DbPet, "speciesId">) {
   return SPECIES_DATA.find((s) => s.id === pet.speciesId)!;
 }
 
+/** 개체의 단계 code. 직접 고른 단계가 없으면 부화일로, 둘 다 없으면 unknown */
 export function stageCodeOf(pet: DbPet, today = new Date()) {
   if (pet.manualStageCode) return pet.manualStageCode;
-  return lifeStageFromHatch(speciesOf(pet), pet.hatchedOn, today)?.code ?? "adult";
+  return lifeStageFromHatch(speciesOf(pet), pet.hatchedOn, today)?.code ?? LIFE_STAGE_UNKNOWN.code;
 }
 
-export function stageNameOf(pet: DbPet) {
+/** 체크 리스트 기준표에 쓰는 단계. 단계를 모르면 백엔드처럼 어린 개체 기준 */
+export const careStageOf = (pet: DbPet) => {
   const code = stageCodeOf(pet);
-  return speciesOf(pet).lifeStages.find((s) => s.code === code)?.name ?? code;
+  return code === LIFE_STAGE_UNKNOWN.code ? "juvenile" : code;
+};
+
+export function stageNameOf(pet: DbPet) {
+  return lifeStageName(stageCodeOf(pet));
 }
 
 export const liveRecords = () => db.records.filter((r) => !r.deletedAt);

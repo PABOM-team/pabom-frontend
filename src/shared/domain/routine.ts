@@ -26,7 +26,7 @@ export const routineSchema = z.object({
   originalDueOn: z.iso.date().nullable(),
   basis: z.object({
     label: careLabelSchema,
-    /** 적용 조건 (예: 크레스티드 게코 · 준성체) */
+    /** 적용 조건 (예: 크레스티드 게코 · 어린 개체) */
     condition: z.string(),
     sourceText: z.string().nullable(),
     version: z.string(),

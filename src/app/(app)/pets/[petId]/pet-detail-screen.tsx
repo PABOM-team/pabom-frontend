@@ -13,6 +13,7 @@ import { ChangeStatusSheet, DeletePetDialog, useRevertPetStatus } from "@/featur
 import { EditRecordSheet } from "@/features/record-editor";
 import { getHttpStatus } from "@/shared/api/errors";
 import { END_REASON_LABEL, SEX_LABEL } from "@/shared/domain/pet";
+import { isKnownStage } from "@/shared/domain/species";
 import { formatFullDate } from "@/shared/lib/date";
 import { format, parseISO } from "date-fns";
 import { Avatar, InfoBox, InfoRow, LoadError, Skeleton } from "@/shared/ui/display";
@@ -57,6 +58,7 @@ export function PetDetailScreen() {
   const { pet, routines, recentRecords } = data;
   const ended = pet.status === "ended";
   const spec = species.get(pet.speciesId);
+  const stageUnknown = !isKnownStage(pet.lifeStageCode);
 
   return (
     <Screen>
@@ -98,10 +100,12 @@ export function PetDetailScreen() {
 
         <div className="mt-3">
           <InfoRow label="생애 단계">
-            {stageName(spec, pet.lifeStageCode)}
-            {/* 키우는 중이고 부화일로 정해진 단계일 때만 '(부화일 기준)' (Figma P04·P08) */}
-            {!ended && pet.lifeStageSource === "hatch" ? (
-              <span className="text-body-md text-subtle-foreground"> (부화일 기준)</span>
+            {stageUnknown ? "확인 전" : stageName(spec, pet.lifeStageCode)}
+            {/* 키우는 중일 때만 붙임말 (Figma P04·P08 · v1.2 명세: '(부화일·체중으로 제안)') */}
+            {!ended ? (
+              <span className="text-body-md text-subtle-foreground">
+                {stageUnknown ? " (체중을 재면 제안해 드려요)" : " (부화일·체중으로 제안)"}
+              </span>
             ) : null}
           </InfoRow>
           <InfoRow label="부화일">

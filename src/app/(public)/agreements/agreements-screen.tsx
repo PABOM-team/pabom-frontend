@@ -132,6 +132,12 @@ export function AgreementsScreen() {
             "시작하기"
           )}
         </Button>
+        {/* 필수 항목을 모두 체크하기 전에는 비활성 (Figma A03 · C2-1) */}
+        {!requiredDone ? (
+          <p className="text-center text-body-md text-subtle-foreground">
+            필수 항목에 모두 동의하면 시작할 수 있어요
+          </p>
+        ) : null}
       </ScreenFooter>
     </Screen>
   );

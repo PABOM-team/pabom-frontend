@@ -65,9 +65,9 @@ export const routineReasonSchema = z.enum([
   "PREFERENCE",
 ]);
 
-/** care-standards의 lifeStage → 앱 단계 code. [백엔드 확인 필요] 스웨거 설명에는 JUVENILE·ADULT만 있다 */
+/** care-standards의 lifeStage → 앱 단계 code. 해츨링 기준이 오면 어린 개체로 합친다 (Figma 댓글) */
 export const LIFE_STAGE_CODE_OF: Record<string, string> = {
-  HATCHLING: "hatchling",
+  HATCHLING: "juvenile",
   JUVENILE: "juvenile",
   ADULT: "adult",
 };

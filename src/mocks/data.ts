@@ -58,12 +58,10 @@ type Interval = Partial<Record<RoutineCareItem, number>>;
 /** 관리 기준표 v0.1 시안. 항목·주기는 예시(가이드라인 확정 전) */
 const INTERVALS: Record<SpeciesId, Record<string, Interval>> = {
   crested_gecko: {
-    hatchling: { feeding: 1, misting: 1, weight: 14, cleaning: 7, shed: 7 },
     juvenile: { feeding: 2, misting: 1, weight: 14, cleaning: 7, shed: 7 },
     adult: { feeding: 3, misting: 1, weight: 30, cleaning: 7, shed: 7 },
   },
   leopard_gecko: {
-    hatchling: { feeding: 1, weight: 14, cleaning: 7, shed: 7 },
     juvenile: { feeding: 2, weight: 14, cleaning: 7, shed: 7 },
     adult: { feeding: 3, weight: 30, cleaning: 7, shed: 7 },
   },
@@ -90,7 +88,7 @@ export const RECORD_TYPE_CODE: Record<RoutineCareItem, string> = {
   shed: "CHECK",
 };
 
-/** GET /species/{id}/care-standards 응답 (백엔드 모양). 백엔드처럼 준성체·성체 기준만 준다 */
+/** GET /species/{id}/care-standards 응답 (백엔드 모양). 백엔드처럼 어린 개체·성체 기준만 준다 */
 export function careStandardsOf(species: Species): BackendCareStandards {
   const lifeStages = [
     ["JUVENILE", "juvenile"],

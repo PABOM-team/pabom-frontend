@@ -1,24 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { lifeStageFromHatch } from "./species";
+import { LIFE_STAGES, lifeStageFromHatch, lifeStageFromWeight } from "./species";
 
-const species = {
-  lifeStages: [
-    { id: 1, code: "hatchling", name: "해츨링", minAgeDays: 0, criteria: "" },
-    { id: 2, code: "juvenile", name: "준성체", minAgeDays: 90, criteria: "" },
-    { id: 3, code: "adult", name: "성체", minAgeDays: 365, criteria: "" },
-  ],
-};
+const species = { lifeStages: LIFE_STAGES, adultWeightG: 35 };
 
 describe("lifeStageFromHatch", () => {
   const today = new Date(2026, 9, 17);
 
-  it("부화 후 일수로 단계를 고른다", () => {
-    expect(lifeStageFromHatch(species, "2026-10-01", today)?.code).toBe("hatchling");
-    expect(lifeStageFromHatch(species, "2026-03-02", today)?.code).toBe("juvenile");
+  it("부화 후 18개월 미만이면 어린 개체, 이상이면 성체", () => {
+    expect(lifeStageFromHatch(species, "2026-10-01", today)?.code).toBe("juvenile");
+    expect(lifeStageFromHatch(species, "2025-04-18", today)?.code).toBe("juvenile");
+    expect(lifeStageFromHatch(species, "2025-04-17", today)?.code).toBe("adult");
     expect(lifeStageFromHatch(species, "2024-06-01", today)?.code).toBe("adult");
   });
 
   it("부화일을 모르면 null", () => {
     expect(lifeStageFromHatch(species, null, today)).toBeNull();
+  });
+});
+
+describe("lifeStageFromWeight", () => {
+  it("성체 참고 체중 이상이면 성체, 아니면 어린 개체", () => {
+    expect(lifeStageFromWeight(species, 34.9)?.code).toBe("juvenile");
+    expect(lifeStageFromWeight(species, 35)?.code).toBe("adult");
+  });
+
+  it("체중이 없으면 null", () => {
+    expect(lifeStageFromWeight(species, null)).toBeNull();
+    expect(lifeStageFromWeight(species, 0)).toBeNull();
   });
 });

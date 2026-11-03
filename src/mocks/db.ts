@@ -195,7 +195,7 @@ export function createSeed(today = new Date()): DbState {
     createdAt: d(250).toISOString(),
   });
 
-  // 콩이(준성체 크레): 분무는 1일 지남, 급여는 오늘, 나머지는 앞으로
+  // 콩이(어린 개체 크레): 분무는 1일 지남, 급여는 오늘, 나머지는 앞으로
   const kong = addRoutines(state, "1", "crested_gecko", "juvenile", d(60));
   // 달이(성체 레오): 급여 오늘
   const dal = addRoutines(state, "2", "leopard_gecko", "adult", d(58));

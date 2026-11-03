@@ -11,6 +11,7 @@ import { stageName, useSpeciesMap } from "@/entities/species";
 import { RoutineEditSheet, RoutineRow } from "@/features/routine-editor";
 import { CARE_DISCLAIMER } from "@/shared/domain/care";
 import { SEX_SYMBOL, SPECIES_LABEL } from "@/shared/domain/pet";
+import { isKnownStage } from "@/shared/domain/species";
 import { Button } from "@/shared/ui/button";
 import { Avatar, Skeleton, StateMessage } from "@/shared/ui/display";
 import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
@@ -35,6 +36,7 @@ export function RoutinesScreen() {
   const editing = routines.data?.find((r) => r.id === editId) ?? null;
   const offCount = routines.data?.filter((r) => !r.enabled).length ?? 0;
   const stage = pet ? stageName(species.get(pet.speciesId), pet.lifeStageCode) : "";
+  const stageUnknown = pet ? !isKnownStage(pet.lifeStageCode) : false;
 
   return (
     <Screen>
@@ -78,7 +80,9 @@ export function RoutinesScreen() {
             {routines.data.length ? (
               <>
                 <p className="mt-3.5 text-body-lg leading-relaxed text-secondary-text">
-                  {SPECIES_LABEL[pet.speciesId]}·{stage}에 맞춘 체크 리스트예요.{" "}
+                  {stageUnknown
+                    ? `단계를 확인하기 전이라 ${SPECIES_LABEL[pet.speciesId]}·어린 개체 기준이에요. 체중을 재면 다시 제안해 드려요.`
+                    : `${SPECIES_LABEL[pet.speciesId]}·${stage}에 맞춘 체크 리스트예요.`}{" "}
                   {offCount ? `${offCount}개 항목이 꺼져 있어요.` : "모두 켜져 있어요."} 필요 없는
                   항목만 꺼 주세요.
                 </p>

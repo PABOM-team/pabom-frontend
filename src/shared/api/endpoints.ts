@@ -161,7 +161,7 @@ export const speciesApi = {
       .get(`species/${serverId}/morphs`)
       .json(successEnvelope(z.array(morphSchema)))
       .then((morphs) => [...morphs].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))),
-  /** API-11 종별 관리 가이드라인 (최신 PUBLISHED 버전의 준성체·성체 기준). 로그인 없이 부른다 */
+  /** API-11 종별 관리 가이드라인 (최신 PUBLISHED 버전의 어린 개체·성체 기준). 로그인 없이 부른다 */
   careStandards: async (speciesId: SpeciesId) =>
     api
       .get(`species/${await serverSpeciesId(speciesId)}/care-standards`)
@@ -251,7 +251,7 @@ export const petsApi = {
 };
 
 export const routinesApi = {
-  /** API-30 개체의 관리 루틴. 부화일을 모르는 개체는 백엔드가 준성체 기준을 쓴다 */
+  /** API-30 개체의 관리 루틴. 단계를 모르는 개체는 백엔드가 어린 개체 기준을 쓴다 */
   list: (petId: string): Promise<Routine[]> =>
     api
       .get(`pets/${petId}/routines`)

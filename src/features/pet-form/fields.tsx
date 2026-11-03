@@ -5,10 +5,17 @@ import { useRef, useState } from "react";
 import { speciesQueries } from "@/entities/species";
 import { filesApi } from "@/shared/api/endpoints";
 import { getErrorMessage } from "@/shared/api/errors";
-import { lifeStageFromHatch, type Species } from "@/shared/domain/species";
+import {
+  LIFE_STAGE_CHOICES,
+  LIFE_STAGE_UNKNOWN,
+  lifeStageFromHatch,
+  lifeStageFromWeight,
+  type Species,
+} from "@/shared/domain/species";
 import { todayYmd } from "@/shared/lib/date";
 import { resizeImage } from "@/shared/lib/image";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
 import { Avatar, InfoBox, Skeleton, Spinner } from "@/shared/ui/display";
@@ -92,20 +99,22 @@ export function PetPhotoPicker({
   );
 }
 
-/** 단계를 직접 고를 때 '정확하지 않아요'를 고를 수 있는 단계 (U5) */
-const UNCERTAIN_STAGES = ["hatchling", "juvenile"];
-
 export type HatchPatch = {
   hatchedOn?: string | null;
   hatchUnknown?: boolean;
   lifeStageCode?: string | null;
   stageUncertain?: boolean;
+  weightG?: number | null;
 };
 
+const stageOf = (species: Species | undefined, code: string | null) =>
+  species?.lifeStages.find((s) => s.code === code) ?? null;
+
 /**
- * 부화일 + '부화일을 몰라요' + 생애 단계 (P02 4/4, U5).
- * 부화일을 알면 단계는 자동, 모르면 날짜 칸이 '모름'으로 잠기고 단계를 직접 고른다.
- * 해츨링·준성체일 때만 '정확하지 않아요'가 보인다.
+ * 부화일 + '부화일을 몰라요' + 생애 단계 칩 3개 [어린 개체] [성체] [잘 모르겠어요] (P02 4/4 · P05 · U5, Figma 댓글 #5~#17).
+ * - 부화일을 넣으면 단계를 미리 골라 주고 "부화일로 보면 어린 개체예요. 다르면 바꿔 주세요." 안내
+ * - 부화일을 모르면 직접 고른다. '정확하지 않아요'는 어린 개체일 때만
+ * - '잘 모르겠어요'를 고르면 체중 칸(선택)이 나타나고, 체중을 넣으면 단계를 제안해 사용자가 확정한다
  */
 export function HatchFields({
   species,
@@ -113,6 +122,7 @@ export function HatchFields({
   hatchUnknown,
   lifeStageCode,
   stageUncertain,
+  weightG,
   variant = "register",
   onChange,
   error,
@@ -122,12 +132,25 @@ export function HatchFields({
   hatchUnknown: boolean;
   lifeStageCode: string | null;
   stageUncertain: boolean;
+  weightG: number | null;
   variant?: "register" | "edit";
   onChange: (patch: HatchPatch) => void;
   error?: string;
 }) {
-  const auto = species ? lifeStageFromHatch(species, hatchedOn) : null;
-  const canBeUncertain = lifeStageCode !== null && UNCERTAIN_STAGES.includes(lifeStageCode);
+  const fromHatch = species && !hatchUnknown ? lifeStageFromHatch(species, hatchedOn) : null;
+  const fromWeight = species && hatchUnknown ? lifeStageFromWeight(species, weightG) : null;
+  const chosen = stageOf(species, lifeStageCode);
+  const unknown = lifeStageCode === LIFE_STAGE_UNKNOWN.code;
+  const showStage = hatchUnknown || Boolean(hatchedOn);
+
+  // 제안 안내: 부화일이 있으면 부화일 기준, 체중으로 정했으면 체중 기준
+  const suggestion = fromHatch
+    ? `부화일로 보면 ${fromHatch.name}예요. 다르면 바꿔 주세요.`
+    : fromWeight && chosen && !unknown
+      ? `체중 ${weightG}g으로 보면 ${fromWeight.name}예요. 다르면 바꿔 주세요.`
+      : variant === "edit"
+        ? "부화일을 모르면 단계를 직접 고르세요. '정확하지 않아요'는 어린 개체일 때만 고를 수 있어요."
+        : "'정확하지 않아요'는 어린 개체일 때만 보여요";
 
   return (
     <div className="space-y-3">
@@ -141,40 +164,53 @@ export function HatchFields({
           invalid={Boolean(error)}
           max={todayYmd()}
           hint="오늘 뒤 날짜는 고를 수 없어요 · 연·월을 눌러 빠르게 옮겨요"
-          onChange={(ymd) => onChange({ hatchedOn: ymd })}
+          onChange={(ymd) =>
+            // 부화일을 넣으면 제안값을 미리 골라 둔다 (사용자가 바꿀 수 있다)
+            onChange({
+              hatchedOn: ymd,
+              lifeStageCode: species ? (lifeStageFromHatch(species, ymd)?.code ?? null) : null,
+              stageUncertain: false,
+              weightG: null,
+            })
+          }
         />
       </Field>
-      <label className="flex items-center gap-2 text-body-lg text-secondary-text">
+      <label className="flex min-h-11 items-center gap-2 text-body-lg text-secondary-text">
         <Checkbox
           checked={hatchUnknown}
           onCheckedChange={(on) =>
             onChange({
               hatchUnknown: on === true,
-              hatchedOn: on === true ? null : hatchedOn,
-              stageUncertain: on === true ? stageUncertain : false,
+              hatchedOn: null,
+              lifeStageCode: null,
+              stageUncertain: false,
+              weightG: null,
             })
           }
         />
         부화일을 몰라요
       </label>
-      {hatchUnknown ? (
+
+      {showStage ? (
         <>
-          <Field label={variant === "register" ? "생애 단계를 골라 주세요" : "생애 단계"}>
+          <Field
+            label={hatchUnknown && !chosen && !unknown ? "생애 단계를 골라 주세요" : "생애 단계"}
+            hint={suggestion}
+          >
             <ChipGroup
               label="생애 단계"
-              size="sm"
-              options={(species?.lifeStages ?? []).map((s) => ({ value: s.code, label: s.name }))}
+              options={LIFE_STAGE_CHOICES}
               value={lifeStageCode}
               onChange={(code) =>
                 onChange({
                   lifeStageCode: code,
-                  stageUncertain: code && UNCERTAIN_STAGES.includes(code) ? stageUncertain : false,
+                  stageUncertain: code === "juvenile" ? stageUncertain : false,
                 })
               }
             />
           </Field>
-          {canBeUncertain ? (
-            <label className="flex items-center gap-2 text-body-lg text-secondary-text">
+          {lifeStageCode === "juvenile" ? (
+            <label className="flex min-h-11 items-center gap-2 text-body-lg text-secondary-text">
               <Checkbox
                 checked={stageUncertain}
                 onCheckedChange={(on) => onChange({ stageUncertain: on === true })}
@@ -182,24 +218,80 @@ export function HatchFields({
               정확하지 않아요
             </label>
           ) : null}
-          <p className="text-body-md text-muted-foreground">
-            {variant === "register"
-              ? "'정확하지 않아요'는 해츨링·준성체일 때만 보여요"
-              : "성체를 고르면 '정확하지 않아요'가 사라져요"}
-          </p>
+          {unknown ? (
+            <WeightSuggestField
+              species={species}
+              weightG={weightG}
+              variant={variant}
+              onChange={onChange}
+            />
+          ) : null}
         </>
-      ) : auto && variant === "edit" ? (
-        // 정보 수정(P05)은 회색 글 두 줄
-        <div className="space-y-1.5 text-body-lg text-muted-foreground">
-          <p>생애 단계 · {auto.name} (자동)</p>
-          <p className="text-body-md leading-relaxed text-subtle-foreground">
-            부화일을 모르면: 단계를 직접 고르고, 해츨링·준성체일 때만 &apos;정확하지 않아요&apos;를
-            고를 수 있어요
-          </p>
-        </div>
-      ) : auto ? (
-        <InfoBox tone="primary">
-          생애 단계 · <strong>{auto.name}</strong> (부화일 기준으로 자동)
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * '잘 모르겠어요'일 때 체중 칸(선택) (Figma 댓글 #5·#17).
+ * 체중을 넣으면 가이드라인 참고 체중으로 단계를 제안하고 사용자가 확정한다.
+ * [백엔드 확인 필요] CreatePetRequest·UpdatePetRequest에 체중 칸이 없어 등록 때 체중 기록(WEIGHT)으로 남긴다
+ */
+function WeightSuggestField({
+  species,
+  weightG,
+  variant,
+  onChange,
+}: {
+  species: Species | undefined;
+  weightG: number | null;
+  variant: "register" | "edit";
+  onChange: (patch: HatchPatch) => void;
+}) {
+  const [text, setText] = useState(weightG?.toString() ?? "");
+  const suggested = species ? lifeStageFromWeight(species, weightG) : null;
+
+  return (
+    <div className="space-y-2">
+      <Field
+        label="체중 (선택)"
+        htmlFor="pet-weight"
+        hint={
+          suggested
+            ? undefined
+            : variant === "register"
+              ? "체중을 모르면 그대로 등록해요. 오늘 할 일에 '체중 재기'를 제안해 드려요."
+              : "체중을 재면 단계를 제안해 드려요."
+        }
+      >
+        <Input
+          id="pet-weight"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.1"
+          placeholder="예: 35"
+          suffix="g"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            const n = Number(e.target.value);
+            onChange({ weightG: e.target.value && n > 0 ? n : null });
+          }}
+        />
+      </Field>
+      {suggested ? (
+        <InfoBox tone="primary" className="flex items-center justify-between gap-3">
+          <span>
+            체중 {weightG}g으로 보면 <strong>{suggested.name}</strong>예요.
+          </span>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => onChange({ lifeStageCode: suggested.code, stageUncertain: false })}
+          >
+            {suggested.name}로 정하기
+          </Button>
         </InfoBox>
       ) : null}
     </div>

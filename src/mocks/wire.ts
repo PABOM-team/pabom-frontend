@@ -73,14 +73,10 @@ export function wirePet(pet: DbPet): PetWire {
     customMorph: morph ? null : pet.morph,
     hatchedAt: pet.hatchedOn,
     adoptedAt: pet.acquiredOn,
-    // 해츨링은 백엔드 ID가 없어 UNKNOWN(4)으로 (LIFE_STAGES 참고)
-    lifeStageId: lifeStageId ?? (pet.manualStageCode ? LIFE_STAGE_UNKNOWN_ID : null),
+    // 단계를 모르면 UNKNOWN(4)
+    lifeStageId: lifeStageId ?? LIFE_STAGE_UNKNOWN_ID,
     stageCertainty:
-      lifeStageId === null
-        ? "UNKNOWN"
-        : pet.manualStageCode && pet.stageUncertain
-          ? "ESTIMATED"
-          : "CONFIRMED",
+      lifeStageId === null ? "UNKNOWN" : pet.stageUncertain ? "ESTIMATED" : "CONFIRMED",
     sex: toServerSex(pet.sex),
     photoFileId: pet.photoFileId ? Number(pet.photoFileId) : null,
     createdAt: pet.createdAt,

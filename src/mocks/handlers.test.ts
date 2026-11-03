@@ -183,7 +183,7 @@ describe("목업 API", () => {
       customized: false,
       enabled: true,
       foodName: "인공 사료",
-      basis: { condition: "크레스티드 게코 · 준성체", version: "v0.1" },
+      basis: { condition: "크레스티드 게코 · 어린 개체", version: "v0.1" },
     });
 
     const updated = await routinesApi.update(feeding.id, { intervalDays: 5, enabled: false });
@@ -209,7 +209,7 @@ describe("목업 API", () => {
     await expect(speciesApi.morphs(999)).rejects.toMatchObject({ response: { status: 404 } });
   });
 
-  it("관리 가이드라인은 백엔드 종 ID로 부르고 준성체·성체 기준표로 바꾼다", async () => {
+  it("관리 가이드라인은 백엔드 종 ID로 부르고 어린 개체·성체 기준표로 바꾼다", async () => {
     const table = await speciesApi.careStandards("leopard_gecko");
     expect(table).toMatchObject({ speciesId: "leopard_gecko", version: "v0.1", isDraft: false });
     expect(table.standards.map((s) => s.lifeStageCode)).not.toContain("hatchling");
@@ -332,7 +332,7 @@ describe("목업 API", () => {
             morphs: [{ id: 2, code: "HARLEQUIN", name: "할리퀸" }],
             customMorph: null,
             lifeStageId: 2,
-            lifeStageName: "준성체",
+            lifeStageName: "어린 개체",
             photoFileId: 301,
           },
         ]),

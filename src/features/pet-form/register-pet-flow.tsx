@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { meQueries } from "@/entities/session";
 import { speciesQueries } from "@/entities/species";
-import { petsApi } from "@/shared/api/endpoints";
+import { petsApi, recordsApi } from "@/shared/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@/shared/api/errors";
 import { invalidateCareData } from "@/shared/api/query-keys";
 import { isPetPhotoDisabled, isRoutineDetached } from "@/shared/config/env";
@@ -28,7 +28,7 @@ import {
   type SpeciesGroup,
   type SpeciesId,
 } from "@/shared/domain/species";
-import { todayYmd } from "@/shared/lib/date";
+import { nowIso, todayYmd } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
@@ -72,6 +72,8 @@ type Draft = {
   hatchUnknown: boolean;
   lifeStageCode: string | null;
   stageUncertain: boolean;
+  /** '잘 모르겠어요'일 때 넣은 체중(g). 단계 제안에 쓰고, 등록 뒤 체중 기록으로 남긴다 */
+  weightG: number | null;
   sex: Sex;
   acquiredOn: string | null;
 };
@@ -86,6 +88,7 @@ const EMPTY: Draft = {
   hatchUnknown: false,
   lifeStageCode: null,
   stageUncertain: false,
+  weightG: null,
   sex: "unknown",
   acquiredOn: null,
 };
@@ -116,7 +119,24 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
   const exit = () => router.replace(onboarding ? "/home" : "/pets");
 
   const create = useMutation({
-    mutationFn: () => petsApi.create(toCreateInput(draft, species!, morphs ?? [], clientRequestId)),
+    mutationFn: async () => {
+      const pet = await petsApi.create(
+        toCreateInput(draft, species!, morphs ?? [], clientRequestId),
+      );
+      // [백엔드 확인 필요] CreatePetRequest에 체중 칸이 없어, 넣은 체중은 체중 기록(WEIGHT)으로 남긴다.
+      // 기록 저장이 실패해도 등록은 끝난 것이므로 조용히 넘어간다
+      if (draft.weightG) {
+        await recordsApi
+          .create({
+            petId: pet.id,
+            careItem: "weight",
+            occurredAt: nowIso(),
+            weightG: draft.weightG,
+          })
+          .catch(() => undefined);
+      }
+      return pet;
+    },
     onSuccess: async (pet) => {
       await invalidateCareData(queryClient);
       // 일정 쪽이 이 개체를 모르면(개체·일정이 한쪽만 진짜) 체크 리스트 대신 상세로 간다
@@ -137,7 +157,8 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
     step === 3;
   const canSubmit =
     draft.name.trim().length > 0 &&
-    (draft.hatchUnknown ? Boolean(draft.lifeStageCode) : Boolean(draft.hatchedOn)) &&
+    (draft.hatchUnknown || Boolean(draft.hatchedOn)) &&
+    Boolean(draft.lifeStageCode) &&
     Boolean(species) &&
     !uploading &&
     !create.isPending;
@@ -280,6 +301,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
               hatchUnknown={draft.hatchUnknown}
               lifeStageCode={draft.lifeStageCode}
               stageUncertain={draft.stageUncertain}
+              weightG={draft.weightG}
               onChange={patch}
             />
             <div

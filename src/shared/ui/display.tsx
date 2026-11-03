@@ -209,7 +209,7 @@ export function StateMessage({
   );
 }
 
-/** 가로 정보 줄 (생애 단계 · 준성체) */
+/** 가로 정보 줄 (생애 단계 · 어린 개체) */
 export function InfoRow({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div className="flex min-h-11.5 items-center border-b border-border py-2.5 text-body-lg">

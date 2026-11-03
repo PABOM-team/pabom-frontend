@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { speciesApi } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import type { Species, SpeciesId } from "@/shared/domain/species";
+import { lifeStageName, type Species, type SpeciesId } from "@/shared/domain/species";
 
 export const speciesQueries = {
   list: () =>
@@ -32,6 +32,7 @@ export function useSpeciesMap() {
   return new Map<SpeciesId, Species>((data ?? []).map((s) => [s.id, s]));
 }
 
+/** 단계 이름. 종 API에 단계 이름이 없어 공통 표(LIFE_STAGES)를 쓰고, 모르는 단계는 '단계 확인 전' */
 export function stageName(species: Species | undefined, code: string) {
-  return species?.lifeStages.find((s) => s.code === code)?.name ?? "";
+  return species?.lifeStages.find((s) => s.code === code)?.name ?? lifeStageName(code);
 }

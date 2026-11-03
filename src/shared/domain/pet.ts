@@ -1,7 +1,9 @@
 import { z } from "zod";
 import {
-  lifeStageFromHatch,
+  isKnownStage,
+  LIFE_STAGE_UNKNOWN,
   LIFE_STAGES,
+  lifeStageFromHatch,
   morphSchema,
   speciesIdSchema,
   type Morph,
@@ -34,10 +36,11 @@ export const petSchema = z.object({
   morph: z.string().max(40).nullable(),
   sex: sexSchema,
   hatchedOn: z.iso.date().nullable(),
+  /** juvenile(어린 개체) · adult(성체) · unknown(잘 모르겠어요 → '단계 확인 전') */
   lifeStageCode: z.string(),
-  /** hatch: 부화일로 자동 계산, manual: 부화일을 몰라 직접 고름 */
+  /** hatch: 부화일이 있어 부화일로 제안한 단계, manual: 부화일을 몰라 직접(또는 체중으로) 고름 */
   lifeStageSource: z.enum(["hatch", "manual"]),
-  /** 부화일을 몰라 고른 단계가 정확하지 않음 (해츨링·준성체만, U5) */
+  /** 고른 단계가 정확하지 않음 (어린 개체일 때만, U5) */
   stageUncertain: z.boolean(),
   acquiredOn: z.iso.date().nullable(),
   photoUrl: z.string().nullable(),
@@ -60,8 +63,10 @@ export const petFormSchema = z
     sex: sexSchema,
     hatchedOn: z.iso.date().nullable(),
     hatchUnknown: z.boolean(),
-    /** 부화일을 모를 때만 직접 고른 단계 */
+    /** 생애 단계 칩 (juvenile · adult · unknown). 부화일이 있으면 자동 제안되고 바꿀 수 있다 */
     lifeStageCode: z.string().nullable(),
+    /** '잘 모르겠어요'일 때 넣는 체중(g, 선택). 단계 제안에만 쓴다 */
+    weightG: z.number().positive().nullable(),
     acquiredOn: z.iso.date().nullable(),
     photoFileId: z.string().nullable(),
   })
@@ -69,7 +74,7 @@ export const petFormSchema = z
     path: ["hatchedOn"],
     message: "부화일을 고르거나 '부화일을 몰라요'를 체크해 주세요",
   })
-  .refine((v) => !v.hatchUnknown || v.lifeStageCode, {
+  .refine((v) => Boolean(v.lifeStageCode), {
     path: ["lifeStageCode"],
     message: "생애 단계를 골라 주세요",
   });
@@ -103,12 +108,12 @@ export type PetUpdateInput = Partial<Omit<PetCreateInput, "clientRequestId" | "s
 
 export const toServerSex = (sex: Sex) => serverSexSchema.parse(sex.toUpperCase());
 
-/** 생애 단계 code ↔ 백엔드 lifeStageId. 해츨링은 백엔드 ID가 없어 null (LIFE_STAGES 참고) */
+/** 생애 단계 code → 백엔드 lifeStageId. unknown·빈 값은 null (stageCertainty UNKNOWN과 짝) */
 export const lifeStageIdOf = (code: string | null | undefined) =>
   LIFE_STAGES.find((s) => s.code === code)?.id ?? null;
-/** null·UNKNOWN(4)·모르는 ID는 null */
-const lifeStageCodeOf = (id: number | null) =>
-  id === null ? null : (LIFE_STAGES.find((s) => s.id === id)?.code ?? null);
+/** 백엔드 lifeStageId → code. null·UNKNOWN(4)·모르는 ID는 unknown */
+const lifeStageCodeOf = (id: number | null | undefined) =>
+  LIFE_STAGES.find((s) => s.id === id)?.code ?? LIFE_STAGE_UNKNOWN.code;
 
 /** 고른 모프 이름 → 본문. 목록에 있는 모프면 ID, 없으면 직접 입력으로 보낸다 */
 export function morphFields(name: string | null, morphs: Morph[]) {
@@ -118,8 +123,9 @@ export function morphFields(name: string | null, morphs: Morph[]) {
 }
 
 /**
- * 부화일·생애 단계 → 본문. 부화일을 알면 단계를 계산해 CONFIRMED,
- * 모르면 고른 단계를 보내고 '정확하지 않아요'면 ESTIMATED
+ * 부화일·생애 단계 → 본문 (Figma 댓글 #5·#7).
+ * 단계는 칩에서 고른 값을 그대로 보낸다 (부화일이 있으면 제안값이 미리 골라져 있다).
+ * '잘 모르겠어요'면 lifeStageId null + UNKNOWN, 어린 개체 + '정확하지 않아요'면 ESTIMATED
  */
 export function stageFields(
   species: Pick<Species, "lifeStages">,
@@ -131,14 +137,16 @@ export function stageFields(
   },
 ) {
   const hatchedAt = v.hatchUnknown ? null : v.hatchedOn;
-  const code = v.hatchUnknown
+  const code = isKnownStage(v.lifeStageCode)
     ? v.lifeStageCode
-    : (lifeStageFromHatch(species, hatchedAt)?.code ?? null);
+    : v.lifeStageCode === LIFE_STAGE_UNKNOWN.code
+      ? null
+      : (lifeStageFromHatch(species, hatchedAt)?.code ?? null);
   const lifeStageId = lifeStageIdOf(code);
   const stageCertainty: Certainty =
     lifeStageId === null
       ? "UNKNOWN"
-      : v.hatchUnknown && v.stageUncertain
+      : code === "juvenile" && v.stageUncertain
         ? "ESTIMATED"
         : "CONFIRMED";
   return { hatchedAt, lifeStageId, stageCertainty };
@@ -192,8 +200,11 @@ export function toPet(res: PetResponse, speciesList: Species[], photoUrl: string
   const species = speciesList.find((s) => s.serverId === res.speciesId);
   if (!species) throw new Error(`알 수 없는 종이에요 (speciesId ${res.speciesId})`);
   const hatchedOn = res.hatchedAt ?? null;
+  // 백엔드가 단계를 안 주고 부화일만 있으면 부화일로 제안한 단계를 보여 준다
   const stageCode =
-    lifeStageCodeOf(res.lifeStageId ?? null) ?? lifeStageFromHatch(species, hatchedOn)?.code;
+    res.lifeStageId == null && hatchedOn
+      ? (lifeStageFromHatch(species, hatchedOn)?.code ?? LIFE_STAGE_UNKNOWN.code)
+      : lifeStageCodeOf(res.lifeStageId);
   const morph = [...res.morphs.map((m) => m.name), res.customMorph].filter(Boolean).join(", ");
   return {
     id: res.id,
@@ -202,9 +213,9 @@ export function toPet(res: PetResponse, speciesList: Species[], photoUrl: string
     morph: morph || null,
     sex: res.sex.toLowerCase() as Sex,
     hatchedOn,
-    lifeStageCode: stageCode ?? "",
+    lifeStageCode: stageCode,
     lifeStageSource: hatchedOn ? "hatch" : "manual",
-    stageUncertain: !hatchedOn && res.stageCertainty === "ESTIMATED",
+    stageUncertain: stageCode === "juvenile" && res.stageCertainty === "ESTIMATED",
     acquiredOn: res.adoptedAt ?? null,
     photoUrl,
     status: res.status,

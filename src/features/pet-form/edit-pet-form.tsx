@@ -40,6 +40,8 @@ type Draft = {
   hatchUnknown: boolean;
   lifeStageCode: string | null;
   stageUncertain: boolean;
+  /** '잘 모르겠어요'일 때 단계 제안용 체중(g). 화면 상태로만 쓴다 [백엔드 확인 필요] UpdatePetRequest에 체중 칸 없음 */
+  weightG: number | null;
   sex: Sex;
   acquiredOn: string | null;
 };
@@ -50,8 +52,9 @@ const fromPet = (pet: Pet): Draft => ({
   photo: { fileId: null, url: pet.photoUrl },
   hatchedOn: pet.hatchedOn,
   hatchUnknown: !pet.hatchedOn,
-  lifeStageCode: pet.lifeStageSource === "manual" ? pet.lifeStageCode : null,
+  lifeStageCode: pet.lifeStageCode,
   stageUncertain: pet.stageUncertain,
+  weightG: null,
   sex: pet.sex,
   acquiredOn: pet.acquiredOn,
 });
@@ -77,7 +80,8 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
   const dirty = JSON.stringify(draft) !== JSON.stringify(original);
   const valid =
     draft.name.trim().length > 0 &&
-    (draft.hatchUnknown ? Boolean(draft.lifeStageCode) : Boolean(draft.hatchedOn));
+    (draft.hatchUnknown || Boolean(draft.hatchedOn)) &&
+    Boolean(draft.lifeStageCode);
   const back = () => router.replace(`/pets/${pet.id}`);
 
   const save = useMutation({
@@ -169,6 +173,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
           hatchUnknown={draft.hatchUnknown}
           lifeStageCode={draft.lifeStageCode}
           stageUncertain={draft.stageUncertain}
+          weightG={draft.weightG}
           variant="edit"
           onChange={patch}
         />

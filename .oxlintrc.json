@@ -10,15 +10,20 @@
     "node": true
   },
   "ignorePatterns": [
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-    "public/sw*",
-    "public/mockServiceWorker.js",
-    "src/shared/api/generated/**",
-    "playwright-report/**",
-    "test-results/**"
+    "**/.next/**",
+    "**/.expo/**",
+    "**/out/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/next-env.d.ts",
+    "**/expo-env.d.ts",
+    "apps/web/public/sw*",
+    "apps/web/public/mockServiceWorker.js",
+    "apps/mobile/ios/**",
+    "apps/mobile/android/**",
+    "packages/core/src/api/generated/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
   ],
   "rules": {
     "no-array-constructor": "error",

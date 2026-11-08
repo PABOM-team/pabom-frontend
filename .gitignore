@@ -1,24 +1,36 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # testing
-/coverage
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
 
-# next.js
-/.next/
-/out/
+# next.js (apps/web)
+.next/
+out/
+build/
+next-env.d.ts
+apps/web/public/sw*
 
-# production
-/build
+# expo (apps/mobile). 네이티브 폴더는 Continuous Native Generation으로 만든다
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+apps/mobile/ios/
+apps/mobile/android/
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
 
 # misc
 .DS_Store
@@ -30,24 +42,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (각 앱의 .env.example만 올린다)
 .env*
+!.env.example
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
-!.env.example
-
-# serwist
-public/sw*
-
-# playwright
-/test-results/
-/playwright-report/
-/playwright/.cache/
 
 # local https (next dev --experimental-https)
-/certificates
+certificates/

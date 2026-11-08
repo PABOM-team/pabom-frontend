@@ -1,0 +1,121 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { ArrowUpRight } from "lucide-react";
+import { useParams } from "next/navigation";
+import { Fragment } from "react";
+import { speciesQueries } from "@/entities/species";
+import { CARE_DISCLAIMER, formatInterval, RECORD_KIND_LABEL } from "@pabom/core/domain/care";
+import { EVIDENCE_LEVEL_LABEL, speciesIdSchema } from "@pabom/core/domain/species";
+import { Skeleton, StateMessage } from "@/shared/ui/display";
+import { Screen, ScreenBody } from "@/shared/ui/screen";
+import { TopBar } from "@/shared/ui/top-bar";
+
+/** SCR-S04 3 종 가이드라인. 표의 항목·주기는 확정 전 예시 */
+export function SpeciesGuidelineScreen() {
+  const params = useParams<{ speciesId: string }>();
+  const parsed = speciesIdSchema.safeParse(params.speciesId);
+  const speciesList = useQuery(speciesQueries.list());
+  const table = useQuery({
+    ...speciesQueries.careStandards(parsed.success ? parsed.data : "crested_gecko"),
+    enabled: parsed.success,
+  });
+  const species = speciesList.data?.find((s) => s.id === params.speciesId);
+
+  if (!parsed.success) {
+    return (
+      <Screen>
+        <TopBar title="가이드라인" fallbackHref="/settings/guidelines" />
+        <StateMessage className="flex-1 justify-center" title="지원하지 않는 종이에요" />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <TopBar
+        title={species?.commonName ?? "가이드라인"}
+        fallbackHref="/settings/guidelines?group=lizard"
+      />
+      <ScreenBody>
+        {table.isPending || !species ? (
+          <Skeleton className="h-72" />
+        ) : table.isError ? (
+          <StateMessage
+            title="가이드라인을 불러오지 못했어요"
+            action={{ label: "다시 시도", onClick: () => table.refetch() }}
+          />
+        ) : (
+          <>
+            <p className="text-body-md text-muted-foreground">
+              관리 가이드라인 v{table.data.version}
+              {table.data.effectiveFrom ? ` · ${table.data.effectiveFrom} 적용` : ""}
+              {table.data.isDraft ? " (예시)" : ""}
+            </p>
+            <table className="mt-3 w-full text-left text-body-lg">
+              <thead>
+                <tr className="bg-muted text-body-md text-secondary-text">
+                  <th className="px-1.5 py-2 font-normal">생애 단계</th>
+                  <th className="px-1.5 py-2 font-normal">항목</th>
+                  <th className="px-1.5 py-2 font-normal">주기</th>
+                  <th className="px-1.5 py-2 font-normal">기록</th>
+                  <th className="px-1.5 py-2 font-normal">근거</th>
+                </tr>
+              </thead>
+              <tbody>
+                {species.lifeStages.map((stage) => {
+                  const rows = table.data.standards.filter((s) => s.lifeStageCode === stage.code);
+                  return (
+                    <Fragment key={stage.code}>
+                      {rows.map((row, i) => (
+                        <tr key={row.careItem} className="border-b border-border">
+                          <td className="px-1.5 py-2.5">{i === 0 ? stage.name : ""}</td>
+                          <td className="px-1.5 py-2.5">
+                            {row.careItemName}
+                            {row.defaultEnabled ? null : (
+                              <span className="block text-body-md text-muted-foreground">
+                                기본 꺼짐
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-1.5 py-2.5">{formatInterval(row.intervalDays)}</td>
+                          <td className="px-1.5 py-2.5">{RECORD_KIND_LABEL[row.recordKind]}</td>
+                          <td className="px-1.5 py-2.5 text-body-md text-secondary-text">
+                            {row.evidenceLevel ? EVIDENCE_LEVEL_LABEL[row.evidenceLevel] : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            {/* 성체로 보는 기준 (v1.2 명세 S04): 참고 체중·최소 나이는 프론트 상수 [백엔드 확인 필요] */}
+            <div className="mt-4 rounded-lg bg-muted p-3.5 text-body-md">
+              <p className="font-bold">성체로 보는 기준</p>
+              <p className="mt-1 leading-relaxed text-secondary-text">
+                체중이 더 늘지 않거나 {species.adultWeightG}g을 넘으면 다 자란 것으로 봐요.{" "}
+                {species.adultCheckMinAgeMonths}개월 전에는 묻지 않아요.
+              </p>
+            </div>
+            <div className="mt-3 rounded-lg bg-muted p-3.5 text-body-md">
+              <p className="font-bold">이렇게 만들었어요</p>
+              {table.data.references.map((ref) => (
+                <p key={ref.title} className="mt-1 flex items-center gap-1 text-secondary-text">
+                  {ref.title}
+                  <ArrowUpRight className="size-3.5" />
+                </p>
+              ))}
+              {table.data.reviewNote ? (
+                <p className="mt-1 text-primary">{table.data.reviewNote}</p>
+              ) : null}
+            </div>
+            <p className="mt-3 text-body-md leading-relaxed text-muted-foreground">
+              {CARE_DISCLAIMER}
+            </p>
+          </>
+        )}
+      </ScreenBody>
+    </Screen>
+  );
+}

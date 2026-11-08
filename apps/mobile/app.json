@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "파봄",
+    "slug": "pabom",
+    "scheme": "pabom",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.pabom.mobile"
+    },
+    "android": {
+      "package": "app.pabom.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#eaf5ff",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -4,7 +4,7 @@
 
 ```
 apps/web/        Next.js 16 웹앱 (PWA). 지금 서비스 중인 것
-apps/mobile/     Expo(React Native) 앱. 스모크 화면만 있는 뼈대
+apps/mobile/     Expo(React Native) 앱. 웹과 같은 화면을 React Native 로 그린다
 packages/core/   @pabom/core — 웹·앱이 함께 쓰는 도메인 스키마·API 클라이언트·쿼리·디자인 토큰
 ```
 
@@ -127,8 +127,11 @@ state 쿠키는 localhost 쪽에 있어서 맞지 않는다).
 
 앱(`apps/mobile`)
 
-- **Expo SDK 58 + React Native 0.88**, **Expo Router** (`src/app/` 파일 기반 라우팅)
-- UI는 React Native `StyleSheet` + `@pabom/core/design/tokens`. 라이브러리 선택(NativeWind 등)은 아직 열려 있다
+- **Expo SDK 58 + React Native 0.88**, **Expo Router** (`src/app/` 파일 기반 라우팅, 웹과 같은 경로)
+- UI는 React Native `StyleSheet` + `@pabom/core/design/tokens`. 의미 색은 `src/shared/ui/theme.ts`(웹 `globals.css` 와 같은 값),
+  글자는 `src/shared/ui/text.tsx` 의 `<Text variant="body-lg" weight="medium">` 로 토큰을 입힌다
+- 폰트: Pretendard 정적 4종(`assets/fonts`, `expo-font`). 아이콘은 웹 아이콘을 `react-native-svg` 로 옮긴 `src/shared/ui/icons.tsx`
+- 앱을 켜면 로고 화면(네이티브 스플래시 → `_layout.tsx` 의 `SplashGate`)이 글꼴·로그인 상태를 불러올 때까지 보이고, 다 되면 페이드로 사라진다
 - 의존성 추가는 `pnpm --filter mobile exec expo install <패키지>` (SDK에 맞는 버전을 고른다)
 
 ## 폴더 구조
@@ -151,8 +154,13 @@ apps/web/src/                 Next.js. app → features → entities → shared
   shared/     웹 전용 — ui(shadcn), lib(cn·image)
   mocks/      MSW 핸들러 + 목업 DB(db.ts) + 업무 규칙 흉내(logic.ts)
 
-apps/mobile/src/              Expo Router. 같은 레이어 구조로 키운다
-  app/        화면 (_layout.tsx 가 QueryClientProvider)
+apps/mobile/src/              Expo Router. app → screens → features → entities → shared
+  app/        라우트 파일만 (얇은 래퍼). _layout.tsx 가 QueryClientProvider·스플래시·토스트·세션 만료 창
+              welcome·agreements·terms·auth/callback 로그인 전, (app) 로그인 후(RequireAuth), (app)/(tabs) 오늘·개체·설정
+  screens/    화면 컴포넌트 — home, pets, settings, handover (웹 app/**/\*-screen.tsx 와 1:1)
+  features/   웹과 같은 이름 — auth, pet-form, task-actions, record-editor, routine-editor, pet-lifecycle, handover
+  entities/   앱 UI(PetCard·TaskCard·RecordRow) + core 의 쿼리를 다시 내보냄
+  shared/     앱 전용 — ui(theme·text·button·sheet·calendar·…), lib(image·share·session-storage·navigation)
 ```
 
 웹 코드에서 공통 코드는 `@pabom/core/domain/pet`, `@pabom/core/api/endpoints` 처럼 가져온다.
@@ -170,14 +178,17 @@ apps/mobile/src/              Expo Router. 같은 레이어 구조로 키운다
 5. **react·@tanstack/react-query 버전은 웹·앱이 같아야 한다.** `pnpm-workspace.yaml`의 `nodeLinker: hoisted`로 루트 node_modules 한 벌을
    쓰므로, 버전이 갈리면 React가 두 벌 번들돼 앱이 죽는다. Expo SDK를 올릴 때 웹 `react`·`react-dom`도 같은 버전으로 맞춘다.
 
-## 앱에서 아직 안 되는 것
+## 앱에서 다른 점·아직 안 되는 것
 
-- **로그인.** 웹은 카카오·구글이 `/api/v1/auth/{provider}/callback`으로 돌려보내지만, 앱은 `expo-web-browser` + 딥링크(`pabom://`)로
-  받아야 한다. 백엔드에 앱용 Redirect URI가 필요하다.
-- **세션 저장.** `apps/web`은 `sessionStorage`를 쓰고, 앱은 `configureSessionStorage()`(`@pabom/core/api/session`)에
-  `expo-secure-store` 어댑터를 끼워야 한다. 지금은 메모리에만 있다.
-- **사진.** 웹의 `resizeImage`(canvas)는 앱에 없다. `expo-image-manipulator`로 같은 규칙(긴 변 1600px·JPEG 0.85)을 구현한다.
-- **MSW 목업·웹 푸시**는 웹 전용이다.
+- **로그인 되돌아오기.** 앱은 `expo-web-browser` 인증 창으로 카카오·구글을 띄우고 `pabom://auth/callback/{provider}?code&state`
+  로 돌아오길 기다린다(`src/features/auth`). 그런데 백엔드 Redirect URI 는 웹(`/api/v1/auth/{provider}/callback`)으로 고정돼 있어,
+  **백엔드(또는 웹 콜백)가 앱 스킴으로 넘겨 주기 전에는 로그인이 끝나지 않는다.** state 쿠키는 RN 네트워크 쿠키 저장소가 들고 있어
+  앱 스킴으로만 돌아오면 그대로 동작한다.
+- **세션 저장.** `configureSessionStorage()` 에 `expo-secure-store` 어댑터(`src/shared/lib/session-storage.ts`)를 끼웠다.
+  refresh 토큰은 웹과 같이 백엔드 쿠키이고, RN 이 쿠키를 보관한다.
+- **사진.** `expo-image-picker` 로 고르고 `expo-image-manipulator` 로 웹과 같은 규칙(긴 변 1600px·JPEG 0.85)으로 줄여 올린다.
+- **QR 저장.** 파일 다운로드 대신 PNG 를 캐시에 쓰고 기기 공유 창(`expo-sharing`)으로 넘긴다.
+- **MSW 목업·웹 푸시·오프라인 서비스 워커**는 웹 전용이다. 앱은 항상 진짜 백엔드를 부른다(`EXPO_PUBLIC_API_BASE_URL`).
 
 ## 화면 틀 (웹)
 

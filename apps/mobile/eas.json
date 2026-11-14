@@ -1,0 +1,48 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "24.11.0",
+      "pnpm": "11.3.0"
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://dev.api.pabom.app",
+        "EXPO_PUBLIC_API_MOCKING": "disabled"
+      }
+    },
+    "preview": {
+      "extends": "base",
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://dev.api.pabom.app",
+        "EXPO_PUBLIC_API_MOCKING": "disabled"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "distribution": "store",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://api.pabom.app",
+        "EXPO_PUBLIC_API_MOCKING": "disabled"
+      }
+    }
+  },
+  "submit": {
+    "preview": {
+      "extends": "production"
+    },
+    "production": {
+      "ios": {
+        "ascAppId": "6834854415"
+      }
+    }
+  }
+}

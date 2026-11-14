@@ -2,6 +2,7 @@
   "expo": {
     "name": "파봄",
     "slug": "pabom",
+    "owner": "pabom",
     "scheme": "pabom",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -41,6 +42,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "46f2f8ad-394c-4a63-8cd0-91c462fb5a29"
+      }
     }
   }
 }

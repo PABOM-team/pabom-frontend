@@ -1,0 +1,63 @@
+# 파봄 iOS 앱을 EAS에서 빌드·서명하고, 원하면 TestFlight로 올린다.
+# 서명 인증서·프로비저닝 프로파일은 EAS 서버에 있고(eas credentials), 여기서는 EXPO_TOKEN만 쓴다.
+# - 수동 실행: Actions → "Mobile iOS" → Run workflow 에서 프로필과 제출 여부를 고른다
+# - 태그: mobile-v* 태그를 올리면 production 빌드 후 TestFlight로 제출한다
+name: Mobile iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "eas.json 빌드 프로필"
+        type: choice
+        options: [production, preview]
+        default: production
+      submit:
+        description: "빌드가 끝나면 TestFlight로 제출"
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "mobile-v*"
+
+concurrency:
+  group: mobile-ios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: EAS iOS build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      PROFILE: ${{ inputs.profile || 'production' }}
+      SUBMIT: ${{ github.event_name == 'push' || inputs.submit }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (and submit)
+        run: |
+          args=(--platform ios --profile "$PROFILE" --non-interactive --no-wait)
+          if [ "$SUBMIT" = "true" ]; then
+            args+=(--auto-submit-with-profile "$PROFILE")
+          fi
+          eas build "${args[@]}"

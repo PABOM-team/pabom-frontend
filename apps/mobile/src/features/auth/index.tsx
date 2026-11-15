@@ -21,8 +21,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 /**
  * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양).
- * 백엔드에서 로그인 주소를 받아(state 쿠키도 함께) 앱 안 인증 브라우저로 띄운다.
- * 카카오·구글 → 백엔드 Redirect URI → 앱 스킴(pabom://auth/callback/{provider}?code&state)으로 돌아오면
+ * 앱 주소(redirect_uri)를 넘겨 백엔드에서 로그인 주소를 받고(state 쿠키도 함께) 앱 안 인증 브라우저로 띄운다.
+ * 카카오·구글 → 백엔드 app-callback → 앱 스킴(pabom://auth/callback/{provider}?code&state)으로 돌아오면
  * 그 주소의 code·state 로 로그인을 마친다
  */
 export function LoginButtons({
@@ -34,11 +34,9 @@ export function LoginButtons({
 }) {
   const login = useMutation({
     mutationFn: async (provider: AuthProvider) => {
-      const { authorizationUrl } = await authApi.loginUrl(provider);
-      const result = await WebBrowser.openAuthSessionAsync(
-        authorizationUrl,
-        loginRedirectUrl(provider),
-      );
+      const redirectUrl = loginRedirectUrl(provider);
+      const { authorizationUrl } = await authApi.appLoginUrl(provider, redirectUrl);
+      const result = await WebBrowser.openAuthSessionAsync(authorizationUrl, redirectUrl);
       return { provider, result };
     },
     onSuccess: ({ provider, result }) => {

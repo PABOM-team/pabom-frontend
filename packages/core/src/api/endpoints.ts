@@ -101,6 +101,15 @@ export const authApi = {
   /** API-01 카카오·구글 로그인 화면 주소. CSRF를 막는 state 쿠키도 함께 받는다 */
   loginUrl: (provider: AuthProvider) => api.get(`auth/${provider}/login-url`).json(loginUrlSchema),
   /**
+   * API-01 앱용 로그인 화면 주소. 카카오·구글이 백엔드 app-callback 을 거쳐
+   * redirectUri(pabom://auth/callback/{provider}, 개발 앱은 pabom-dev://…)로 code·state 를 돌려보낸다.
+   * 웹의 loginUrl 은 mutationFn 으로 바로 넘겨져 두 번째 인자를 받으면 안 되므로 따로 둔다
+   */
+  appLoginUrl: (provider: AuthProvider, redirectUri: string) =>
+    api
+      .get(`auth/${provider}/login-url`, { searchParams: { redirect_uri: redirectUri } })
+      .json(loginUrlSchema),
+  /**
    * API-01 인가 코드로 로그인·가입. 기존 회원은 refresh 쿠키도 받는다.
    * 인가 코드는 한 번만 쓸 수 있어서 다시 시도하지 않는다
    */

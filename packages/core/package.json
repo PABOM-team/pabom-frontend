@@ -1,0 +1,33 @@
+{
+  "name": "@pabom/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "파봄 웹·앱이 함께 쓰는 도메인 스키마, API 클라이언트, 쿼리, 디자인 토큰",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "api:generate": "orval --config orval.config.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
+    "date-fns": "^4.4.0",
+    "ky": "^2.1.0",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "@types/react": "~19.3.0",
+    "orval": "^8.40.0",
+    "react": "19.3.0",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  }
+}

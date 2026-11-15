@@ -1,0 +1,103 @@
+/** 쉼표로 적은 목록을 Set으로 */
+const list = (value: string | undefined) =>
+  new Set(
+    (value ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+
+/**
+ * 묶음 이름의 단수·복수 실수(pet → pets, records → record 등)는 바로잡아 받는다.
+ * dev 배포 환경변수에 `pet`이 들어가 개체만 목업으로 남고 기록은 진짜로 가서 상세가 깨진 적이 있다
+ */
+const GROUP_ALIAS: Record<string, ApiLiveGroup> = {
+  pet: "pets",
+  routines: "routine",
+  records: "record",
+  files: "file",
+  users: "user",
+};
+
+/** API_LIVE → 묶음 Set. 모르는 이름은 버리고 콘솔에 알린다 */
+const liveGroups = (value: string | undefined) => {
+  const known = new Set<string>(API_LIVE_GROUPS);
+  const groups = [...list(value)].map((name) => GROUP_ALIAS[name] ?? name);
+  const unknown = groups.filter((name) => !known.has(name));
+  if (unknown.length && typeof console !== "undefined") {
+    console.warn(
+      `[env] API_LIVE에 모르는 묶음이 있어요: ${unknown.join(", ")} (가능한 값: ${API_LIVE_GROUPS.join(", ")})`,
+    );
+  }
+  return new Set(groups.filter((name) => known.has(name)));
+};
+
+/**
+ * API_LIVE에 적을 수 있는 묶음. 웹 목업 핸들러 묶음(apps/web/src/mocks/browser.ts)과 1:1이다.
+ * - auth: 로그인·약관 동의 · user: 내 정보·회원 탈퇴 · species: 종·모프·관리 가이드라인
+ * - pets: 개체 목록·등록·상세·수정·삭제 · routine: 체크 리스트·완료/건너뛰기/미루기·오늘 할 일
+ * - record: 기록 목록·추가·상세·정정·삭제·복구 · file: 사진 업로드·조회 주소
+ * 인계 카드·개체 상태 바꾸기는 스웨거에 없어 항상 목업이다
+ */
+export const API_LIVE_GROUPS = [
+  "auth",
+  "user",
+  "species",
+  "pets",
+  "routine",
+  "record",
+  "file",
+] as const;
+export type ApiLiveGroup = (typeof API_LIVE_GROUPS)[number];
+
+/**
+ * 환경 변수는 웹(Next)은 NEXT_PUBLIC_*, 앱(Expo)은 EXPO_PUBLIC_* 로 받는다.
+ * 두 번들러 모두 `process.env.접두사_이름` 을 글자 그대로 적은 곳만 빌드 때 값으로 바꾸므로
+ * 변수 이름을 조립하지 말고 아래처럼 하나씩 적는다. 자기 쪽이 아닌 접두사는 undefined 가 된다.
+ */
+export const env = {
+  /**
+   * API를 부르는 백엔드 주소. 배포에서는 반드시 넣는다 (예: https://api.pabom.app).
+   * 웹 로컬 개발에서 비워 두면 같은 주소의 /api/v1로 부르고, 개발 전용 프록시(apps/web/src/app/api/v1)가
+   * API_PROXY_TARGET 백엔드로 넘긴다. 앱은 프록시가 없으니 항상 넣는다.
+   */
+  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.EXPO_PUBLIC_API_BASE_URL ?? "",
+  apiMocking:
+    (process.env.NEXT_PUBLIC_API_MOCKING ?? process.env.EXPO_PUBLIC_API_MOCKING) === "enabled",
+  /** 목업 모드에서도 진짜 백엔드로 보내는 API 묶음 (API_LIVE_GROUPS). 비우면 전부 목업 */
+  apiLive: liveGroups(
+    process.env.NEXT_PUBLIC_API_LIVE ?? process.env.EXPO_PUBLIC_API_LIVE,
+  ) as Set<string>,
+  /** 웹 푸시용 VAPID 공개키 (웹 전용) */
+  vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
+} as const;
+
+/** 로그인을 목업으로 하는지 (목업 모드이면서 auth를 진짜로 보내지 않을 때) */
+export const isAuthMocked = env.apiMocking && !env.apiLive.has("auth");
+
+const liveMismatch = (a: ApiLiveGroup, b: ApiLiveGroup) =>
+  env.apiMocking && env.apiLive.has(a) !== env.apiLive.has(b);
+
+/**
+ * 개체(pets)와 사진(file)이 한쪽만 진짜 백엔드면 서로 파일 ID를 몰라서,
+ * 개체 등록·수정 화면에서 사진 칸을 숨긴다
+ */
+export const isPetPhotoDisabled = liveMismatch("pets", "file");
+
+/**
+ * 개체(pets)와 일정(routine)이 한쪽만 진짜 백엔드면 일정 쪽이 그 개체를 몰라서,
+ * 등록 뒤 체크 리스트 화면 대신 개체 상세로 가고 단계가 바뀌어도 체크 리스트 토스트를 띄우지 않는다
+ */
+export const isRoutineDetached = liveMismatch("pets", "routine");
+
+/**
+ * 함께했던 개체로 바꾸기·되돌리기는 스웨거에 없어 목업에만 있다. 개체(pets)가 진짜 백엔드면 목업이 그 개체를
+ * 몰라 404 가 나므로 메뉴에서 뺀다 [백엔드 요청]
+ */
+export const isPetStatusChangeSupported = env.apiMocking && !env.apiLive.has("pets");
+
+/**
+ * 급여 먹이 이름은 스웨거 UpdateRoutineRequest에 없고, 모르는 칸을 보내면 백엔드가 400을 준다 [백엔드 요청].
+ * 그래서 일정(routine)이 목업일 때만 먹이 이름을 보여 주고 저장한다
+ */
+export const isRoutineFoodNameSupported = env.apiMocking && !env.apiLive.has("routine");

@@ -1,0 +1,144 @@
+/* 자동 생성 파일. 고치지 말고 packages/core/src/design/tokens.ts 를 바꾼 뒤 `pnpm tokens:build` */
+@theme {
+  /* ---- Color / 팔레트 ---- */
+  --color-primary-50: #eaf5ff;
+  --color-primary-100: #bddfff;
+  --color-primary-200: #9dd0ff;
+  --color-primary-300: #70bbff;
+  --color-primary-400: #54adff;
+  --color-primary-500: #2999ff;
+  --color-primary-600: #258be8;
+  --color-primary-700: #1d6db5;
+  --color-primary-800: #17548c;
+  --color-primary-900: #11406b;
+
+  --color-sub-50: #f0f5ff;
+  --color-sub-100: #d0e1ff;
+  --color-sub-200: #b9d2ff;
+  --color-sub-300: #98beff;
+  --color-sub-400: #85b1ff;
+  --color-sub-500: #669eff;
+  --color-sub-600: #5d90e8;
+  --color-sub-700: #4870b5;
+  --color-sub-800: #38578c;
+  --color-sub-900: #2b426b;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bedbff;
+  --color-blue-300: #8ec5ff;
+  --color-blue-400: #51a2ff;
+  --color-blue-500: #2b7fff;
+  --color-blue-600: #155dfc;
+  --color-blue-700: #1447e6;
+  --color-blue-800: #193cb8;
+  --color-blue-900: #1c398e;
+  --color-blue-950: #162456;
+
+  --color-red-50: #fef2f2;
+  --color-red-100: #ffe2e2;
+  --color-red-200: #ffc9c9;
+  --color-red-300: #ffa2a2;
+  --color-red-400: #ff6467;
+  --color-red-500: #fb2c36;
+  --color-red-600: #e7000b;
+  --color-red-700: #c10007;
+  --color-red-800: #9f0712;
+  --color-red-900: #82181a;
+  --color-red-950: #460809;
+
+  --color-green-50: #e6faee;
+  --color-green-100: #dcfce7;
+  --color-green-200: #b9f8cf;
+  --color-green-300: #7bf1a8;
+  --color-green-400: #05df72;
+  --color-green-500: #00c950;
+  --color-green-600: #00a63e;
+  --color-green-700: #008236;
+  --color-green-800: #016630;
+  --color-green-900: #0d542b;
+  --color-green-950: #032e15;
+
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c2;
+  --color-yellow-200: #fff085;
+  --color-yellow-300: #ffdf20;
+  --color-yellow-400: #fdc700;
+  --color-yellow-500: #f0b100;
+  --color-yellow-600: #d08700;
+  --color-yellow-700: #a65f00;
+  --color-yellow-800: #894b00;
+  --color-yellow-900: #733e0a;
+  --color-yellow-950: #432004;
+
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #9f9fa9;
+  --color-gray-500: #71717b;
+  --color-gray-600: #52525c;
+  --color-gray-700: #3f3f47;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #09090b;
+
+  --color-kakao-brand: #fee500;
+  --color-kakao-brand-foreground: #191919;
+
+  /* ---- Typography: title 은 bold · 행간 120% · 자간 -3%, body 는 굵기를 따로 ---- */
+  --text-title-xl: 36px;
+  --text-title-xl--line-height: 1.2;
+  --text-title-xl--letter-spacing: -0.03em;
+  --text-title-xl--font-weight: 700;
+  --text-title-lg: 32px;
+  --text-title-lg--line-height: 1.2;
+  --text-title-lg--letter-spacing: -0.03em;
+  --text-title-lg--font-weight: 700;
+  --text-title-md: 28px;
+  --text-title-md--line-height: 1.2;
+  --text-title-md--letter-spacing: -0.03em;
+  --text-title-md--font-weight: 700;
+  --text-title-sm: 24px;
+  --text-title-sm--line-height: 1.2;
+  --text-title-sm--letter-spacing: -0.03em;
+  --text-title-sm--font-weight: 700;
+  --text-title-xs: 20px;
+  --text-title-xs--line-height: 1.2;
+  --text-title-xs--letter-spacing: -0.03em;
+  --text-title-xs--font-weight: 700;
+
+  --text-body-xl: 16px;
+  --text-body-xl--line-height: 1.3;
+  --text-body-xl--letter-spacing: -0.03em;
+  --text-body-lg: 14px;
+  --text-body-lg--line-height: 1.35;
+  --text-body-lg--letter-spacing: -0.03em;
+  --text-body-md: 12px;
+  --text-body-md--line-height: 1.35;
+  --text-body-md--letter-spacing: -0.03em;
+  --text-body-sm: 10px;
+  --text-body-sm--line-height: 1.35;
+  --text-body-sm--letter-spacing: -0.03em;
+
+  /* ---- Radius ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 20px;
+  --radius-4xl: 20px;
+
+  /* ---- Shadow ---- */
+  --shadow-xs: 0 2px 5px 0px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 3px 10px 0px rgb(0 0 0 / 0.12);
+  --shadow-md: 0 4px 15px 1px rgb(0 0 0 / 0.15);
+  --shadow-lg: 0 20px 100px 2px rgb(0 0 0 / 0.15);
+  --shadow-xl: var(--shadow-lg);
+  --shadow-2xl: var(--shadow-lg);
+
+  /* ---- Grid: 모바일 375 기준 좌우 여백 ---- */
+  --spacing-gutter: 20px;
+}

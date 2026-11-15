@@ -1,5 +1,8 @@
 pnpm-lock.yaml
-public/mockServiceWorker.js
-public/sw*
-src/shared/api/generated
+apps/web/public/mockServiceWorker.js
+apps/web/public/sw*
+apps/web/src/app/tokens.css
+packages/core/src/api/generated
 .next
+.expo
+dist

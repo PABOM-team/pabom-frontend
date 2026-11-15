@@ -1,3 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Expo(Metro)·React Native는 node_modules가 한 곳에 펼쳐져 있어야 react·react-query가 한 벌만 번들된다.
+# 웹·앱이 같은 react 버전을 쓰므로 루트 node_modules 한 벌을 모두가 쓴다
+nodeLinker: hoisted
+
 allowBuilds:
   esbuild: true
   msw: true

@@ -10,7 +10,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.pabom.mobile"
+      "bundleIdentifier": "app.pabom.mobile",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.pabom.mobile",

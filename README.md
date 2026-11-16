@@ -197,6 +197,21 @@ apps/mobile/src/              Expo Router. app → screens → features → enti
 - **QR 저장.** 파일 다운로드 대신 PNG 를 캐시에 쓰고 기기 공유 창(`expo-sharing`)으로 넘긴다.
 - **MSW 목업·웹 푸시·오프라인 서비스 워커**는 웹 전용이다. 앱은 항상 진짜 백엔드를 부른다(`EXPO_PUBLIC_API_BASE_URL`).
 
+## 앱 배포 (EAS)
+
+개발 앱 "파봄(dev)"과 운영 앱 "파봄"을 따로 배포한다. 빌드 설정과 앱에 들어가는 공개 키는 `apps/mobile/eas.json` 프로필의 `env`에 있고,
+GitHub Actions 는 `EXPO_TOKEN` 시크릿만 쓴다. 서명 키(iOS 인증서, Android 키스토어)와 스토어 제출 키는 EAS 서버에 있다(`eas credentials`).
+
+| 앱                               | 프로필       | iOS                                                             | Android                                                                                                  |
+| -------------------------------- | ------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 파봄(dev) `app.pabom.mobile.dev` | `preview`    | develop 머지 → TestFlight (`mobile-ios-dev.yml`)                | develop 머지 → APK, expo.dev 설치 링크 (`mobile-android-dev.yml`)                                        |
+| 파봄 `app.pabom.mobile`          | `production` | main 수동 실행·`mobile-v*` 태그 → TestFlight (`mobile-ios.yml`) | main 수동 실행·`mobile-v*` 태그 → AAB, 수동 실행에서 고르면 Play 내부 테스트 초안 (`mobile-android.yml`) |
+
+- CI 는 서명 키를 새로 만들 수 없다. 새 앱(번들 ID·패키지명)은 처음 한 번 로컬에서 `cd apps/mobile && eas credentials` 로 만든다.
+  Android 키스토어를 만들면 그 SHA-1 을 Google Cloud(Android 클라이언트)와 카카오(키 해시)에 등록한다.
+- Play 제출은 Play Console 에 앱을 만들고 첫 AAB 를 손으로 올린 뒤에만 된다(Google API 제약). 제출 키는 Google 서비스 계정 JSON 을
+  `eas credentials -p android` → Google Service Account 로 EAS 에 올린다. Play 가 다시 서명하므로 Play 앱 서명 키의 SHA-1 도 따로 등록한다.
+
 ## 화면 틀 (웹)
 
 모바일 웹앱이라 화면 틀(`apps/web/src/shared/ui/app-shell.tsx`)이 최대 430px로 고정된다. 768px 이상에서는 가운데 정렬,

@@ -1,0 +1,59 @@
+# 개발 서버용 Android 앱 "파봄(dev)"(app.pabom.mobile.dev)을 EAS에서 APK로 빌드한다 (eas.json preview 프로필).
+# Play 스토어를 거치지 않는 내부 배포라, 빌드가 끝나면 expo.dev 빌드 페이지의 설치 링크·QR을 테스터에게 보낸다.
+# 운영 앱 "파봄"은 mobile-android.yml 에서 main 기준으로만 빌드한다.
+# - 자동: develop 에 앱에 들어가는 코드(apps/mobile, packages/core, 의존성)가 바뀌어 들어오면 빌드한다
+# - 수동: Actions → "Mobile Android (dev)" → Run workflow. 어떤 브랜치를 골라도 develop 최신 커밋을 빌드한다
+# 서명 키스토어는 EAS 서버에 있다. CI(--non-interactive)는 키스토어를 새로 만들 수 없어서, 처음 한 번은
+# 로컬에서 `eas credentials -p android` (preview 프로필)로 만들어 둔다
+name: Mobile Android (dev)
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "apps/mobile/**"
+      - "packages/core/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/mobile-android-dev.yml"
+  workflow_dispatch:
+
+# 연달아 머지되면 앞 빌드를 기다리지 않고 마지막 develop 만 빌드한다
+concurrency:
+  group: mobile-android-dev
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: EAS Android build (preview)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: develop
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: |
+          echo "Building $(git rev-parse --short HEAD) from develop"
+          eas build --platform android --profile preview --non-interactive --no-wait

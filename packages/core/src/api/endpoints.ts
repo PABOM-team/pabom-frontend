@@ -115,6 +115,12 @@ export const authApi = {
    */
   callback: (provider: AuthProvider, query: { code: string; state: string }) =>
     api.get(`auth/${provider}/callback`, { searchParams: query, retry: 0 }).json(oauthLoginSchema),
+  /**
+   * 앱 SDK 로그인. 카카오·구글 SDK가 기기에서 받은 토큰(카카오 access 토큰, 구글 ID 토큰)을 백엔드가 검증하고
+   * 콜백과 같은 결과를 준다. 기존 회원은 refresh 쿠키도 받는다. 토큰은 한 번 검증에 쓰므로 다시 시도하지 않는다
+   */
+  tokenLogin: (provider: AuthProvider, body: { accessToken: string } | { idToken: string }) =>
+    api.post(`auth/${provider}/token`, { json: body, retry: 0 }).json(oauthLoginSchema),
   /** API-03 refresh 쿠키를 지운다. 쿠키가 없어도 204 */
   logout: () => api.post("auth/logout").then(noContent),
 };

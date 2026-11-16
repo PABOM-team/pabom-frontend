@@ -6,6 +6,7 @@ import { getErrorMessage } from "@pabom/core/api/errors";
 import { setAccessToken, setSignupSession, setStoredAccount } from "@pabom/core/api/session";
 import { appLoginRedirectUri, type AuthProvider } from "@pabom/core/domain/user";
 import { toast } from "@/shared/ui/toast";
+import { LoginCancelled, socialToken } from "./social";
 
 /** 로그인 뒤 돌아갈 곳. 앱 안 경로만 허용한다 */
 export function safeNext(next: string | string[] | null | undefined) {
@@ -56,8 +57,21 @@ export function parseLoginCallback(url: string): LoginCallbackParams {
 
 const FAILED = "로그인하지 못했어요. 다시 시도해 주세요.";
 
+/** 로그인 결과로 새 회원은 약관 동의, 기존 회원은 홈(또는 보던 화면)으로 */
+function finishLogin(provider: AuthProvider, login: Awaited<ReturnType<typeof authApi.callback>>) {
+  const next = takeLoginNext();
+  setStoredAccount({ id: login.user.id, nickname: login.user.nickname, provider });
+  if ("signupToken" in login) {
+    setSignupSession(login.signupToken, login.expiresIn);
+    router.replace(next ? { pathname: "/agreements", params: { next } } : "/agreements");
+  } else {
+    setAccessToken(login.accessToken);
+    router.replace((next as "/home") ?? "/home");
+  }
+}
+
 /**
- * SCR-A02 로그인 처리. 인가 코드로 백엔드 콜백 API(GET /auth/{provider}/callback?code&state)를 불러
+ * SCR-A02 브라우저 로그인 처리 (그 서비스의 SDK 키가 없는 빌드). 인가 코드로 백엔드 콜백 API(GET /auth/{provider}/callback?code&state)를 불러
  * 새 회원이면 가입 토큰, 기존 회원이면 access 토큰(refresh 는 쿠키)을 받는다.
  * state 쿠키는 로그인 주소를 받을 때 RN 네트워크 쿠키 저장소에 남아 있어 이 요청에 같이 실린다.
  * 취소하면 첫 화면으로 그냥 돌아가고, 실패하면 오류 토스트(C3-4)와 함께 첫 화면으로
@@ -76,19 +90,27 @@ export async function completeLogin(provider: AuthProvider, params: LoginCallbac
     return;
   }
   try {
-    const login = await authApi.callback(provider, { code: params.code, state: params.state });
-    const next = takeLoginNext();
-    setStoredAccount({ id: login.user.id, nickname: login.user.nickname, provider });
-    if ("signupToken" in login) {
-      setSignupSession(login.signupToken, login.expiresIn);
-      router.replace(next ? { pathname: "/agreements", params: { next } } : "/agreements");
-    } else {
-      setAccessToken(login.accessToken);
-      router.replace((next as "/home") ?? "/home");
-    }
+    finishLogin(
+      provider,
+      await authApi.callback(provider, { code: params.code, state: params.state }),
+    );
   } catch (error) {
     console.error("[auth] 로그인 콜백 실패", error);
     toast(getErrorMessage(error, FAILED));
     router.replace("/welcome");
+  }
+}
+
+/**
+ * SCR-A02 앱 SDK 로그인. 카카오·구글 SDK로 기기에서 토큰을 받아 백엔드(POST /auth/{provider}/token)가 검증한다.
+ * 카카오톡이 깔려 있으면 카카오톡에서 동의 한 번으로 끝난다. 취소하면 첫 화면에 그대로 머문다
+ */
+export async function loginWithSdk(provider: AuthProvider) {
+  try {
+    finishLogin(provider, await authApi.tokenLogin(provider, await socialToken(provider)));
+  } catch (error) {
+    if (error instanceof LoginCancelled) return;
+    console.error("[auth] SDK 로그인 실패", error);
+    toast(getErrorMessage(error, FAILED));
   }
 }

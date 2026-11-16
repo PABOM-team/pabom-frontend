@@ -12,16 +12,25 @@ import { meQueries } from "@pabom/core/entities/session";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/display";
 import { toast } from "@/shared/ui/toast";
-import { completeLogin, loginRedirectUrl, parseLoginCallback, rememberLoginNext } from "./login";
+import {
+  completeLogin,
+  loginRedirectUrl,
+  loginWithSdk,
+  parseLoginCallback,
+  rememberLoginNext,
+} from "./login";
+import { isSdkReady, socialLogout } from "./social";
 
 export { completeLogin, parseLoginCallback, safeNext, takeLoginNext } from "./login";
+export { socialLogout } from "./social";
 
 // 다른 앱에서 돌아왔을 때 열려 있던 인증 창을 닫는다
 WebBrowser.maybeCompleteAuthSession();
 
 /**
  * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양).
- * 앱 주소(redirect_uri)를 넘겨 백엔드에서 로그인 주소를 받고(state 쿠키도 함께) 앱 안 인증 브라우저로 띄운다.
+ * 이 빌드에 그 서비스의 SDK 키가 있으면 SDK로 로그인한다 (카카오톡·OS 계정 선택 창, loginWithSdk).
+ * 키가 없으면 브라우저 로그인: 앱 주소(redirect_uri)를 넘겨 백엔드에서 로그인 주소를 받고(state 쿠키도 함께) 앱 안 인증 브라우저로 띄운다.
  * 카카오·구글 → 백엔드 app-callback → 앱 스킴(pabom://auth/callback/{provider}?code&state)으로 돌아오면
  * 그 주소의 code·state 로 로그인을 마친다
  */
@@ -34,15 +43,15 @@ export function LoginButtons({
 }) {
   const login = useMutation({
     mutationFn: async (provider: AuthProvider) => {
+      if (isSdkReady(provider)) {
+        await loginWithSdk(provider);
+        return;
+      }
       const redirectUrl = loginRedirectUrl(provider);
       const { authorizationUrl } = await authApi.appLoginUrl(provider, redirectUrl);
       const result = await WebBrowser.openAuthSessionAsync(authorizationUrl, redirectUrl);
-      return { provider, result };
-    },
-    onSuccess: ({ provider, result }) => {
       // 브라우저를 닫거나 뒤로 가면 아무 일도 없던 것처럼 첫 화면에 머문다
-      if (result.type !== "success") return;
-      void completeLogin(provider, parseLoginCallback(result.url));
+      if (result.type === "success") await completeLogin(provider, parseLoginCallback(result.url));
     },
     onError: (error) => toast(getErrorMessage(error, "로그인을 시작하지 못했어요.")),
   });
@@ -118,7 +127,8 @@ function GoogleSymbol() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: authApi.logout,
+    // 기기의 카카오·구글 로그인도 지워 다음에 다른 계정을 고를 수 있게 한다
+    mutationFn: () => Promise.all([authApi.logout(), socialLogout()]),
     onSettled: () => {
       clearSession();
       queryClient.clear();

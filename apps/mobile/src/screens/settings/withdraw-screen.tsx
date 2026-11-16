@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
+import { socialLogout } from "@/features/auth";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { clearSession } from "@pabom/core/api/session";
@@ -25,6 +26,8 @@ export function WithdrawScreen() {
   const withdraw = useMutation({
     mutationFn: meApi.withdraw,
     onSuccess: () => {
+      // 기기에 남은 카카오·구글 로그인도 지워 다음에 다른 계정으로 가입할 수 있게 한다
+      void socialLogout();
       clearSession();
       queryClient.clear();
       router.replace("/welcome");

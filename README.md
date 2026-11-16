@@ -180,10 +180,17 @@ apps/mobile/src/              Expo Router. app → screens → features → enti
 
 ## 앱에서 다른 점·아직 안 되는 것
 
-- **로그인 되돌아오기.** 앱은 `expo-web-browser` 인증 창으로 카카오·구글을 띄우고 `pabom://auth/callback/{provider}?code&state`
-  로 돌아오길 기다린다(`src/features/auth`). 그런데 백엔드 Redirect URI 는 웹(`/api/v1/auth/{provider}/callback`)으로 고정돼 있어,
-  **백엔드(또는 웹 콜백)가 앱 스킴으로 넘겨 주기 전에는 로그인이 끝나지 않는다.** state 쿠키는 RN 네트워크 쿠키 저장소가 들고 있어
-  앱 스킴으로만 돌아오면 그대로 동작한다.
+- **로그인.** 빌드에 그 서비스의 SDK 키가 있으면 SDK로, 없으면 브라우저로 로그인한다 (`src/features/auth`).
+  - **SDK** (`social.ts`): 카카오는 `@react-native-seoul/kakao-login`(카카오톡이 있으면 카카오톡에서 동의 한 번, 없으면 카카오계정 화면),
+    구글은 `@react-native-google-signin/google-signin`. 받은 토큰을 `POST /api/v1/auth/{provider}/token` 으로 보내면 백엔드가 검증한다
+    (카카오는 서버의 `KAKAO_APP_ID`, 구글은 `GOOGLE_CLIENT_ID` = 웹 클라이언트 ID 와 비교).
+  - **브라우저**: `expo-web-browser` 인증 창 → 백엔드 `app-callback` → `pabom(-dev)://auth/callback/{provider}?code&state`.
+  - 키는 공개 값이다. 개발 앱은 `eas.json` 프로필 env, 로컬은 `apps/mobile/.env.local` (`.env.example` 참고).
+    `EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`. 바꾸면 네이티브를 다시 빌드한다.
+  - 콘솔 등록은 앱마다(번들 ID·패키지명) 따로다. 운영 `app.pabom.mobile`, 개발 `app.pabom.mobile.dev`.
+    카카오 디벨로퍼스 > 플랫폼에 iOS 번들 ID·Android 패키지명·키 해시, Google Cloud 에 iOS·Android 클라이언트(Android 는 서명 SHA-1).
+    키 해시·SHA-1 은 빌드한 키마다 다르다 (로컬 디버그 키, EAS 키, Play 앱 서명 키). 로컬 디버그 키는 Expo 템플릿 공용이라 개발용 앱에만 등록한다.
+  - iOS 는 Expo 58 템플릿이 주소를 SceneDelegate 로 받아, `app.config.ts` 가 카카오톡에서 돌아오는 주소를 카카오 SDK 에 넘기도록 고친다.
 - **세션 저장.** `configureSessionStorage()` 에 `expo-secure-store` 어댑터(`src/shared/lib/session-storage.ts`)를 끼웠다.
   refresh 토큰은 웹과 같이 백엔드 쿠키이고, RN 이 쿠키를 보관한다.
 - **사진.** `expo-image-picker` 로 고르고 `expo-image-manipulator` 로 웹과 같은 규칙(긴 변 1600px·JPEG 0.85)으로 줄여 올린다.

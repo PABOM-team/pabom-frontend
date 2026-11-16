@@ -11,6 +11,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.pabom.mobile",
+      "infoPlist": {
+        "CFBundleName": "파봄"
+      },
       "config": {
         "usesNonExemptEncryption": false
       }

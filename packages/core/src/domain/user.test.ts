@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { agreementCompletionSchema, oauthLoginSchema, tokenSchema } from "./user";
+import {
+  agreementCompletionSchema,
+  appLoginRedirectUri,
+  oauthLoginSchema,
+  tokenSchema,
+} from "./user";
 
 const envelope = <T>(data: T) => ({
   resultType: "SUCCESS",
@@ -46,5 +51,13 @@ describe("로그인 콜백 응답", () => {
   it("토큰이 없으면 거부한다", () => {
     expect(oauthLoginSchema.safeParse({ ...access, accessToken: undefined }).success).toBe(false);
     expect(oauthLoginSchema.safeParse(envelope({ user: access.user })).success).toBe(false);
+  });
+});
+
+describe("appLoginRedirectUri", () => {
+  // 백엔드 허용 목록(AUTH_APP_REDIRECT_URIS)과 글자 그대로 같아야 한다
+  it("스킴 뒤에 슬래시 두 개와 auth/callback/{provider} 를 붙인다", () => {
+    expect(appLoginRedirectUri("pabom", "kakao")).toBe("pabom://auth/callback/kakao");
+    expect(appLoginRedirectUri("pabom-dev", "google")).toBe("pabom-dev://auth/callback/google");
   });
 });

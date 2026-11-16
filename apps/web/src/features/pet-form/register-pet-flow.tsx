@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { meQueries } from "@/entities/session";
 import { speciesQueries } from "@/entities/species";
+import { newRequestId } from "@pabom/core/api/adapters";
 import { petsApi, recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
@@ -111,7 +112,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
   const [uploading, setUploading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   // 같은 화면에서 다시 눌러도 한 마리만 등록되도록 요청 ID를 한 번만 만든다
-  const [clientRequestId] = useState(() => crypto.randomUUID());
+  const [clientRequestId] = useState(newRequestId);
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
   const species = speciesList?.find((s) => s.id === draft.speciesId);

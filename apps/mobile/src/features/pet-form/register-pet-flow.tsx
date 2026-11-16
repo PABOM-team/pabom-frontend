@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { meQueries } from "@/entities/session";
 import { speciesQueries } from "@/entities/species";
+import { newRequestId } from "@pabom/core/api/adapters";
 import { petsApi, recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
@@ -42,9 +43,6 @@ import { IconButton, TopBar, TopBarAction } from "@/shared/ui/top-bar";
 import { HatchFields, MorphPicker, PetPhotoPicker, type PhotoValue } from "./fields";
 
 const STEPS = ["분류", "종", "모프", "기본 정보"] as const;
-
-/** RN 에서는 crypto.randomUUID 가 보장되지 않아 시간 + 난수로 요청 ID를 만든다 */
-const newRequestId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
 /** 입력한 내용을 POST /pets 본문으로 */
 function toCreateInput(

@@ -68,8 +68,18 @@ const toId = (value: number | null | undefined) =>
 const toNumber = (value: string | null | undefined) =>
   value === null || value === undefined ? null : Number(value);
 
+const HEX = "0123456789abcdef";
+
+/** 앱(Hermes)에는 crypto.randomUUID 가 없을 수 있어 Math.random 으로 UUID v4 를 만든다. 멱등 키라 암호학적 난수는 필요 없다 */
+const fallbackUuid = () =>
+  "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const n = Math.floor(Math.random() * 16);
+    return HEX[char === "x" ? n : (n & 0x3) | 0x8] ?? "0";
+  });
+
+/** 서버가 clientRequestId 를 UUID 로 검증하므로 항상 UUID 형식으로 만든다 */
 export function newRequestId() {
-  return crypto.randomUUID();
+  return typeof globalThis.crypto?.randomUUID === "function" ? globalThis.crypto.randomUUID() : fallbackUuid();
 }
 
 // ── 관리 루틴 ─────────────────────────────────────────────

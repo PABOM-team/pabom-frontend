@@ -50,6 +50,14 @@ export const accountSchema = z.object({
 });
 export type Account = z.infer<typeof accountSchema>;
 
+/**
+ * 앱 로그인 뒤 백엔드 app-callback 이 돌려보낼 앱 주소 (pabom://auth/callback/kakao, 개발 앱은 pabom-dev://…).
+ * 백엔드 허용 목록(AUTH_APP_REDIRECT_URIS)과 글자 그대로 같아야 해서 직접 만든다.
+ * expo-linking createURL 은 릴리스 빌드에서 슬래시 세 개(pabom:///…), 개발 서버에선 호스트(pabom://192.168…:8081/…)를 넣는다
+ */
+export const appLoginRedirectUri = (scheme: string, provider: AuthProvider) =>
+  `${scheme}://auth/callback/${provider}`;
+
 /** API-01 카카오·구글 로그인 주소. 응답과 함께 state 쿠키가 온다 */
 export const loginUrlSchema = successEnvelope(z.object({ authorizationUrl: z.url() }));
 

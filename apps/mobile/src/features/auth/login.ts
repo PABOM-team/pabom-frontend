@@ -1,9 +1,10 @@
+import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { setAccessToken, setSignupSession, setStoredAccount } from "@pabom/core/api/session";
-import type { AuthProvider } from "@pabom/core/domain/user";
+import { appLoginRedirectUri, type AuthProvider } from "@pabom/core/domain/user";
 import { toast } from "@/shared/ui/toast";
 
 /** 로그인 뒤 돌아갈 곳. 앱 안 경로만 허용한다 */
@@ -24,9 +25,12 @@ export function takeLoginNext() {
   return safeNext(next);
 }
 
-/** 카카오·구글이 돌려보낼 앱 주소 (pabom://auth/callback/{provider}) */
+/** app.json·app.config.ts 의 스킴 (운영 앱 pabom, 개발 앱 pabom-dev) */
+const appScheme = [Constants.expoConfig?.scheme].flat()[0] ?? "pabom";
+
+/** 카카오·구글이 백엔드 app-callback 을 거쳐 돌려보낼 앱 주소 (pabom://auth/callback/{provider}) */
 export const loginRedirectUrl = (provider: AuthProvider) =>
-  Linking.createURL(`/auth/callback/${provider}`);
+  appLoginRedirectUri(appScheme, provider);
 
 export type LoginCallbackParams = {
   code?: string | null;

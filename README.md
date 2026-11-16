@@ -199,13 +199,14 @@ apps/mobile/src/              Expo Router. app → screens → features → enti
 
 ## 앱 배포 (EAS)
 
-개발 앱 "파봄(dev)"과 운영 앱 "파봄"을 따로 배포한다. 빌드 설정과 앱에 들어가는 공개 키는 `apps/mobile/eas.json` 프로필의 `env`에 있고,
-GitHub Actions 는 `EXPO_TOKEN` 시크릿만 쓴다. 서명 키(iOS 인증서, Android 키스토어)와 스토어 제출 키는 EAS 서버에 있다(`eas credentials`).
+개발 앱 "파봄(dev)"과 운영 앱 "파봄"을 따로 배포하고, 각 워크플로가 iOS·Android 를 함께 빌드한다.
+빌드 설정과 앱에 들어가는 공개 키는 `apps/mobile/eas.json` 프로필의 `env`에 있고, GitHub Actions 는 `EXPO_TOKEN` 시크릿만 쓴다.
+서명 키(iOS 인증서, Android 키스토어)와 스토어 제출 키는 EAS 서버에 있다(`eas credentials`).
 
-| 앱                               | 프로필       | iOS                                                             | Android                                                                                                  |
-| -------------------------------- | ------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 파봄(dev) `app.pabom.mobile.dev` | `preview`    | develop 머지 → TestFlight (`mobile-ios-dev.yml`)                | develop 머지 → APK, expo.dev 설치 링크 (`mobile-android-dev.yml`)                                        |
-| 파봄 `app.pabom.mobile`          | `production` | main 수동 실행·`mobile-v*` 태그 → TestFlight (`mobile-ios.yml`) | main 수동 실행·`mobile-v*` 태그 → AAB, 수동 실행에서 고르면 Play 내부 테스트 초안 (`mobile-android.yml`) |
+| 앱                               | 프로필·워크플로              | 언제                             | iOS        | Android                                                |
+| -------------------------------- | ---------------------------- | -------------------------------- | ---------- | ------------------------------------------------------ |
+| 파봄(dev) `app.pabom.mobile.dev` | `preview` · `mobile-dev.yml` | develop 머지, 수동 실행          | TestFlight | APK, expo.dev 설치 링크                                |
+| 파봄 `app.pabom.mobile`          | `production` · `mobile.yml`  | main 수동 실행, `mobile-v*` 태그 | TestFlight | AAB, 수동 실행에서 고르면 Play 내부 테스트 트랙에 초안 |
 
 - CI 는 서명 키를 새로 만들 수 없다. 새 앱(번들 ID·패키지명)은 처음 한 번 로컬에서 `cd apps/mobile && eas credentials` 로 만든다.
   Android 키스토어를 만들면 그 SHA-1 을 Google Cloud(Android 클라이언트)와 카카오(키 해시)에 등록한다.

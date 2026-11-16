@@ -150,6 +150,8 @@ export function Button({
             borderColor: look.border,
           },
           variant === "link" && styles.link,
+          // 카카오 노랑은 가이드 색이라 바꾸지 않고, 누르면 살짝 흐리게 해 눌린 걸 보여 준다
+          variant === "kakao" && pressed && !inactive && styles.dimmed,
           style,
         ];
       }}
@@ -198,4 +200,5 @@ const styles = StyleSheet.create({
   },
   content: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
   link: { borderWidth: 0, height: undefined, paddingHorizontal: 0 },
+  dimmed: { opacity: 0.7 },
 });

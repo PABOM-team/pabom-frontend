@@ -15,7 +15,12 @@ const appConfig = ({ config }: ConfigContext): ExpoConfig => {
     ...base,
     name: "파봄(dev)",
     scheme: "pabom-dev",
-    ios: { ...base.ios, bundleIdentifier: "app.pabom.mobile.dev" },
+    ios: {
+      ...base.ios,
+      bundleIdentifier: "app.pabom.mobile.dev",
+      // iOS 로그인 확인 창("…이(가) kakao.com을 사용하여 로그인하려고 합니다")에 나오는 이름
+      infoPlist: { ...base.ios?.infoPlist, CFBundleName: "파봄(dev)" },
+    },
     android: { ...base.android, package: "app.pabom.mobile.dev" },
   };
 };

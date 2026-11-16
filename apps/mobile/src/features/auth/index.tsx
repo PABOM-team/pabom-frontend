@@ -52,12 +52,16 @@ export function LoginButtons({
     login.mutate(provider);
   };
 
+  // 로그인 주소를 받아 인증 창이 뜨기까지 몇 초 걸릴 수 있어, 누른 버튼에 로딩을 보여 준다
+  const loadingOf = (provider: AuthProvider) => login.isPending && login.variables === provider;
+
   return (
     <View style={{ gap: 8 }}>
       <Button
         variant="kakao"
         size="xl"
         disabled={login.isPending}
+        loading={loadingOf("kakao")}
         icon={<KakaoSymbol />}
         onPress={() => start("kakao")}
       >
@@ -67,6 +71,7 @@ export function LoginButtons({
         variant="outline"
         size="xl"
         disabled={login.isPending}
+        loading={loadingOf("google")}
         icon={<GoogleSymbol />}
         onPress={() => start("google")}
       >

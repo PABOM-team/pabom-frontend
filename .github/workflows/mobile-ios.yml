@@ -1,7 +1,7 @@
-# 파봄 iOS 앱을 EAS에서 빌드·서명하고, 원하면 TestFlight로 올린다.
+# 운영 iOS 앱 "파봄"을 EAS에서 빌드·서명하고, 원하면 TestFlight로 올린다 (eas.json production 프로필).
 # 서명 인증서·프로비저닝 프로파일은 EAS 서버에 있고(eas credentials), 여기서는 EXPO_TOKEN만 쓴다.
-# 배포는 항상 main 기준이다.
-# - 수동 실행: Actions → "Mobile iOS" → Run workflow 에서 프로필과 제출 여부를 고른다.
+# 운영 배포는 항상 main 기준이다. 개발 앱 "파봄(dev)"은 mobile-ios-dev.yml 이 develop 에서 자동으로 올린다.
+# - 수동 실행: Actions → "Mobile iOS" → Run workflow 에서 제출 여부를 고른다.
 #   어떤 브랜치를 골라도 main 최신 커밋을 빌드한다
 # - 태그: mobile-v* 태그를 올리면 production 빌드 후 TestFlight로 제출한다.
 #   태그가 main에 들어간 커밋을 가리키지 않으면 빌드하지 않고 실패한다
@@ -10,11 +10,6 @@ name: Mobile iOS
 on:
   workflow_dispatch:
     inputs:
-      profile:
-        description: "eas.json 빌드 프로필"
-        type: choice
-        options: [production, preview]
-        default: production
       submit:
         description: "빌드가 끝나면 TestFlight로 제출"
         type: boolean
@@ -29,13 +24,13 @@ concurrency:
 
 jobs:
   build:
-    name: EAS iOS build
+    name: EAS iOS build (production)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/mobile
     env:
-      PROFILE: ${{ inputs.profile || 'production' }}
+      PROFILE: production
       SUBMIT: ${{ github.event_name == 'push' || inputs.submit }}
     steps:
       # 수동 실행은 고른 브랜치와 상관없이 main을, 태그는 그 태그 커밋을 받는다

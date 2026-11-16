@@ -79,7 +79,9 @@ const fallbackUuid = () =>
 
 /** 서버가 clientRequestId 를 UUID 로 검증하므로 항상 UUID 형식으로 만든다 */
 export function newRequestId() {
-  return typeof globalThis.crypto?.randomUUID === "function" ? globalThis.crypto.randomUUID() : fallbackUuid();
+  return typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID()
+    : fallbackUuid();
 }
 
 // ── 관리 루틴 ─────────────────────────────────────────────

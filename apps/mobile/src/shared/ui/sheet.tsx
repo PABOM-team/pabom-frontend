@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XIcon } from "./icons";
 import { Text } from "./text";
 import { radius, semantic, shadows, spacing, toNativeShadow } from "./theme";
+import { Toaster } from "./toast";
 import { IconButton } from "./top-bar";
 
 type SheetProps = {
@@ -31,21 +32,28 @@ const DURATION = 200;
 
 /**
  * 열림·닫힘 애니메이션을 가진 모달 바탕. 닫을 때는 애니메이션이 끝난 뒤 Modal 을 내린다
- * children 은 진행도(0 닫힘 → 1 열림)를 받아 자기 모양대로 움직인다
+ * children 은 진행도(0 닫힘 → 1 열림)를 받아 자기 모양대로 움직인다.
+ * onClosed 는 닫힘 애니메이션이 끝나 Modal 이 내려간 뒤 불린다
  */
 export function AnimatedModal({
   open,
   onRequestClose,
+  onClosed,
   children,
   dismissOnOverlay = true,
 }: {
   open: boolean;
   onRequestClose: () => void;
+  onClosed?: () => void;
   children: (progress: Animated.Value) => ReactNode;
   dismissOnOverlay?: boolean;
 }) {
   const [progress] = useState(() => new Animated.Value(0));
   const [mounted, setMounted] = useState(open);
+  const onClosedRef = useRef(onClosed);
+  useEffect(() => {
+    onClosedRef.current = onClosed;
+  });
   // 열릴 때는 바로 그리고(렌더 중 갱신), 닫힐 때는 애니메이션이 끝난 뒤 내린다
   if (open && !mounted) setMounted(true);
 
@@ -55,7 +63,11 @@ export function AnimatedModal({
       return;
     }
     Animated.timing(progress, { toValue: 0, duration: DURATION, useNativeDriver: true }).start(
-      ({ finished }) => finished && setMounted(false),
+      ({ finished }) => {
+        if (!finished) return;
+        setMounted(false);
+        onClosedRef.current?.();
+      },
     );
   }, [open, progress]);
 
@@ -77,6 +89,9 @@ export function AnimatedModal({
         />
       </Animated.View>
       {children(progress)}
+      {/* 네이티브 Modal 은 루트 화면 위 따로 뜬 창이라 루트의 Toaster 를 가린다. 시트가 열린 채 뜨는
+          실패 토스트(미루지 못했어요 등)가 보이도록 모달 안에도 그린다 */}
+      <Toaster />
     </Modal>
   );
 }

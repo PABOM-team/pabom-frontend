@@ -39,6 +39,11 @@ export function Menu({
   triggerSize?: number;
 }) {
   const anchor = useRef<HostInstance>(null);
+  /**
+   * 고른 항목은 메뉴 Modal 이 다 내려간 뒤 실행한다. 닫히는 중인 Modal 위에 시트 Modal 을 바로 띄우면
+   * iOS 에서 메뉴가 내려갈 때 위의 시트까지 함께 내려가거나 보이지 않는 창이 남아 화면이 멈춘 것처럼 된다
+   */
+  const pending = useRef<(() => void) | null>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, right: EDGE });
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -62,7 +67,15 @@ export function Menu({
           {trigger ?? <DotsHorizontalIcon color={semantic.mutedForeground} />}
         </IconButton>
       </View>
-      <AnimatedModal open={open} onRequestClose={() => setOpen(false)}>
+      <AnimatedModal
+        open={open}
+        onRequestClose={() => setOpen(false)}
+        onClosed={() => {
+          const action = pending.current;
+          pending.current = null;
+          action?.();
+        }}
+      >
         {(progress) => (
           <Animated.View
             style={[
@@ -81,8 +94,8 @@ export function Menu({
                 key={item.label}
                 accessibilityRole="menuitem"
                 onPress={() => {
+                  pending.current = item.onSelect;
                   setOpen(false);
-                  item.onSelect();
                 }}
                 style={({ pressed }) => [
                   styles.item,

@@ -146,7 +146,11 @@ export const backendRoutineMutationSchema = z.object({
 /** 완료·건너뛰기·미루기 뒤의 루틴 상태 (RoutineState) */
 export const backendRoutineStateSchema = z.object({
   id,
-  lastDoneOn: date.nullable(),
+  /**
+   * 미루기 응답에는 이 칸이 아예 없다 (스웨거와 다름, dev 서버 확인).
+   * 대신 baseDueOn·postponedTo·postponedAt이 온다. 없으면 null로 본다 [백엔드 확인 필요]
+   */
+  lastDoneOn: date.nullish(),
   nextDueOn: date.nullable(),
 });
 export type BackendRoutineState = z.infer<typeof backendRoutineStateSchema>;

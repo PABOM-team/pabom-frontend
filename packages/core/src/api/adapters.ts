@@ -181,7 +181,7 @@ export const toRoutineFromDetails = (raw: BackendRoutineDetails): Routine =>
 
 export const toRoutineState = (raw: BackendRoutineState): RoutineState => ({
   id: String(raw.id),
-  lastDoneOn: raw.lastDoneOn,
+  lastDoneOn: raw.lastDoneOn ?? null,
   nextDueOn: raw.nextDueOn,
 });
 

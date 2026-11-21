@@ -4,7 +4,11 @@ import { getErrorMessage } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { WEIGHT_CODE } from "@pabom/core/domain/care";
 import { lifeStageIdOf } from "@pabom/core/domain/pet";
-import { PLATEAU_SAMPLE, weightStageSuggestion } from "@pabom/core/domain/weight-stage";
+import {
+  PLATEAU_SAMPLE,
+  weightStageBlocked,
+  weightStageSuggestion,
+} from "@pabom/core/domain/weight-stage";
 import { petQueries } from "@pabom/core/entities/pet";
 import { speciesQueries } from "@pabom/core/entities/species";
 import { toast } from "@/shared/ui/toast";
@@ -15,6 +19,7 @@ import { toast } from "@/shared/ui/toast";
  * - ② 어린 개체가 성체 참고 체중 이상: "다 자란 것 같아요. 성체 기준 체크 리스트로 바꿀까요?" [바꾸기]
  * - ① 어린 개체의 최근 체중 3개가 정체: "체중이 더 늘지 않고 있어요. …" [바꾸기]
  * 토스트는 한 번에 하나라 '나중에'는 따로 없고, 그냥 두면 사라진다.
+ * 어린 개체인데 아직 제안할 수 없으면(최소 나이 전·체중 기록 부족) 그 이유와 누를 수 없는 [바꾸기]를 보여 준다 (QA T05-08).
  * 제안할 게 있으면 true
  */
 export function useWeightStageToast() {
@@ -56,7 +61,15 @@ export function useWeightStageToast() {
         .filter((w): w is number => Boolean(w));
       const weights = [weightG, ...earlier];
       const suggestion = weightStageSuggestion({ pet, species, weights });
-      if (!suggestion) return false;
+      if (!suggestion) {
+        const blocked = weightStageBlocked({ pet, species, weights });
+        if (blocked) {
+          toast(blocked.message, {
+            action: { label: blocked.actionLabel, onClick: () => {}, disabled: true },
+          });
+        }
+        return false;
+      }
       toast(suggestion.message, {
         action: {
           label: suggestion.actionLabel,

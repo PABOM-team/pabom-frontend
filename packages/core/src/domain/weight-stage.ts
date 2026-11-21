@@ -82,3 +82,47 @@ export function weightStageSuggestion({
   }
   return null;
 }
+
+export type WeightStageBlocked = {
+  /** too-young: 성체 여부를 묻기 전 나이 · few-weights: 체중 기록이 정체를 볼 만큼 쌓이지 않음 */
+  reason: "too-young" | "few-weights";
+  message: string;
+  /** 누를 수 없는 [바꾸기]로 보여 준다 */
+  actionLabel: string;
+};
+
+/**
+ * 어린 개체인데 성체로 바꾸기를 아직 제안할 수 없을 때 그 이유 (QA T05-08).
+ * 제안(weightStageSuggestion)이 없을 때만 부른다. 아직 자라는 중이라 제안이 없는 경우는 알리지 않는다.
+ * weights는 방금 저장한 체중을 포함한 최근 체중, 최신 순
+ */
+export function weightStageBlocked({
+  pet,
+  species,
+  weights,
+  today = new Date(),
+}: {
+  pet: PetLike;
+  species: SpeciesLike;
+  weights: number[];
+  today?: Date;
+}): WeightStageBlocked | null {
+  if (pet.lifeStageCode !== "juvenile" || !weights[0]) return null;
+  if (!species.lifeStages.some((s) => s.code === "adult")) return null;
+  if (!adultCheckAllowed(pet, species, today)) {
+    return {
+      reason: "too-young",
+      message: `부화 후 ${species.adultCheckMinAgeMonths}개월이 지나야 성체로 바꿀 수 있어요`,
+      actionLabel: "바꾸기",
+    };
+  }
+  const recorded = weights.filter((w) => w > 0).length;
+  if (recorded < PLATEAU_SAMPLE && weights[0] < species.adultWeightG) {
+    return {
+      reason: "few-weights",
+      message: `체중을 ${PLATEAU_SAMPLE}번 이상 기록하면 성체로 바꿀 수 있는지 알려 드려요`,
+      actionLabel: "바꾸기",
+    };
+  }
+  return null;
+}

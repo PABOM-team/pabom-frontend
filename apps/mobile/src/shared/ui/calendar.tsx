@@ -28,6 +28,12 @@ import { IconButton } from "./top-bar";
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i);
 
+/** 칸 목록을 7칸씩 끊는다. 마지막 주는 빈 칸(null)으로 채워 열을 맞춘다 */
+function toWeeks<T>(cells: (T | null)[]): (T | null)[][] {
+  const padded = [...cells, ...Array.from({ length: (7 - (cells.length % 7)) % 7 }, () => null)];
+  return Array.from({ length: padded.length / 7 }, (_, w) => padded.slice(w * 7, w * 7 + 7));
+}
+
 /** 연·월 고르기. 헤더를 누르면 날짜 격자 대신 보인다 */
 function YearMonthPicker({
   month,
@@ -192,49 +198,52 @@ export function Calendar({
               </View>
             ))}
           </View>
+          {/* 한 주씩 줄로 나눠 그린다. 퍼센트 너비 + 줄바꿈은 반올림 때문에 한 줄에 6칸만 차 요일이 밀린다 */}
           <View style={styles.dayGrid}>
-            {Array.from({ length: blanks }, (_, i) => (
-              <View key={`b${i}`} style={styles.dayCell} />
+            {toWeeks([...Array.from({ length: blanks }, () => null), ...days]).map((week, w) => (
+              <View key={w} style={styles.dayRow}>
+                {week.map((day, i) => {
+                  if (!day) return <View key={`b${i}`} style={styles.dayCell} />;
+                  const ymd = toYmd(day);
+                  const disabled = Boolean((min && ymd < min) || (max && ymd > max));
+                  const selected = value === ymd;
+                  const isToday = isSameDay(day, fromYmd(today));
+                  return (
+                    <View key={ymd} style={styles.dayCell}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={formatFullDate(day)}
+                        accessibilityState={{ selected, disabled }}
+                        disabled={disabled}
+                        onPress={() => onChange(ymd)}
+                        style={({ pressed }) => [
+                          styles.day,
+                          pressed && !disabled && { backgroundColor: semantic.muted },
+                          isToday && !selected && styles.today,
+                          selected && { backgroundColor: semantic.primary },
+                        ]}
+                      >
+                        <Text
+                          variant="body-lg"
+                          weight={selected || isToday ? "bold" : "regular"}
+                          color={
+                            selected
+                              ? "#ffffff"
+                              : disabled
+                                ? semantic.disabledForeground
+                                : isToday
+                                  ? semantic.primary
+                                  : semantic.foreground
+                          }
+                        >
+                          {format(day, "d")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </View>
             ))}
-            {days.map((day) => {
-              const ymd = toYmd(day);
-              const disabled = Boolean((min && ymd < min) || (max && ymd > max));
-              const selected = value === ymd;
-              const isToday = isSameDay(day, fromYmd(today));
-              return (
-                <View key={ymd} style={styles.dayCell}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={formatFullDate(day)}
-                    accessibilityState={{ selected, disabled }}
-                    disabled={disabled}
-                    onPress={() => onChange(ymd)}
-                    style={({ pressed }) => [
-                      styles.day,
-                      pressed && !disabled && { backgroundColor: semantic.muted },
-                      isToday && !selected && styles.today,
-                      selected && { backgroundColor: semantic.primary },
-                    ]}
-                  >
-                    <Text
-                      variant="body-lg"
-                      weight={selected || isToday ? "bold" : "regular"}
-                      color={
-                        selected
-                          ? "#ffffff"
-                          : disabled
-                            ? semantic.disabledForeground
-                            : isToday
-                              ? semantic.primary
-                              : semantic.foreground
-                      }
-                    >
-                      {format(day, "d")}
-                    </Text>
-                  </Pressable>
-                </View>
-              );
-            })}
           </View>
         </>
       )}
@@ -386,9 +395,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
   },
   weekRow: { flexDirection: "row" },
-  weekCell: { width: `${100 / 7}%`, alignItems: "center", paddingVertical: 6 },
-  dayGrid: { flexDirection: "row", flexWrap: "wrap", rowGap: 4 },
-  dayCell: { width: `${100 / 7}%`, alignItems: "center" },
+  weekCell: { flex: 1, alignItems: "center", paddingVertical: 6 },
+  dayGrid: { rowGap: 4 },
+  dayRow: { flexDirection: "row" },
+  dayCell: { flex: 1, alignItems: "center" },
   day: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   today: { borderWidth: 1.5, borderColor: semantic.primary },
 });

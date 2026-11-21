@@ -8,6 +8,7 @@ import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { isRoutineFoodNameSupported } from "@pabom/core/config/env";
 import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@pabom/core/domain/care";
 import {
+  guidelineRange,
   ROUTINE_INTERVAL_MAX,
   ROUTINE_INTERVAL_MIN,
   type Routine,
@@ -99,11 +100,8 @@ export function RoutineEditSheet({
   const days = Number(intervalText);
   const invalid =
     !Number.isInteger(days) || days < ROUTINE_INTERVAL_MIN || days > ROUTINE_INTERVAL_MAX;
-  // 가이드라인 범위 안내 (v1.2 P03): 직접 바꾼 주기는 범위를 숨기고 되돌리기만 보여 준다
-  const range =
-    current && !current.customized && current.minDays && current.maxDays
-      ? { min: current.minDays, max: current.maxDays }
-      : null;
+  // 가이드라인 범위 안내 (v1.2 P03). 직접 바꾼 주기·한 값뿐인 범위는 숨긴다
+  const range = current ? guidelineRange(current) : null;
   const outOfRange = range !== null && !invalid && (days < range.min || days > range.max);
 
   const save = useMutation({

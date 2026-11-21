@@ -32,7 +32,6 @@
       "expo-router",
       "expo-web-browser",
       "expo-secure-store",
-      "expo-sharing",
       [
         "expo-notifications",
         {

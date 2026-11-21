@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { env } from "../config/env";
 import {
   backendCareStandardsSchema,
   backendFileSchema,
@@ -19,20 +18,11 @@ import {
 } from "../domain/backend";
 import { successEnvelope } from "../domain/envelope";
 import {
-  handoverCardSchema,
-  handoverPreviewSchema,
-  type HandoverAcceptInput,
-  type HandoverScope,
-} from "../domain/handover";
-import {
   petResponseSchema,
-  petSchema,
   toPet,
   type Pet,
   type PetCreateInput,
   type PetResponse,
-  type PetStatus,
-  type PetStatusChangeInput,
   type PetUpdateInput,
 } from "../domain/pet";
 import {
@@ -89,7 +79,7 @@ import { api } from "./client";
  * 서버 API 목록 (IA 8_개발 참고 API-01~84). 화면은 이 함수만 부르고 경로는 여기에만 둔다.
  * 응답은 zod 스키마로 검증해서 백엔드와 모양이 어긋나면 바로 드러나게 한다.
  * 일정·오늘 할 일·기록·파일·가이드라인은 백엔드 모양(src/shared/domain/backend.ts)으로 받아
- * adapters.ts가 화면용 도메인 모델로 바꾼다. 인계 카드·개체 상태 바꾸기는 스웨거에 아직 없어 목업이다.
+ * adapters.ts가 화면용 도메인 모델로 바꾼다.
  */
 
 const noContent = () => undefined;
@@ -226,49 +216,28 @@ const getPet = (petId: string) =>
 /** recentRecords 가 null 이면 최근 기록만 못 불러온 것 (C1-3 영역 오류). 개체·체크 리스트는 그대로 보여 준다 */
 export type PetDetail = { pet: Pet; routines: Routine[]; recentRecords: CareRecord[] | null };
 
-/**
- * 개체(pets)는 진짜 백엔드인데 일정(routine)은 목업이거나 그 반대면, 일정 쪽이 그 개체를 몰라 404가 난다.
- * 그때는 일정을 빈 목록으로 둔다
- */
-const routinesOrEmpty = (petId: string) =>
-  env.apiMocking && env.apiLive.has("pets") !== env.apiLive.has("routine")
-    ? routinesApi.list(petId).catch(() => [])
-    : routinesApi.list(petId);
-
-/** 개체(pets)와 기록(record)이 한쪽만 진짜 백엔드여도 마찬가지라, 그때는 최근 기록을 빈 목록으로 둔다 */
-const recentRecordsOrEmpty = (petId: string): Promise<CareRecord[] | null> =>
-  env.apiMocking && env.apiLive.has("pets") !== env.apiLive.has("record")
-    ? recordsApi.list({ petId, limit: 5 }).then(
-        (r) => r.items,
-        () => [],
-      )
-    : // 최근 기록만 실패하면 개체 상세 전체를 막지 않고 그 영역만 오류로 보여 준다 (Figma C1-3)
-      recordsApi.list({ petId, limit: 5 }).then(
-        (r) => r.items,
-        () => null,
-      );
+/** 최근 기록만 실패하면 개체 상세 전체를 막지 않고 그 영역만 오류로 보여 준다 (Figma C1-3) */
+const recentRecordsOrNull = (petId: string): Promise<CareRecord[] | null> =>
+  recordsApi.list({ petId, limit: 5 }).then(
+    (r) => r.items,
+    () => null,
+  );
 
 export const petsApi = {
-  /**
-   * API-20 내 개체 목록 (최근 등록 순). 백엔드는 아직 status 조건이 없어 모두 키우는 중으로 온다.
-   * 그래서 받은 뒤 상태로 한 번 더 거른다 (목업은 status 조건을 받는다)
-   */
-  list: async (status: PetStatus = "active"): Promise<Pet[]> => {
-    const rows = await api
-      .get("pets", { searchParams: { status } })
-      .json(successEnvelope(z.array(petResponseSchema)));
-    const pets = await Promise.all(rows.map(toPetWithPhoto));
-    return pets.filter((pet) => pet.status === status);
+  /** API-20 내 개체 목록 (최근 등록 순) */
+  list: async (): Promise<Pet[]> => {
+    const rows = await api.get("pets").json(successEnvelope(z.array(petResponseSchema)));
+    return Promise.all(rows.map(toPetWithPhoto));
   },
-  /** API-21 개체 등록 (기본 관리 일정을 만드는지는 [백엔드 확인 필요]. 목업은 만든다) */
+  /** API-21 개체 등록 */
   create: (input: PetCreateInput): Promise<Pet> =>
     api.post("pets", { json: input }).json(successEnvelope(petResponseSchema)).then(toPetWithPhoto),
   /** API-22 개체 상세. 체크 리스트(API-30)·최근 기록(API-50)은 따로 불러 합친다 */
   get: async (petId: string): Promise<PetDetail> => {
     const [pet, routines, recent] = await Promise.all([
       getPet(petId),
-      routinesOrEmpty(petId),
-      recentRecordsOrEmpty(petId),
+      routinesApi.list(petId),
+      recentRecordsOrNull(petId),
     ]);
     return { pet, routines, recentRecords: recent };
   },
@@ -280,9 +249,6 @@ export const petsApi = {
       .then(toPetWithPhoto),
   /** API-24 소프트 삭제 (개체의 활성 기록도 함께). 204 */
   remove: (petId: string) => api.delete(`pets/${petId}`).then(noContent),
-  /** API-26 함께했던 개체로 바꾸기·되돌리기 (스웨거에 없어 목업) */
-  changeStatus: (petId: string, input: PetStatusChangeInput) =>
-    api.post(`pets/${petId}/status-changes`, { json: input }).json(petSchema),
 };
 
 export const routinesApi = {
@@ -404,21 +370,6 @@ export const recordsApi = {
 export const healthApi = {
   /** 서버 상태. 봉투 없이 {status}가 바로 온다. 의존성이 죽어 있으면 503 */
   get: () => api.get("health", { retry: 0 }).json(backendHealthSchema),
-};
-
-export const handoverApi = {
-  /** API-80 */
-  create: (petId: string, scope: HandoverScope) =>
-    api.post("handover-cards", { json: { petId, scope, agreed: true } }).json(handoverCardSchema),
-  /** API-81 로그인 없이 미리보기 */
-  preview: (code: string) => api.get(`handover-cards/${code}`).json(handoverPreviewSchema),
-  /** API-82 수락 → 개체 생성 */
-  accept: (code: string, input: HandoverAcceptInput) =>
-    api.post(`handover-cards/${code}/accept`, { json: input }).json(petSchema),
-  /** API-83 */
-  list: () => api.get("handover-cards").json(z.array(handoverCardSchema)),
-  /** API-84 */
-  cancel: (code: string) => api.delete(`handover-cards/${code}`).then(noContent),
 };
 
 export const pushTokensApi = {

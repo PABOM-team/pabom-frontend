@@ -46,7 +46,7 @@ export function useWeightStageToast() {
   }) => {
     try {
       const [pets, speciesList] = await Promise.all([
-        queryClient.fetchQuery(petQueries.list("active")),
+        queryClient.fetchQuery(petQueries.list()),
         queryClient.fetchQuery(speciesQueries.list()),
       ]);
       const pet = pets.find((p) => p.id === petId);

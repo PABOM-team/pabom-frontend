@@ -97,7 +97,7 @@ export const backendPetRoutineSchema = z.object({
   recordType: z.string(),
   /** 적용 조건 설명 (H04 '적용 조건'에 그대로 보여 준다) */
   description: z.string().nullish(),
-  // ── 백엔드에 아직 없는 값. [백엔드 요청] 급여 먹이 이름. 목업만 준다 ──
+  // ── 백엔드에 아직 없는 값. [백엔드 요청 backend#64] 급여 먹이 이름 ──
   foodName: z.string().nullish(),
 });
 export type BackendPetRoutine = z.infer<typeof backendPetRoutineSchema>;
@@ -187,7 +187,7 @@ export type BackendRoutineUpdate = {
   startDate?: string;
   reason?: z.infer<typeof routineReasonSchema>;
   reasonNote?: string;
-  /** [백엔드 요청] 급여 먹이 이름. 스웨거에 없어 목업만 받는다 */
+  /** [백엔드 요청 backend#64] 급여 먹이 이름. 아직 스웨거에 없다 */
   foodName?: string | null;
 };
 
@@ -237,7 +237,7 @@ export const backendTaskSchema = z.object({
       unit: z.string().nullish(),
     })
     .nullish(),
-  // ── 백엔드에 아직 없는 값. [백엔드 요청] 화면(D1 카드 두 번째 줄)에 필요해 목업만 준다 ──
+  // ── 백엔드에 아직 없는 값. [백엔드 요청] 화면(D1 카드 두 번째 줄)에 필요하다 ──
   /** N일마다 */
   intervalDays: z.number().int().nullish(),
   /** 미룬 할 일이면 원래 예정일 */

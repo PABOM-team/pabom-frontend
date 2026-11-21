@@ -8,7 +8,7 @@ export const queryKeys = {
   morphs: (serverId: number) => ["species", serverId, "morphs"] as const,
   careStandards: (speciesId: string) => ["species", speciesId, "care-standards"] as const,
   pets: ["pets"] as const,
-  petList: (status: string) => ["pets", "list", status] as const,
+  petList: () => ["pets", "list"] as const,
   pet: (petId: string) => ["pets", "detail", petId] as const,
   routines: (petId: string) => ["routines", petId] as const,
   today: ["today"] as const,
@@ -16,8 +16,6 @@ export const queryKeys = {
   records: ["records"] as const,
   recordList: (query: object) => ["records", "list", query] as const,
   record: (recordId: string) => ["records", "detail", recordId] as const,
-  handoverCards: ["handover-cards"] as const,
-  handoverPreview: (code: string) => ["handover-cards", "preview", code] as const,
 };
 
 /** 할 일·기록·일정이 바뀌면 오늘 할 일과 개체 요약(오늘 할 일 수·최근 기록)도 같이 바뀐다 */

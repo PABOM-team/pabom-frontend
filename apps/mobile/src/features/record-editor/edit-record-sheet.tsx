@@ -78,7 +78,7 @@ export function EditRecordSheet({
 
   const kind = record?.recordKind ?? null;
   const { data: pets } = useQuery({
-    ...petQueries.list("active"),
+    ...petQueries.list(),
     enabled: speciesId === undefined && kind === "intake",
   });
   const feedResultSet = useFeedResultSet(

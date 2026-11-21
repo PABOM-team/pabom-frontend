@@ -9,14 +9,13 @@ import { petQueries, petSpeciesLine } from "@/entities/pet";
 import { RecordRow } from "@/entities/record";
 import { routinesShortLine } from "@/entities/routine";
 import { feedResultSetOf, speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
-import { ChangeStatusSheet, DeletePetDialog, useRevertPetStatus } from "@/features/pet-lifecycle";
+import { DeletePetDialog } from "@/features/pet-lifecycle";
 import { EditRecordSheet } from "@/features/record-editor";
 import { petsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getHttpStatus } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
-import { isPetStatusChangeSupported } from "@pabom/core/config/env";
 import { isWeightItem } from "@pabom/core/domain/care";
-import { END_REASON_LABEL, lifeStageIdOf, SEX_LABEL } from "@pabom/core/domain/pet";
+import { lifeStageIdOf, SEX_LABEL } from "@pabom/core/domain/pet";
 import { isKnownStage, lifeStageFromWeight } from "@pabom/core/domain/species";
 import { formatFullDate } from "@pabom/core/lib/date";
 import { format, parseISO } from "date-fns";
@@ -27,7 +26,7 @@ import { Menu } from "@/shared/ui/menu";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { TopBar } from "@/shared/ui/top-bar";
 
-/** SCR-P04 개체 상세. 함께했던 개체면 맨 위 띠, 체크 리스트 줄 없음, 기록만 볼 수 있다 */
+/** SCR-P04 개체 상세 */
 export function PetDetailScreen() {
   const { petId } = useParams<{ petId: string }>();
   const router = useRouter();
@@ -37,10 +36,8 @@ export function PetDetailScreen() {
     ...speciesQueries.careStandards(data?.pet.speciesId ?? "crested_gecko"),
     enabled: Boolean(data),
   });
-  const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
-  const revert = useRevertPetStatus(data?.pet);
   const queryClient = useQueryClient();
   // 단계를 모르는 개체는 최근 체중 기록으로 단계를 제안하고, 버튼 한 번으로 정한다 (Figma 댓글: 체중으로 단계 제안)
   const confirmStage = useMutation({
@@ -75,7 +72,6 @@ export function PetDetailScreen() {
   }
 
   const { pet, routines, recentRecords } = data;
-  const ended = pet.status === "ended";
   const spec = species.get(pet.speciesId);
   const stageUnknown = !isKnownStage(pet.lifeStageCode);
   const lastWeight = recentRecords?.find((r) => isWeightItem(r.careItem) && r.weightG)?.weightG;
@@ -85,34 +81,18 @@ export function PetDetailScreen() {
     <Screen>
       <TopBar
         title={pet.name}
-        fallbackHref={ended ? "/pets/archived" : "/pets"}
+        fallbackHref="/pets"
         trailing={
           <Menu
             label={`${pet.name} 메뉴`}
-            items={
-              ended
-                ? [
-                    { label: "키우는 중으로 되돌리기", onSelect: () => revert.mutate() },
-                    { label: "개체 삭제", tone: "danger", onSelect: () => setDeleteOpen(true) },
-                  ]
-                : [
-                    { label: "정보 수정", onSelect: () => router.push(`/pets/${pet.id}/edit`) },
-                    ...(isPetStatusChangeSupported
-                      ? [{ label: "함께했던 개체로 바꾸기", onSelect: () => setStatusOpen(true) }]
-                      : []),
-                    { label: "개체 삭제", tone: "danger", onSelect: () => setDeleteOpen(true) },
-                  ]
-            }
+            items={[
+              { label: "정보 수정", onSelect: () => router.push(`/pets/${pet.id}/edit`) },
+              { label: "개체 삭제", tone: "danger", onSelect: () => setDeleteOpen(true) },
+            ]}
           />
         }
       />
       <ScreenBody>
-        {ended && pet.endedOn && pet.endReason ? (
-          <InfoBox className="mb-4 bg-muted text-body-lg text-secondary-text">
-            {formatFullDate(pet.endedOn)} {END_REASON_LABEL[pet.endReason]} · 기록만 볼 수 있어요
-          </InfoBox>
-        ) : null}
-
         <div className="flex items-center gap-4">
           <Avatar src={pet.photoUrl} size={72} />
           <div className="min-w-0">
@@ -124,12 +104,10 @@ export function PetDetailScreen() {
         <div className="mt-3">
           <InfoRow label="생애 단계">
             {stageUnknown ? "확인 전" : stageName(spec, pet.lifeStageCode)}
-            {/* 키우는 중일 때만 붙임말 (Figma P04·P08 · v1.2 명세: '(부화일·체중으로 제안)') */}
-            {!ended ? (
-              <span className="text-body-md text-subtle-foreground">
-                {stageUnknown ? " (체중을 재면 제안해 드려요)" : " (부화일·체중으로 제안)"}
-              </span>
-            ) : null}
+            {/* 붙임말 (Figma P04 · v1.2 명세: '(부화일·체중으로 제안)') */}
+            <span className="text-body-md text-subtle-foreground">
+              {stageUnknown ? " (체중을 재면 제안해 드려요)" : " (부화일·체중으로 제안)"}
+            </span>
           </InfoRow>
           {suggested ? (
             <InfoBox tone="primary" className="my-2 flex items-center justify-between gap-3">
@@ -149,21 +127,19 @@ export function PetDetailScreen() {
           <InfoRow label="부화일">
             {pet.hatchedOn ? formatFullDate(pet.hatchedOn) : "몰라요"}
           </InfoRow>
-          {!ended ? <InfoRow label="성별">{SEX_LABEL[pet.sex]}</InfoRow> : null}
+          <InfoRow label="성별">{SEX_LABEL[pet.sex]}</InfoRow>
         </div>
 
-        {!ended ? (
-          <Link
-            href={`/pets/${pet.id}/routines`}
-            className="mt-2 flex min-h-[52px] items-center gap-3 border-b border-border py-3"
-          >
-            <span className="shrink-0 text-body-xl font-bold">체크 리스트</span>
-            <span className="min-w-0 flex-1 truncate text-right text-body-lg text-muted-foreground">
-              {routinesShortLine(routines) || "아직 없어요"}
-            </span>
-            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-          </Link>
-        ) : null}
+        <Link
+          href={`/pets/${pet.id}/routines`}
+          className="mt-2 flex min-h-[52px] items-center gap-3 border-b border-border py-3"
+        >
+          <span className="shrink-0 text-body-xl font-bold">체크 리스트</span>
+          <span className="min-w-0 flex-1 truncate text-right text-body-lg text-muted-foreground">
+            {routinesShortLine(routines) || "아직 없어요"}
+          </span>
+          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
 
         <h3 className="mt-4 mb-1 text-body-lg font-medium">최근 기록</h3>
         {recentRecords === null ? (
@@ -199,9 +175,6 @@ export function PetDetailScreen() {
         ) : null}
       </ScreenBody>
 
-      {!ended ? (
-        <ChangeStatusSheet pet={pet} open={statusOpen} onOpenChange={setStatusOpen} />
-      ) : null}
       <DeletePetDialog pet={pet} open={deleteOpen} onOpenChange={setDeleteOpen} />
       <EditRecordSheet
         recordId={editRecordId}

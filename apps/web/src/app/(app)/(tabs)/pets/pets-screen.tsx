@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { isPetStatusChangeSupported } from "@pabom/core/config/env";
 import { PlusIcon } from "@/shared/ui/icons";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +9,6 @@ import { stageName, useSpeciesMap } from "@/entities/species";
 import { todayQueries } from "@/entities/task";
 import { todayYmd } from "@pabom/core/lib/date";
 import { LoadError, Skeleton, StateMessage } from "@/shared/ui/display";
-import { Menu } from "@/shared/ui/menu";
 import { ScreenBody } from "@/shared/ui/screen";
 import { TopBar } from "@/shared/ui/top-bar";
 
@@ -18,7 +16,7 @@ import { TopBar } from "@/shared/ui/top-bar";
 export function PetsScreen() {
   const router = useRouter();
   const species = useSpeciesMap();
-  const { data, isPending, isError, refetch } = useQuery(petQueries.list("active"));
+  const { data, isPending, isError, refetch } = useQuery(petQueries.list());
   // 오늘 할 일 수는 개체 목록 응답에 없어 GET /today 로 센다 [백엔드 요청]
   const [today] = useState(() => todayYmd());
   const todayList = useQuery(todayQueries.byDate(today));
@@ -27,21 +25,7 @@ export function PetsScreen() {
 
   return (
     <>
-      <TopBar
-        leading="none"
-        title="내 개체"
-        // 개체가 있을 때만 ⋯ (C1-2·C1-4에는 없다)
-        trailing={
-          data?.length && isPetStatusChangeSupported ? (
-            <Menu
-              label="개체 메뉴"
-              items={[
-                { label: "함께했던 개체 목록 보기", onSelect: () => router.push("/pets/archived") },
-              ]}
-            />
-          ) : undefined
-        }
-      />
+      <TopBar leading="none" title="내 개체" />
       <ScreenBody className="space-y-3">
         {isPending ? (
           <>

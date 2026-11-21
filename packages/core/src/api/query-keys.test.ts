@@ -11,7 +11,7 @@ describe("isPetScopedKey", () => {
     expect(isPetScopedKey(queryKeys.todayAt("2026-11-21", "26"), "26")).toBe(true);
 
     expect(isPetScopedKey(queryKeys.pet("27"), "26")).toBe(false);
-    expect(isPetScopedKey(queryKeys.petList("active"), "26")).toBe(false);
+    expect(isPetScopedKey(queryKeys.petList(), "26")).toBe(false);
     expect(isPetScopedKey(queryKeys.recordList({ limit: 5 }), "26")).toBe(false);
     expect(isPetScopedKey(queryKeys.todayAt("2026-11-21"), "26")).toBe(false);
   });
@@ -32,7 +32,7 @@ describe("invalidateAfterPetDeleted", () => {
     const unsubscribe = [
       observe(queryKeys.pet("26"), "deleted-detail"),
       observe(queryKeys.routines("26"), "deleted-routines"),
-      observe(queryKeys.petList("active"), "list"),
+      observe(queryKeys.petList(), "list"),
     ];
     await new Promise((resolve) => setTimeout(resolve, 0));
     calls.length = 0;

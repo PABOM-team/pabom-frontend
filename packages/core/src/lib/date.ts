@@ -42,10 +42,6 @@ export const formatTime = (iso: string) => format(parseISO(iso), "a h:mm", { loc
 export const formatDateTime = (iso: string) =>
   format(parseISO(iso), "M월 d일 (EEE) a h:mm", { locale: ko });
 
-/** 2025년 5월 (올해면 연도 생략하지 않음: 함께했던 기간 표시용) */
-export const formatYearMonth = (date: Date | string) =>
-  format(typeof date === "string" ? fromYmd(date) : date, "yyyy년 M월");
-
 export function formatRelativeDay(ymd: string, today = new Date()) {
   const diff = differenceInCalendarDays(fromYmd(ymd), startOfDay(today));
   if (diff === 0) return "오늘";

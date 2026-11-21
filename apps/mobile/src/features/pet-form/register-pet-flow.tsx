@@ -8,7 +8,6 @@ import { newRequestId } from "@pabom/core/api/adapters";
 import { petsApi, recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
-import { isPetPhotoDisabled, isRoutineDetached } from "@pabom/core/config/env";
 import { WEIGHT_CODE } from "@pabom/core/domain/care";
 import {
   isPetDraftReady,
@@ -141,15 +140,10 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
     },
     onSuccess: async (pet) => {
       await invalidateCareData(queryClient);
-      // 일정 쪽이 이 개체를 모르면(개체·일정이 한쪽만 진짜) 체크 리스트 대신 상세로 간다
-      if (isRoutineDetached) {
-        router.replace({ pathname: "/pets/[petId]", params: { petId: pet.id } });
-      } else {
-        router.replace({
-          pathname: "/pets/[petId]/routines",
-          params: { petId: pet.id, from: "register" },
-        });
-      }
+      router.replace({
+        pathname: "/pets/[petId]/routines",
+        params: { petId: pet.id, from: "register" },
+      });
       // 첫 개체의 관리 일정이 막 생긴 때라 알림이 왜 필요한지 알 수 있다. 아직 안 물었을 때만 창이 뜬다
       void requestPushPermission();
     },
@@ -280,14 +274,11 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 
         {step === 4 ? (
           <View style={{ gap: 20 }}>
-            {/* 개체·사진이 한쪽만 진짜 백엔드면 서로 파일 ID를 몰라서 사진 칸을 숨긴다 */}
-            {!isPetPhotoDisabled ? (
-              <PetPhotoPicker
-                value={draft.photo}
-                onChange={(photo) => patch({ photo })}
-                onBusyChange={setUploading}
-              />
-            ) : null}
+            <PetPhotoPicker
+              value={draft.photo}
+              onChange={(photo) => patch({ photo })}
+              onBusyChange={setUploading}
+            />
             <Field label="이름" error={nameError}>
               <Input
                 maxLength={20}
@@ -376,7 +367,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
             loading={create.isPending || uploading}
             onPress={() => create.mutate()}
           >
-            {isRoutineDetached ? "등록하기" : "등록하고 체크 리스트 보기"}
+            등록하고 체크 리스트 보기
           </Button>
         )}
         {onboarding && step === 1 ? (

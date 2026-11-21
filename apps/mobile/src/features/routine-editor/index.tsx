@@ -5,7 +5,6 @@ import { routineSummary } from "@/entities/routine";
 import { routinesApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
-import { isRoutineFoodNameSupported } from "@pabom/core/config/env";
 import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@pabom/core/domain/care";
 import {
   FEED_INTERVAL_ASK,
@@ -105,8 +104,9 @@ export function RoutineEditSheet({
   }
   const current = routine ?? shown;
   const label = current?.careItemName ?? "";
-  // 먹이 이름 칸은 백엔드 일정 API에 없어 목업일 때만 보여 준다
-  const feed = current ? isFeedItem(current.recordKind) && isRoutineFoodNameSupported : false;
+  const feed = current ? isFeedItem(current.recordKind) : false;
+  // 먹이 이름은 바꿨을 때만 보낸다. 백엔드가 foodName 을 받기 전(backend#64)에도 주기만 바꾸는 저장은 되게 한다
+  const foodChanged = feed && food.trim() !== (current?.foodName ?? "");
   const days = Number(intervalText);
   const invalid =
     !Number.isInteger(days) || days < ROUTINE_INTERVAL_MIN || days > ROUTINE_INTERVAL_MAX;
@@ -118,7 +118,7 @@ export function RoutineEditSheet({
     mutationFn: () =>
       routinesApi.update(current!.id, {
         intervalDays: days,
-        foodName: feed ? food.trim() || null : undefined,
+        foodName: foodChanged ? food.trim() || null : undefined,
       }),
     onSuccess: () => onOpenChange(false),
     onError: (error) => toast(getErrorMessage(error, "저장하지 못했어요.")),

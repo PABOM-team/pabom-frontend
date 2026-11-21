@@ -1,29 +1,14 @@
 "use client";
 
 import { PlusIcon } from "./icons";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { filesApi } from "@pabom/core/api/endpoints";
 import type { Photo } from "@pabom/core/domain/record";
 import { resizeImage } from "@/shared/lib/image";
+import { useTouchDevice } from "@/shared/lib/use-touch-device";
 import { cn } from "@/shared/lib/utils";
 import { Spinner } from "./display";
 import { Menu } from "./menu";
-
-const TOUCH_QUERY = "(pointer: coarse)";
-const subscribeTouch = (onChange: () => void) => {
-  const query = window.matchMedia(TOUCH_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-};
-
-/** 휴대폰·태블릿처럼 손가락으로 쓰는 기기인지. 서버 렌더에서는 아니라고 본다 */
-function useTouchDevice() {
-  return useSyncExternalStore(
-    subscribeTouch,
-    () => window.matchMedia(TOUCH_QUERY).matches,
-    () => false,
-  );
-}
 
 type Pending = { key: string; file: File; status: "uploading" | "failed" };
 

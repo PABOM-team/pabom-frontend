@@ -33,7 +33,7 @@ export * from "./icons";
 export { Menu, type MenuItem } from "./menu";
 export { OfflineBanner } from "./offline-banner";
 export { PabomAppIcon, PabomLogo, PabomSymbol } from "./pabom-logo";
-export { PhotoInput, pickImages, uploadPicked } from "./photo-input";
+export { PhotoInput, pickImages, takePhoto, uploadPicked } from "./photo-input";
 export { PhotoViewer } from "./photo-viewer";
 export { Screen, ScreenBody, ScreenCenter, ScreenFooter } from "./screen";
 export { AnimatedModal, Sheet, SheetLabel } from "./sheet";

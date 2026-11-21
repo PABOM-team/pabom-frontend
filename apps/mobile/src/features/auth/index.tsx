@@ -6,7 +6,7 @@ import { StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { clearSession } from "@pabom/core/api/session";
+import { clearSession, isSignedOut } from "@pabom/core/api/session";
 import type { AuthProvider } from "@pabom/core/domain/user";
 import { meQueries } from "@pabom/core/entities/session";
 import { Button } from "@/shared/ui/button";
@@ -124,16 +124,28 @@ function GoogleSymbol() {
   );
 }
 
-export function useLogout() {
+/**
+ * 로그아웃·탈퇴 뒤 이 기기에 남은 로그인 흔적을 모두 지운다.
+ * access·가입 토큰, 로그인 회원 정보, 로그인 뒤 돌아갈 곳, 불러 둔 내 정보·목록.
+ * 남겨 두면 같은 소셜 계정으로 다시 가입할 때 약관 동의 대신 이전 화면(설정 등)으로 갈 수 있다
+ */
+export function useResetSession() {
   const queryClient = useQueryClient();
+  return () => {
+    clearSession();
+    rememberLoginNext(null);
+    // 보던 화면이 내 정보를 다시 불러 첫 화면 주소에 next를 붙이지 않도록 먼저 옮긴다
+    router.replace("/welcome");
+    queryClient.clear();
+  };
+}
+
+export function useLogout() {
+  const resetSession = useResetSession();
   return useMutation({
     // 기기의 카카오·구글 로그인도 지워 다음에 다른 계정을 고를 수 있게 한다
     mutationFn: () => Promise.all([authApi.logout(), socialLogout()]),
-    onSettled: () => {
-      clearSession();
-      queryClient.clear();
-      router.replace("/welcome");
-    },
+    onSettled: resetSession,
   });
 }
 
@@ -155,7 +167,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { data: me, isError } = useQuery(meQueries.detail());
   const [initialPath] = useState(pathname);
 
-  if (isError) return <Redirect href={{ pathname: "/welcome", params: { next: initialPath } }} />;
+  // 로그아웃·탈퇴한 직후에는 보던 화면을 기억하지 않는다 (다시 로그인하면 그 화면으로 가 버린다)
+  if (isError) {
+    return isSignedOut() ? (
+      <Redirect href="/welcome" />
+    ) : (
+      <Redirect href={{ pathname: "/welcome", params: { next: initialPath } }} />
+    );
+  }
   if (me?.status === "PENDING_TERMS") return <Redirect href="/agreements" />;
   if (!me) return <FullScreenLoading />;
   return children;

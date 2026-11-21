@@ -3,7 +3,8 @@ import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { setAccessToken, setSignupSession, setStoredAccount } from "@pabom/core/api/session";
+import { getQueryClient } from "@pabom/core/api/query-client";
+import { applyLoginResult } from "@pabom/core/api/session";
 import { appLoginRedirectUri, type AuthProvider } from "@pabom/core/domain/user";
 import { toast } from "@/shared/ui/toast";
 import { LoginCancelled, socialToken } from "./social";
@@ -57,15 +58,16 @@ export function parseLoginCallback(url: string): LoginCallbackParams {
 
 const FAILED = "로그인하지 못했어요. 다시 시도해 주세요.";
 
-/** 로그인 결과로 새 회원은 약관 동의, 기존 회원은 홈(또는 보던 화면)으로 */
+/**
+ * 로그인 결과로 새 회원(가입 토큰 또는 약관 동의 전 PENDING_TERMS)은 약관 동의, 기존 회원은 홈(또는 보던 화면)으로.
+ * 탈퇴 뒤 같은 소셜 계정으로 다시 가입할 때 이전 계정의 내 정보·목록이 남아 있지 않게 먼저 비운다
+ */
 function finishLogin(provider: AuthProvider, login: Awaited<ReturnType<typeof authApi.callback>>) {
   const next = takeLoginNext();
-  setStoredAccount({ id: login.user.id, nickname: login.user.nickname, provider });
-  if ("signupToken" in login) {
-    setSignupSession(login.signupToken, login.expiresIn);
+  getQueryClient().clear();
+  if (applyLoginResult(login, provider) === "agreements") {
     router.replace(next ? { pathname: "/agreements", params: { next } } : "/agreements");
   } else {
-    setAccessToken(login.accessToken);
     router.replace((next as "/home") ?? "/home");
   }
 }

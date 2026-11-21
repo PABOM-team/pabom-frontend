@@ -81,12 +81,18 @@ export function RoutineEditSheet({
 }) {
   const { refresh } = useRoutineMutation();
   const [shown, setShown] = useState<Routine | null>(null);
+  // 지금 열려 있는 창이 값을 받아 온 항목. 닫히면 비워서, 같은 항목을 다시 열 때도
+  // 저장·되돌리기 뒤의 최신 주기로 칸을 다시 채운다 (QA T03-04)
+  const [openedId, setOpenedId] = useState<string | null>(null);
   const [intervalText, setIntervalText] = useState("");
   const [food, setFood] = useState("");
-  if (routine && routine.id !== shown?.id) {
+  if (routine && routine.id !== openedId) {
+    setOpenedId(routine.id);
     setShown(routine);
     setIntervalText(String(routine.intervalDays));
     setFood(routine.foodName ?? "");
+  } else if (!routine && openedId !== null) {
+    setOpenedId(null);
   }
   const current = routine ?? shown;
   const label = current?.careItemName ?? "";
@@ -131,21 +137,16 @@ export function RoutineEditSheet({
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        <div className="flex gap-2">
+        // 되돌리기가 있으면 두 버튼을 위아래로 쌓는다. 한 줄이면 좁은 화면에서 저장이 밀려난다
+        <div className={cn("flex w-full gap-2", current?.customized && "flex-col")}>
           {current?.customized ? (
-            <Button
-              variant="outline"
-              size="xl"
-              className="shrink-0"
-              disabled={pending}
-              onClick={() => reset.mutate()}
-            >
+            <Button variant="outline" size="xl" disabled={pending} onClick={() => reset.mutate()}>
               가이드라인 주기로 되돌리기
             </Button>
           ) : null}
           <Button
             size="xl"
-            className="flex-1"
+            className={current?.customized ? undefined : "flex-1"}
             disabled={invalid || pending}
             onClick={() => save.mutate()}
           >

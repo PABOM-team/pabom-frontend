@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LIFE_STAGES } from "./species";
-import { isWeightPlateau, weightStageSuggestion } from "./weight-stage";
+import { isWeightPlateau, weightStageBlocked, weightStageSuggestion } from "./weight-stage";
 
 const species = { lifeStages: LIFE_STAGES, adultWeightG: 35, adultCheckMinAgeMonths: 10 };
 const today = new Date(2026, 10, 3);
@@ -83,5 +83,45 @@ describe("weightStageSuggestion", () => {
         today,
       }),
     ).toBeNull();
+  });
+});
+
+describe("weightStageBlocked", () => {
+  const juvenile = (hatchedOn: string | null) => ({ lifeStageCode: "juvenile", hatchedOn });
+
+  it("최소 나이 전이면 나이 안내를 준다", () => {
+    const b = weightStageBlocked({
+      pet: juvenile("2026-03-02"),
+      species,
+      weights: [30, 30, 30],
+      today,
+    });
+    expect(b?.reason).toBe("too-young");
+    expect(b?.message).toBe("부화 후 10개월이 지나야 성체로 바꿀 수 있어요");
+    expect(b?.actionLabel).toBe("바꾸기");
+  });
+
+  it("나이는 됐지만 체중 기록이 3개보다 적으면 기록 안내를 준다", () => {
+    const b = weightStageBlocked({ pet: juvenile(null), species, weights: [30, 29], today });
+    expect(b?.reason).toBe("few-weights");
+    expect(b?.message).toBe("체중을 3번 이상 기록하면 성체로 바꿀 수 있는지 알려 드려요");
+  });
+
+  it("참고 체중 이상이면 기록 수가 적어도 안내하지 않는다 (제안 쪽에서 다룬다)", () => {
+    expect(weightStageBlocked({ pet: juvenile(null), species, weights: [36], today })).toBeNull();
+  });
+
+  it("조건을 채웠는데 아직 자라는 중이면 안내하지 않는다", () => {
+    expect(
+      weightStageBlocked({ pet: juvenile("2025-01-01"), species, weights: [30, 27, 24], today }),
+    ).toBeNull();
+  });
+
+  it("어린 개체가 아니면 안내하지 않는다", () => {
+    for (const lifeStageCode of ["adult", "unknown"]) {
+      expect(
+        weightStageBlocked({ pet: { lifeStageCode, hatchedOn: null }, species, weights: [30], today }),
+      ).toBeNull();
+    }
   });
 });

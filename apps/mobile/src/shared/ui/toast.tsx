@@ -4,7 +4,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, semantic, shadows, spacing, toNativeShadow } from "./theme";
 import { Text } from "./text";
 
-type ToastAction = { label: string; onClick: () => void };
+type ToastAction = {
+  label: string;
+  onClick: () => void;
+  /** 누를 수 없는 행동. 왜 못 하는지 메시지로 알릴 때 (QA T05-08) */
+  disabled?: boolean;
+};
 type ToastItem = {
   id: number;
   message: string;
@@ -76,6 +81,9 @@ export function Toaster() {
         {item.action ? (
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled: Boolean(item.action.disabled) }}
+            disabled={item.action.disabled}
+            style={item.action.disabled ? styles.actionDisabled : undefined}
             hitSlop={8}
             onPress={() => {
               item.action?.onClick();
@@ -112,4 +120,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...toNativeShadow(shadows.md),
   },
+  actionDisabled: { opacity: 0.4 },
 });

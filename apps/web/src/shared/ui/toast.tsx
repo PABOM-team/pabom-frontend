@@ -4,7 +4,12 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { cn } from "@/shared/lib/utils";
 
-type ToastAction = { label: string; onClick: () => void };
+type ToastAction = {
+  label: string;
+  onClick: () => void;
+  /** 누를 수 없는 행동. 왜 못 하는지 메시지로 알릴 때 (QA T05-08) */
+  disabled?: boolean;
+};
 type ToastItem = {
   id: number;
   message: string;
@@ -67,7 +72,8 @@ export function Toaster() {
           {current.action ? (
             <button
               type="button"
-              className="shrink-0 font-semibold text-sub-300"
+              disabled={current.action.disabled}
+              className="shrink-0 font-semibold text-sub-300 disabled:opacity-40"
               onClick={() => {
                 current.action?.onClick();
                 dismiss();

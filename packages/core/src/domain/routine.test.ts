@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { getOccurrences, guidelineRange } from "./routine";
+import { feedIntervalFromAnswer, feedRoutineToAsk, getOccurrences, guidelineRange } from "./routine";
 
 const fmt = (dates: Date[]) => dates.map((d) => format(d, "yyyy-MM-dd"));
 
@@ -49,5 +49,36 @@ describe("guidelineRange", () => {
   it("직접 바꾼 주기나 범위가 없으면 숨긴다", () => {
     expect(guidelineRange({ customized: true, minDays: 7, maxDays: 14 })).toBeNull();
     expect(guidelineRange({ customized: false, minDays: null, maxDays: null })).toBeNull();
+  });
+});
+
+describe("feedRoutineToAsk", () => {
+  it("켜진 첫 급여 일정을 고른다", () => {
+    const routines = [
+      { id: "a", enabled: true, recordKind: "check" as const },
+      { id: "b", enabled: false, recordKind: "intake" as const },
+      { id: "c", enabled: true, recordKind: "intake" as const },
+    ];
+    expect(feedRoutineToAsk(routines)?.id).toBe("c");
+  });
+
+  it("급여 일정이 없으면 null", () => {
+    expect(feedRoutineToAsk([{ enabled: true, recordKind: "check" as const }])).toBeNull();
+  });
+});
+
+describe("feedIntervalFromAnswer", () => {
+  it("숫자를 넣으면 그 주기", () => {
+    expect(feedIntervalFromAnswer("3")).toBe(3);
+  });
+
+  it("비우면 모름으로 보고 매일", () => {
+    expect(feedIntervalFromAnswer("  ")).toBe(1);
+  });
+
+  it("범위 밖이거나 숫자가 아니면 null", () => {
+    expect(feedIntervalFromAnswer("0")).toBeNull();
+    expect(feedIntervalFromAnswer("366")).toBeNull();
+    expect(feedIntervalFromAnswer("2.5")).toBeNull();
   });
 });

@@ -93,22 +93,24 @@ export function PostponeSheet({
             {formatShortDay(date)}로 옮겨요
           </Text>
         ) : null}
+        {/* iOS 모달은 가장 가까운 화면에서 띄운다. 미루기 시트와 나란히 두면 이미 모달을 띄운
+            루트 위에 또 띄우려다 실패해 달력이 열리지 않으니, 시트 안에 두어 그 위로 띄운다 */}
+        <DatePickerSheet
+          open={calendarOpen}
+          onOpenChange={setCalendarOpen}
+          title="날짜 고르기"
+          value={date}
+          min={toYmd(addDays(today, 1))}
+          max={toYmd(addDays(today, POSTPONE_MAX_DAYS))}
+          hint="오늘·지난 날·30일 뒤는 고를 수 없어요"
+          previewText={(ymd) => `${formatShortDay(ymd)}로 옮겨요`}
+          confirmLabel="미루기"
+          onConfirm={(ymd) => {
+            setDate(ymd);
+            if (current) onSubmit(current, ymd);
+          }}
+        />
       </Sheet>
-      <DatePickerSheet
-        open={calendarOpen}
-        onOpenChange={setCalendarOpen}
-        title="날짜 고르기"
-        value={date}
-        min={toYmd(addDays(today, 1))}
-        max={toYmd(addDays(today, POSTPONE_MAX_DAYS))}
-        hint="오늘·지난 날·30일 뒤는 고를 수 없어요"
-        previewText={(ymd) => `${formatShortDay(ymd)}로 옮겨요`}
-        confirmLabel="미루기"
-        onConfirm={(ymd) => {
-          setDate(ymd);
-          if (current) onSubmit(current, ymd);
-        }}
-      />
     </>
   );
 }

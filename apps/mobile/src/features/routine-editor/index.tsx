@@ -8,17 +8,21 @@ import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { isRoutineFoodNameSupported } from "@pabom/core/config/env";
 import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@pabom/core/domain/care";
 import {
+  FEED_INTERVAL_ASK,
+  feedIntervalFromAnswer,
+  feedIntervalSavedMessage,
   guidelineRange,
   ROUTINE_INTERVAL_MAX,
   ROUTINE_INTERVAL_MIN,
   type Routine,
+  UNKNOWN_FEED_INTERVAL_DAYS,
 } from "@pabom/core/domain/routine";
 import { Button } from "@/shared/ui/button";
 import { Badge, InfoBox } from "@/shared/ui/display";
 import { Input, Switch } from "@/shared/ui/form";
 import { Sheet, SheetLabel } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
-import { semantic } from "@/shared/ui/theme";
+import { radius, semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
 
 function useRoutineMutation() {
@@ -86,12 +90,18 @@ export function RoutineEditSheet({
 }) {
   const { refresh } = useRoutineMutation();
   const [shown, setShown] = useState<Routine | null>(null);
+  // 지금 열려 있는 창이 값을 받아 온 항목. 닫히면 비워서, 같은 항목을 다시 열 때도
+  // 저장·되돌리기 뒤의 최신 주기로 칸을 다시 채운다 (QA T03-04)
+  const [openedId, setOpenedId] = useState<string | null>(null);
   const [intervalText, setIntervalText] = useState("");
   const [food, setFood] = useState("");
-  if (routine && routine.id !== shown?.id) {
+  if (routine && routine.id !== openedId) {
+    setOpenedId(routine.id);
     setShown(routine);
     setIntervalText(String(routine.intervalDays));
     setFood(routine.foodName ?? "");
+  } else if (!routine && openedId !== null) {
+    setOpenedId(null);
   }
   const current = routine ?? shown;
   const label = current?.careItemName ?? "";
@@ -133,7 +143,8 @@ export function RoutineEditSheet({
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        <>
+        // 되돌리기가 있으면 두 버튼을 위아래로 쌓는다. 한 줄이면 좁은 화면에서 저장이 밀려난다
+        <View style={[styles.footer, current?.customized && styles.footerStacked]}>
           {current?.customized ? (
             <Button variant="outline" size="xl" disabled={pending} onPress={() => reset.mutate()}>
               가이드라인 주기로 되돌리기
@@ -141,13 +152,13 @@ export function RoutineEditSheet({
           ) : null}
           <Button
             size="xl"
-            style={{ flex: 1 }}
+            style={current?.customized ? undefined : { flex: 1 }}
             disabled={invalid || pending}
             onPress={() => save.mutate()}
           >
             저장
           </Button>
-        </>
+        </View>
       }
     >
       <SheetLabel first>주기</SheetLabel>
@@ -185,7 +196,73 @@ export function RoutineEditSheet({
   );
 }
 
+/**
+ * 단계 확인 전 개체의 급여 주기 질문 (P03).
+ * 숫자를 넣으면 그 주기(내가 정한 주기), 비우고 저장하면 매일로 잡는다.
+ */
+export function FeedIntervalAsk({ routine }: { routine: Routine }) {
+  const { refresh } = useRoutineMutation();
+  const [text, setText] = useState(routine.customized ? String(routine.intervalDays) : "");
+  const days = feedIntervalFromAnswer(text);
+
+  const save = useMutation({
+    mutationFn: async (next: number) => {
+      let current = routine;
+      // 모름(매일)이면 직접 정한 주기를 먼저 가이드라인으로 되돌려 '내가 정한 주기' 표시를 남기지 않는다
+      if (next === UNKNOWN_FEED_INTERVAL_DAYS && current.customized) {
+        current = await routinesApi.reset(current.id);
+      }
+      // 이미 그 주기면 다시 저장하지 않는다
+      if (next !== current.intervalDays)
+        await routinesApi.update(current.id, { intervalDays: next });
+      return next;
+    },
+    onSuccess: (next) => toast(feedIntervalSavedMessage(routine.careItemName, next)),
+    onError: (error) => toast(getErrorMessage(error, "저장하지 못했어요.")),
+    onSettled: refresh,
+  });
+
+  return (
+    <View style={styles.ask}>
+      <Text variant="body-xl" weight="bold">
+        {FEED_INTERVAL_ASK.title}
+      </Text>
+      <View style={styles.askRow}>
+        <Input
+          accessibilityLabel={FEED_INTERVAL_ASK.title}
+          inputMode="numeric"
+          keyboardType="number-pad"
+          maxLength={3}
+          containerStyle={{ width: 140 }}
+          suffix="일마다"
+          placeholder="모름"
+          value={text}
+          invalid={days === null}
+          onChangeText={(next) => setText(next.replace(/[^0-9]/g, "").slice(0, 3))}
+        />
+        <Button
+          size="md"
+          disabled={days === null || save.isPending}
+          onPress={() => days !== null && save.mutate(days)}
+        >
+          저장
+        </Button>
+      </View>
+      <Text variant="body-md" color={semantic.secondaryText} style={{ marginTop: 6 }}>
+        {FEED_INTERVAL_ASK.hint}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  ask: {
+    marginTop: 14,
+    borderRadius: radius.xl,
+    backgroundColor: semantic.primarySoft,
+    padding: 14,
+  },
+  askRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -196,5 +273,7 @@ const styles = StyleSheet.create({
   },
   rowBody: { flex: 1, minWidth: 0 },
   rowTitle: { flexDirection: "row", alignItems: "center", gap: 6 },
+  footer: { flex: 1, flexDirection: "row", gap: 8 },
+  footerStacked: { flexDirection: "column" },
   edit: { flexShrink: 0, paddingHorizontal: 4, minHeight: 44, justifyContent: "center" },
 });

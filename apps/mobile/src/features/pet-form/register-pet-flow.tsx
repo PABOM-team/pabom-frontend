@@ -34,7 +34,7 @@ import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { PhotoBox, Skeleton, StepProgress } from "@/shared/ui/display";
+import { Badge, PhotoBox, Skeleton, StepProgress } from "@/shared/ui/display";
 import { Field, Input } from "@/shared/ui/form";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "@/shared/ui/icons";
 import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
@@ -222,9 +222,11 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
                 title={SPECIES_GROUP_LABEL.lizard}
                 onPress={() => patch({ group: "lizard" })}
               />
-              {/* 뱀(볼파이톤)은 MVP 범위 밖이라 고를 수 없다 (CLAUDE.md). 글은 Figma 그대로 */}
+              {/* 뱀(볼파이톤)은 MVP 범위 밖이라 고를 수 없다 (CLAUDE.md). 글은 Figma 그대로 두고,
+                  왜 못 고르는지 보이게 '준비 중' 배지만 붙인다 (QA T02-01) */}
               <ChoiceCard
                 disabled
+                badge="준비 중"
                 title={SPECIES_GROUP_LABEL.snake}
                 description={onboarding ? undefined : "볼파이톤"}
               />
@@ -407,12 +409,15 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 function ChoiceCard({
   title,
   description,
+  badge,
   selected,
   disabled,
   onPress,
 }: {
   title: string;
   description?: string;
+  /** 제목 옆 작은 배지 (예: 고를 수 없는 카드의 '준비 중') */
+  badge?: string;
   selected?: boolean;
   disabled?: boolean;
   onPress?: () => void;
@@ -443,6 +448,7 @@ function ChoiceCard({
               ✓
             </Text>
           ) : null}
+          {badge ? <Badge style={{ marginLeft: 4 }}>{badge}</Badge> : null}
         </View>
         {description ? (
           <Text variant="body-md" color={semantic.mutedForeground}>

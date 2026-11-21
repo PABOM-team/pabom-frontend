@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, isAfter, isBefore, startOfDay } from "date-fns";
 import { z } from "zod";
-import { recordKindSchema } from "./care";
+import { formatInterval, isFeedItem, recordKindSchema } from "./care";
 import { careLabelSchema } from "./species";
 
 export const ROUTINE_INTERVAL_MIN = 1;
@@ -93,3 +93,37 @@ export function getOccurrences(
   }
   return result;
 }
+
+/**
+ * 단계 확인 전 개체의 체크 리스트(P03)에서 '지금 며칠마다 먹이고 있나요?'를 물을 급여 일정.
+ * 켜진 급여형 일정 중 첫 번째. 없으면 묻지 않는다.
+ */
+export function feedRoutineToAsk<T extends Pick<Routine, "enabled" | "recordKind">>(
+  routines: readonly T[],
+): T | null {
+  return routines.find((r) => r.enabled && isFeedItem(r.recordKind)) ?? null;
+}
+
+/** 급여 주기를 모를 때 잡는 주기 (P03 단계 확인 전: 모르면 매일) */
+export const UNKNOWN_FEED_INTERVAL_DAYS = 1;
+
+/**
+ * '지금 며칠마다 먹이고 있나요?' 입력값 → 저장할 주기.
+ * 비우면 모름으로 보고 매일, 범위를 벗어나거나 숫자가 아니면 null(저장 불가).
+ */
+export function feedIntervalFromAnswer(text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return UNKNOWN_FEED_INTERVAL_DAYS;
+  if (!/^[0-9]+$/.test(trimmed)) return null;
+  const days = Number(trimmed);
+  return days >= ROUTINE_INTERVAL_MIN && days <= ROUTINE_INTERVAL_MAX ? days : null;
+}
+
+/** 단계 확인 전 급여 주기 질문 문구 (P03) */
+export const FEED_INTERVAL_ASK = {
+  title: "지금 며칠마다 먹이고 있나요?",
+  hint: "적어 주면 그 주기로 맞춰요. 모르면 비워 두고 저장하세요. 매일로 잡아요.",
+} as const;
+
+export const feedIntervalSavedMessage = (name: string, days: number) =>
+  `${name} 주기를 ${formatInterval(days)}로 잡았어요`;

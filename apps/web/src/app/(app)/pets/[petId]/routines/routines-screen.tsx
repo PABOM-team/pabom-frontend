@@ -8,9 +8,10 @@ import { useState } from "react";
 import { petQueries, petSpeciesLine } from "@/entities/pet";
 import { routineQueries } from "@/entities/routine";
 import { speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
-import { RoutineEditSheet, RoutineRow } from "@/features/routine-editor";
+import { FeedIntervalAsk, RoutineEditSheet, RoutineRow } from "@/features/routine-editor";
 import { CARE_DISCLAIMER } from "@pabom/core/domain/care";
 import { SEX_SYMBOL, SPECIES_LABEL } from "@pabom/core/domain/pet";
+import { feedRoutineToAsk } from "@pabom/core/domain/routine";
 import { isKnownStage } from "@pabom/core/domain/species";
 import { Button } from "@/shared/ui/button";
 import { Avatar, Skeleton, StateMessage } from "@/shared/ui/display";
@@ -44,6 +45,8 @@ export function RoutinesScreen() {
   const offCount = routines.data?.filter((r) => !r.enabled).length ?? 0;
   const stage = pet ? stageName(species.get(pet.speciesId), pet.lifeStageCode) : "";
   const stageUnknown = pet ? !isKnownStage(pet.lifeStageCode) : false;
+  // 단계 확인 전이면 지금 먹이는 주기를 물어 급여 일정에 반영한다 (QA T03-06)
+  const feedToAsk = stageUnknown ? feedRoutineToAsk(routines.data ?? []) : null;
 
   return (
     <Screen>
@@ -93,6 +96,8 @@ export function RoutinesScreen() {
                   {offCount ? `${offCount}개 항목이 꺼져 있어요.` : "모두 켜져 있어요."} 필요 없는
                   항목만 꺼 주세요.
                 </p>
+
+                {feedToAsk ? <FeedIntervalAsk key={feedToAsk.id} routine={feedToAsk} /> : null}
 
                 <ul className="mt-2">
                   {routines.data.map((routine) => (

@@ -1,3 +1,4 @@
+import { File } from "expo-file-system";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 
 /** 올리기 전에 사진을 줄인다 (FE-C09): 긴 변 1600px · JPEG 품질 0.85. 다시 저장하면서 EXIF 위치 정보도 사라진다 */
@@ -25,9 +26,10 @@ export async function resizeImage(
 }
 
 /**
- * React Native fetch 의 FormData 는 {uri, name, type} 꼴 파일을 받는다.
- * 공용 API(filesApi.upload)는 Blob 타입을 요구하므로 모양만 맞춘다
+ * 올릴 파일을 만든다. 앱의 전역 fetch·FormData 는 Expo 구현(expo/fetch)이라
+ * React Native 식 {uri, name, type} 객체를 보내지 못하고 "Unsupported FormDataPart implementation"
+ * 으로 요청 전에 실패한다 (QA T08-10). Blob 을 구현한 expo-file-system 의 File 로 넘긴다
  */
-export function toUploadFile(uri: string, name = "photo.jpg") {
-  return { uri, name, type: "image/jpeg" } as unknown as Blob;
+export function toUploadFile(uri: string): Blob {
+  return new File(uri);
 }

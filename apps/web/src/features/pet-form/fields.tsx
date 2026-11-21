@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { speciesQueries } from "@/entities/species";
 import { filesApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
@@ -14,12 +14,14 @@ import {
 } from "@pabom/core/domain/species";
 import { todayYmd } from "@pabom/core/lib/date";
 import { resizeImage } from "@/shared/lib/image";
+import { useTouchDevice } from "@/shared/lib/use-touch-device";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
 import { Avatar, InfoBox, Skeleton, Spinner } from "@/shared/ui/display";
 import { Checkbox, Field, Input } from "@/shared/ui/form";
+import { Menu } from "@/shared/ui/menu";
 import { toast } from "@/shared/ui/toast";
 
 export type PhotoValue = { fileId: string | null; url: string | null };
@@ -37,6 +39,9 @@ export function PetPhotoPicker({
   onBusyChange?: (busy: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  // 카메라로 찍기는 휴대폰 브라우저에서만 고르게 한다. 데스크톱은 capture 를 무시하고 파일 창을 연다
+  const touch = useTouchDevice();
   const [uploading, setUploading] = useState(false);
 
   const pick = async (file: File | undefined) => {
@@ -54,29 +59,50 @@ export function PetPhotoPicker({
     }
   };
 
+  const onFile = (e: ChangeEvent<HTMLInputElement>) => {
+    void pick(e.target.files?.[0]);
+    e.target.value = "";
+  };
+
+  const label = value.url ? "사진 바꾸기" : "사진 추가";
+  const avatar = (
+    <Avatar
+      src={value.url}
+      size={72}
+      className={cn(!value.url && variant !== "edit" && "border-[1.5px] border-dashed border-input")}
+    >
+      {uploading ? (
+        <Spinner />
+      ) : variant === "edit" ? null : (
+        <span className="flex items-center gap-0.5 text-body-sm">+ 사진</span>
+      )}
+    </Avatar>
+  );
+
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        aria-label={value.url ? "사진 바꾸기" : "사진 추가"}
-        className="relative"
-      >
-        {/* 등록(P02)은 점선 동그라미에 '+ 사진', 정보 수정(P05)은 동그라미만 */}
-        <Avatar
-          src={value.url}
-          size={72}
-          className={cn(
-            !value.url && variant !== "edit" && "border-[1.5px] border-dashed border-input",
-          )}
+      {/* 등록(P02)은 점선 동그라미에 '+ 사진', 정보 수정(P05)은 동그라미만 */}
+      {touch ? (
+        // 휴대폰 브라우저에서는 앨범·카메라 중 고른다 (T08-04)
+        <Menu
+          label={label}
+          trigger={avatar}
+          triggerClassName="relative size-auto rounded-full hover:bg-transparent data-[state=open]:bg-transparent"
+          items={[
+            { label: "앨범에서 고르기", onSelect: () => inputRef.current?.click() },
+            { label: "카메라로 찍기", onSelect: () => cameraRef.current?.click() },
+          ]}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          aria-label={label}
+          className="relative"
         >
-          {uploading ? (
-            <Spinner />
-          ) : variant === "edit" ? null : (
-            <span className="flex items-center gap-0.5 text-body-sm">+ 사진</span>
-          )}
-        </Avatar>
-      </button>
+          {avatar}
+        </button>
+      )}
       <span
         className={cn(
           "text-body-md",
@@ -85,15 +111,14 @@ export function PetPhotoPicker({
       >
         {variant === "edit" ? "사진 바꾸기" : "사진 (선택)"}
       </span>
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onFile} />
       <input
-        ref={inputRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
+        capture="environment"
         hidden
-        onChange={(e) => {
-          void pick(e.target.files?.[0]);
-          e.target.value = "";
-        }}
+        onChange={onFile}
       />
     </div>
   );

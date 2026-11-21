@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { speciesQueries } from "@/entities/species";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import {
@@ -16,7 +16,8 @@ import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
 import { Avatar, InfoBox, Skeleton, Spinner } from "@/shared/ui/display";
 import { CheckboxRow, Field, Input } from "@/shared/ui/form";
-import { pickImages, uploadPicked } from "@/shared/ui/photo-input";
+import { Menu } from "@/shared/ui/menu";
+import { pickImages, takePhoto, uploadPicked } from "@/shared/ui/photo-input";
 import { Text } from "@/shared/ui/text";
 import { semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
@@ -37,8 +38,8 @@ export function PetPhotoPicker({
 }) {
   const [uploading, setUploading] = useState(false);
 
-  const pick = async () => {
-    const [asset] = await pickImages(1);
+  const pick = async (source: "library" | "camera") => {
+    const [asset] = source === "camera" ? await takePhoto() : await pickImages(1);
     if (!asset) return;
     setUploading(true);
     onBusyChange?.(true);
@@ -55,24 +56,28 @@ export function PetPhotoPicker({
 
   return (
     <View style={styles.photoPicker}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={value.url ? "사진 바꾸기" : "사진 추가"}
-        onPress={() => void pick()}
-      >
-        {/* 등록(P02)은 점선 동그라미에 '+ 사진', 정보 수정(P05)은 동그라미만 */}
-        <Avatar
-          src={value.url}
-          size={72}
-          style={!value.url && variant !== "edit" ? styles.dashedAvatar : undefined}
-        >
-          {uploading ? (
-            <Spinner />
-          ) : variant === "edit" ? null : (
-            <Text variant="body-sm">+ 사진</Text>
-          )}
-        </Avatar>
-      </Pressable>
+      {/* 누르면 앨범·카메라 중 고른다 (T08-04). 등록(P02)은 점선 동그라미에 '+ 사진', 정보 수정(P05)은 동그라미만 */}
+      <Menu
+        label={value.url ? "사진 바꾸기" : "사진 추가"}
+        triggerSize={72}
+        trigger={
+          <Avatar
+            src={value.url}
+            size={72}
+            style={!value.url && variant !== "edit" ? styles.dashedAvatar : undefined}
+          >
+            {uploading ? (
+              <Spinner />
+            ) : variant === "edit" ? null : (
+              <Text variant="body-sm">+ 사진</Text>
+            )}
+          </Avatar>
+        }
+        items={[
+          { label: "앨범에서 고르기", onSelect: () => void pick("library") },
+          { label: "카메라로 찍기", onSelect: () => void pick("camera") },
+        ]}
+      />
       <Text
         variant="body-md"
         weight={variant === "edit" ? "medium" : "regular"}

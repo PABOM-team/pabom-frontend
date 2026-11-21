@@ -1,4 +1,4 @@
-import type { AuthProvider } from "../domain/user";
+import type { AuthProvider, OAuthLoginResult } from "../domain/user";
 
 /**
  * access 토큰은 메모리에만 둔다 (refresh 토큰은 서버가 httpOnly 쿠키로 관리).
@@ -7,6 +7,8 @@ import type { AuthProvider } from "../domain/user";
 let accessToken: string | null = null;
 /** 한 번이라도 로그인했던 세션인지. 처음 온 사람에게 '로그인이 만료됐어요'를 띄우지 않으려고 쓴다 */
 let hadSession = false;
+/** 이 기기에서 로그아웃·탈퇴한 직후인지. 이때 로그인 화면으로 보낼 때는 보던 화면(next)을 기억하지 않는다 */
+let signedOut = false;
 
 type Listener = () => void;
 const expiredListeners = new Set<Listener>();
@@ -17,14 +19,49 @@ export function getAccessToken() {
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
-  if (token) hadSession = true;
+  if (token) {
+    hadSession = true;
+    signedOut = false;
+  }
 }
 
+/** 로그아웃·탈퇴. access 토큰·가입 토큰·로그인 회원 정보를 모두 지운다 */
 export function clearSession() {
   accessToken = null;
   hadSession = false;
+  signedOut = true;
   clearSignupSession();
   writeStored(ACCOUNT_KEY, null);
+}
+
+/** 로그아웃·탈퇴 직후라 다시 로그인해도 보던 화면으로 돌아가면 안 되는지 */
+export function isSignedOut() {
+  return signedOut;
+}
+
+/**
+ * 로그인(콜백·SDK) 결과를 세션에 반영하고 어디로 갈지 알려 준다.
+ * 가입 토큰이 왔거나 회원이 약관 동의 전(PENDING_TERMS)이면 그 토큰을 가입 토큰으로 두고 'agreements'.
+ * 탈퇴 뒤 같은 소셜 계정으로 다시 가입하는 경우에도 이전 세션 값이 남지 않게 먼저 비운다
+ */
+export function applyLoginResult(
+  login: OAuthLoginResult,
+  provider: AuthProvider,
+): "agreements" | "home" {
+  accessToken = null;
+  clearSignupSession();
+  setStoredAccount({ id: login.user.id, nickname: login.user.nickname, provider });
+  const pendingTerms = "signupToken" in login || login.user.status === "PENDING_TERMS";
+  if (pendingTerms) {
+    signedOut = false;
+    setSignupSession(
+      "signupToken" in login ? login.signupToken : login.accessToken,
+      login.expiresIn,
+    );
+    return "agreements";
+  }
+  setAccessToken(login.accessToken);
+  return "home";
 }
 
 export function onSessionExpired(listener: Listener) {

@@ -1,12 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
+import { useResetSession } from "@/features/auth";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { clearSession } from "@pabom/core/api/session";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { InfoBox } from "@/shared/ui/display";
@@ -17,8 +16,7 @@ import { TopBar } from "@/shared/ui/top-bar";
 
 /** SCR-S02 회원 탈퇴. 확인 체크 전에는 버튼이 꺼져 있고, 누르면 최종 위험 확인 창(C4) → 첫 화면 + 토스트 */
 export function WithdrawScreen() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const resetSession = useResetSession();
   const { data: pets } = useQuery(petQueries.list("active"));
   const [checked, setChecked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -26,9 +24,8 @@ export function WithdrawScreen() {
   const withdraw = useMutation({
     mutationFn: meApi.withdraw,
     onSuccess: () => {
-      clearSession();
-      queryClient.clear();
-      router.replace("/welcome");
+      // 탈퇴한 계정의 토큰·회원 정보·돌아갈 곳을 모두 지워, 같은 계정으로 다시 가입하면 약관 동의부터
+      resetSession();
       toast("탈퇴했어요. 그동안 고마웠어요.");
     },
     onError: (error) => toast(getErrorMessage(error, "탈퇴하지 못했어요.")),

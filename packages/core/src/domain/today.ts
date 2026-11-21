@@ -1,3 +1,4 @@
+import { addDays, format } from "date-fns";
 import { z } from "zod";
 import { intakeSchema, recordKindSchema } from "./care";
 
@@ -33,6 +34,29 @@ export const taskSchema = z.object({
     .nullable(),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+/** 미룬 할 일(원래 예정일이 있음)인가. 미룬 할 일은 다시 미루기만 할 수 있다 (U3, Q-50: 미루기 취소는 화면에서 뺀다) */
+export const isPostponed = (task: Pick<Task, "originalDueOn">) => task.originalDueOn !== null;
+
+/**
+ * ⋯ 메뉴에서 미루기를 보일지. 오늘·지난 할 일(todo)은 언제나,
+ * 앞 날짜(planned)는 이미 미룬 할 일만 다시 미룰 수 있다 (T06-04). 완료·건너뜀은 미루지 않는다
+ */
+export const canPostpone = (task: Pick<Task, "state" | "originalDueOn">) =>
+  task.state === "todo" || (task.state === "planned" && isPostponed(task));
+
+const QUICK_LABELS = ["", "내일", "모레", "글피"] as const;
+
+/**
+ * 미루기 시트의 빠른 날짜 칩 두 개 (내일·모레·글피 중). 지금 예정일과 같은 날은 빼서,
+ * 이미 미룬 할 일을 같은 날로 다시 미루는 칩이 나오지 않게 한다
+ */
+export function postponeQuickDates(task: Pick<Task, "dueOn">, today: Date) {
+  return [1, 2, 3]
+    .map((n) => ({ value: format(addDays(today, n), "yyyy-MM-dd"), label: QUICK_LABELS[n]! }))
+    .filter((option) => option.value !== task.dueOn)
+    .slice(0, 2);
+}
 
 export const todaySchema = z.object({
   date: z.iso.date(),

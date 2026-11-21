@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { SKIP_REASONS } from "@pabom/core/domain/care";
-import type { Task } from "@pabom/core/domain/today";
+import { postponeQuickDates, type Task } from "@pabom/core/domain/today";
 import { addDays, formatShortDay, toYmd } from "@pabom/core/lib/date";
 import { Button } from "@/shared/ui/button";
 import { DatePickerSheet } from "@/shared/ui/calendar";
@@ -33,10 +33,8 @@ export function PostponeSheet({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const today = new Date();
   const already = task?.originalDueOn ? task : null;
-  const quick = (already ? [2, 3] : [1, 2]).map((n) => ({
-    value: toYmd(addDays(today, n)),
-    label: ["", "내일", "모레", "글피"][n]!,
-  }));
+  // 지금 예정일과 같은 날은 빼고 내일·모레·글피 중 두 개 (이미 미룬 할 일을 같은 날로 다시 미루지 않게)
+  const quick = postponeQuickDates({ dueOn: (task ?? shown)?.dueOn ?? "" }, today);
 
   if (task && task.routineId !== shown?.routineId) {
     setShown(task);

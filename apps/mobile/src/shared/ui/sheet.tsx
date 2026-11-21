@@ -33,7 +33,9 @@ const DURATION = 200;
 /**
  * 열림·닫힘 애니메이션을 가진 모달 바탕. 닫을 때는 애니메이션이 끝난 뒤 Modal 을 내린다
  * children 은 진행도(0 닫힘 → 1 열림)를 받아 자기 모양대로 움직인다.
- * onClosed 는 닫힘 애니메이션이 끝나 Modal 이 내려간 뒤 불린다
+ * onClosed 는 닫힘 애니메이션이 끝나 Modal 이 내려간 뒤 불린다.
+ * iOS 는 Modal 창이 실제로 다 내려간 뒤(onDismiss)에 부른다. 그 전에 사진 선택기 같은 네이티브 화면을
+ * 띄우면 iOS 가 "다른 화면이 내려가는 중"이라며 조용히 무시한다 (T08-04·T08-10)
  */
 export function AnimatedModal({
   open,
@@ -49,13 +51,23 @@ export function AnimatedModal({
   dismissOnOverlay?: boolean;
 }) {
   const [progress] = useState(() => new Animated.Value(0));
-  const [mounted, setMounted] = useState(open);
+  // visible: Modal 이 떠 있어야 하는가. rendered: iOS 에서 창이 다 내려갈(onDismiss) 때까지 Modal 을 붙여 둔다
+  const [visible, setVisible] = useState(open);
+  const [rendered, setRendered] = useState(open);
   const onClosedRef = useRef(onClosed);
   useEffect(() => {
     onClosedRef.current = onClosed;
   });
   // 열릴 때는 바로 그리고(렌더 중 갱신), 닫힐 때는 애니메이션이 끝난 뒤 내린다
-  if (open && !mounted) setMounted(true);
+  if (open && !visible) {
+    setVisible(true);
+    setRendered(true);
+  }
+
+  const finishClose = () => {
+    setRendered(false);
+    onClosedRef.current?.();
+  };
 
   useEffect(() => {
     if (open) {
@@ -65,21 +77,23 @@ export function AnimatedModal({
     Animated.timing(progress, { toValue: 0, duration: DURATION, useNativeDriver: true }).start(
       ({ finished }) => {
         if (!finished) return;
-        setMounted(false);
-        onClosedRef.current?.();
+        setVisible(false);
+        // iOS 는 아래 Modal 의 onDismiss 에서 마무리한다. 안드로이드는 onDismiss 가 없다
+        if (Platform.OS !== "ios") finishClose();
       },
     );
   }, [open, progress]);
 
-  if (!mounted) return null;
+  if (!rendered) return null;
 
   return (
     <Modal
-      visible
+      visible={visible}
       transparent
       animationType="none"
       statusBarTranslucent
       onRequestClose={onRequestClose}
+      onDismiss={Platform.OS === "ios" ? finishClose : undefined}
     >
       <Animated.View style={[styles.overlay, { opacity: progress }]}>
         <Pressable

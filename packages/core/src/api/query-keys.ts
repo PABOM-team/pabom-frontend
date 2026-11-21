@@ -27,3 +27,29 @@ export function invalidateCareData(queryClient: QueryClient) {
     ),
   );
 }
+
+/** 이 개체에만 딸린 쿼리인가: 개체 상세, 그 개체 할 일 목록, 그 개체 기록 목록, 그 개체 오늘 할 일 */
+export function isPetScopedKey(queryKey: readonly unknown[], petId: string) {
+  const [root, second, third] = queryKey;
+  if (root === "pets") return second === "detail" && third === petId;
+  if (root === "routines") return second === petId;
+  if (root === "today") return third === petId;
+  if (root === "records") {
+    return second === "list" && (third as { petId?: string } | undefined)?.petId === petId;
+  }
+  return false;
+}
+
+/**
+ * 개체를 지운 뒤. 지운 개체에 딸린 쿼리는 다시 부르면 404 라 오래된 것으로만 표시해 두고(떠나는 화면이 아직 붙어
+ * 있어도 다시 부르지 않는다), 나머지 돌봄 데이터는 평소처럼 다시 부른다
+ */
+export function invalidateAfterPetDeleted(queryClient: QueryClient, petId: string) {
+  const ofPet = ({ queryKey }: { queryKey: readonly unknown[] }) => isPetScopedKey(queryKey, petId);
+  return Promise.all([
+    queryClient.invalidateQueries({ predicate: ofPet, refetchType: "none" }),
+    ...[queryKeys.today, queryKeys.records, queryKeys.pets, ["routines"]].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey, predicate: (query) => !ofPet(query) }),
+    ),
+  ]);
+}

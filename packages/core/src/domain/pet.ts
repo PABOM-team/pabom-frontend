@@ -152,6 +152,13 @@ export function stageFields(
   return { hatchedAt, lifeStageId, stageCertainty };
 }
 
+/**
+ * 개체 등록(P02 4/4)을 보낼 수 있는지. 필수는 이름뿐이다 (종은 화면이 따로 본다).
+ * POST /pets는 부화일·생애 단계·성별·데려온 날이 비어도 받고, 체중은 받는 칸이 없다.
+ * 그래서 부화일·생애 단계·체중·'더 자세한 정보'는 비워도 등록할 수 있다 (단계는 stageFields가 UNKNOWN으로 보낸다)
+ */
+export const isPetDraftReady = (draft: { name: string }) => draft.name.trim().length > 0;
+
 /** 성별 → 본문. 앱에는 '정확성' 입력이 없어 고르면 CONFIRMED, 모름이면 UNKNOWN [가정] */
 export const sexFields = (sex: Sex) => ({
   sex: toServerSex(sex),

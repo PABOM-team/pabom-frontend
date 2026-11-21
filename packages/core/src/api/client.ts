@@ -23,6 +23,7 @@ const isAuthPath = (url: string) =>
 
 /** refresh 쿠키로 access 토큰을 다시 받는다 (API-02). 동시에 여러 번 불려도 요청은 한 번만 */
 export function refreshAccessToken() {
+  const before = getAccessToken();
   refreshing ??= ky
     .post(`${apiBaseUrl}/auth/refresh`, { credentials: "include", retry: 0 })
     .json(tokenSchema)
@@ -30,7 +31,12 @@ export function refreshAccessToken() {
       setAccessToken(accessToken);
       return accessToken;
     })
-    .catch(() => null)
+    .catch(() => {
+      // refresh 쿠키가 무효(REFRESH_INVALID·탈퇴 등)면 남은 access 토큰도 버린다.
+      // 그 사이 새로 로그인해 토큰이 바뀌었으면 그대로 둔다
+      if (getAccessToken() === before) setAccessToken(null);
+      return null;
+    })
     .finally(() => {
       refreshing = undefined;
     });

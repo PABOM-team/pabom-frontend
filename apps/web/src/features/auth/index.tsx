@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { meQueries } from "@/entities/session";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { clearSession } from "@pabom/core/api/session";
+import { clearSession, isSignedOut } from "@pabom/core/api/session";
 import type { AuthProvider } from "@pabom/core/domain/user";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -163,16 +163,28 @@ function GoogleSymbol() {
   );
 }
 
-export function useLogout() {
+/**
+ * 로그아웃·탈퇴 뒤 이 기기에 남은 로그인 흔적을 모두 지운다.
+ * access·가입 토큰, 로그인 회원 정보, 로그인 뒤 돌아갈 곳, 불러 둔 내 정보·목록.
+ * 남겨 두면 같은 소셜 계정으로 다시 가입할 때 약관 동의 대신 이전 화면(설정 등)으로 갈 수 있다
+ */
+export function useResetSession() {
   const queryClient = useQueryClient();
   const router = useRouter();
+  return () => {
+    clearSession();
+    rememberLoginNext(null);
+    // 보던 화면이 내 정보를 다시 불러 첫 화면 주소에 next를 붙이지 않도록 먼저 옮긴다
+    router.replace("/welcome");
+    queryClient.clear();
+  };
+}
+
+export function useLogout() {
+  const resetSession = useResetSession();
   return useMutation({
     mutationFn: authApi.logout,
-    onSettled: () => {
-      clearSession();
-      queryClient.clear();
-      router.replace("/welcome");
-    },
+    onSettled: resetSession,
   });
 }
 
@@ -196,7 +208,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const needsAgreement = me?.status === "PENDING_TERMS" && pathname !== "/agreements";
 
   useEffect(() => {
-    if (isError) router.replace(`/welcome?next=${encodeURIComponent(pathname)}`);
+    // 로그아웃·탈퇴한 직후에는 보던 화면을 기억하지 않는다 (다시 로그인하면 그 화면으로 가 버린다)
+    if (isError)
+      router.replace(isSignedOut() ? "/welcome" : `/welcome?next=${encodeURIComponent(pathname)}`);
     else if (needsAgreement) router.replace("/agreements");
   }, [isError, needsAgreement, pathname, router]);
 

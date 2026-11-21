@@ -14,6 +14,7 @@ import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { isPetPhotoDisabled, isRoutineDetached } from "@pabom/core/config/env";
 import { WEIGHT_CODE } from "@pabom/core/domain/care";
 import {
+  isPetDraftReady,
   morphFields,
   serverFileId,
   SEX_LABEL,
@@ -157,13 +158,9 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
     (step === 1 && draft.group === "lizard") ||
     (step === 2 && Boolean(draft.speciesId)) ||
     step === 3;
-  const canSubmit =
-    draft.name.trim().length > 0 &&
-    (draft.hatchUnknown || Boolean(draft.hatchedOn)) &&
-    Boolean(draft.lifeStageCode) &&
-    Boolean(species) &&
-    !uploading &&
-    !create.isPending;
+  // 필수는 종·이름뿐이다. 부화일·생애 단계·체중·더 자세한 정보는 비워도 등록된다
+  // (비우면 단계는 UNKNOWN으로 보낸다, stageFields)
+  const canSubmit = isPetDraftReady(draft) && Boolean(species) && !uploading && !create.isPending;
 
   const goBack = () => {
     if (step > 1) setStep(step - 1);

@@ -1,18 +1,18 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { FullScreenLoading, takeLoginNext } from "@/features/auth";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { setAccessToken, setSignupSession, setStoredAccount } from "@pabom/core/api/session";
-import { authProviderSchema, type AuthProvider } from "@pabom/core/domain/user";
+import { applyLoginResult } from "@pabom/core/api/session";
+import {
+  authProviderSchema,
+  type AuthProvider,
+  type OAuthLoginResult,
+} from "@pabom/core/domain/user";
 import { toast } from "@/shared/ui/toast";
-
-type LoginOutcome =
-  | { kind: "signup"; token: string; expiresIn: number; id: number; nickname?: string }
-  | { kind: "access"; token: string; id: number; nickname?: string };
 
 /** 인가 코드 없이 돌아온 경우 (동의 화면에서 취소 등) */
 class LoginCanceled extends Error {}
@@ -30,15 +30,10 @@ async function resolveLogin(
   provider: AuthProvider,
   code: string | null,
   state: string | null,
-): Promise<LoginOutcome> {
+): Promise<OAuthLoginResult> {
   if (!code) throw new LoginCanceled();
   if (!state) throw new MissingState();
-
-  const login = await authApi.callback(provider, { code, state });
-  const user = { id: login.user.id, nickname: login.user.nickname };
-  return "signupToken" in login
-    ? { kind: "signup", token: login.signupToken, expiresIn: login.expiresIn, ...user }
-    : { kind: "access", token: login.accessToken, ...user };
+  return authApi.callback(provider, { code, state });
 }
 
 /**
@@ -48,6 +43,7 @@ async function resolveLogin(
  */
 export function LoginCallback() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams<{ provider: string }>();
   const search = useSearchParams();
   const provider = authProviderSchema.safeParse(params.provider);
@@ -59,14 +55,14 @@ export function LoginCallback() {
 
   const login = useMutation({
     mutationFn: () => resolveLogin(provider.data!, code, state),
-    onSuccess: (outcome) => {
+    onSuccess: (login) => {
       const next = takeLoginNext();
-      setStoredAccount({ id: outcome.id, nickname: outcome.nickname, provider: provider.data! });
-      if (outcome.kind === "signup") {
-        setSignupSession(outcome.token, outcome.expiresIn);
+      // 이전 계정(탈퇴·로그아웃한 계정)의 내 정보·목록이 남아 있지 않게 비운다
+      queryClient.clear();
+      // 가입 토큰이 왔거나 약관 동의 전 회원이면 약관 동의로 (탈퇴 뒤 같은 계정으로 다시 가입할 때도)
+      if (applyLoginResult(login, provider.data!) === "agreements") {
         router.replace(next ? `/agreements?next=${encodeURIComponent(next)}` : "/agreements");
       } else {
-        setAccessToken(outcome.token);
         router.replace(next ?? "/home");
       }
     },

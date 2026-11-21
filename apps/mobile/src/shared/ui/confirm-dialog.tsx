@@ -16,6 +16,8 @@ type ConfirmDialogProps = {
   tone?: "default" | "danger" | "inverse";
   pending?: boolean;
   onConfirm: () => void;
+  /** 닫힘 애니메이션이 끝나 Modal 이 내려간 뒤 불린다. 화면 이동은 여기서 해야 iOS 에서 창이 남지 않는다 */
+  onClosed?: () => void;
 };
 
 /** 가운데 뜨는 확인 창 (C4). 위험한 행동은 빨간 버튼 */
@@ -29,9 +31,15 @@ export function ConfirmDialog({
   tone = "default",
   pending,
   onConfirm,
+  onClosed,
 }: ConfirmDialogProps) {
   return (
-    <AnimatedModal open={open} onRequestClose={() => onOpenChange(false)} dismissOnOverlay={false}>
+    <AnimatedModal
+      open={open}
+      onRequestClose={() => onOpenChange(false)}
+      onClosed={onClosed}
+      dismissOnOverlay={false}
+    >
       {(progress) => (
         <View style={styles.host} pointerEvents="box-none">
           <Animated.View

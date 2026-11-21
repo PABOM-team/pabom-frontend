@@ -57,7 +57,7 @@ export function BasisSheet({
       s.careItem === current?.careItem &&
       (s.lifeStageCode === detail?.pet.lifeStageCode || !detail?.pet.lifeStageCode),
   );
-  // 목업·백엔드가 description에 적용 조건만 넣으면 같은 글을 두 번 보이지 않는다 [백엔드 확인 필요]
+  // 백엔드가 description에 적용 조건만 넣으면 같은 글을 두 번 보이지 않는다 [백엔드 확인 필요]
   const description =
     standard?.description && standard.description !== condition ? standard.description : null;
 

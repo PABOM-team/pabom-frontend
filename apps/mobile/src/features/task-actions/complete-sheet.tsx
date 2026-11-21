@@ -45,7 +45,7 @@ export function CompleteSheet({
   const current = task ?? shown;
   const kind = current?.recordKind ?? null;
   // 급여 칩은 그 개체 종의 먹이 묶음(인공 사료·곤충·통먹이)에 맞춘다 (D2)
-  const { data: pets } = useQuery({ ...petQueries.list("active"), enabled: kind === "intake" });
+  const { data: pets } = useQuery({ ...petQueries.list(), enabled: kind === "intake" });
   const feedResultSet = useFeedResultSet(
     pets?.find((p) => p.id === current?.petId)?.speciesId,
     kind === "intake" ? current?.careItem : null,

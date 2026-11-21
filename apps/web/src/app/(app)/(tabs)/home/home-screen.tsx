@@ -45,7 +45,7 @@ export function HomeScreen() {
   const [addOpen, setAddOpen] = useState<{ petId?: string; item?: string } | null>(null);
   const [editRecordId, setEditRecordId] = useState<string | null>(null);
 
-  const pets = useQuery(petQueries.list("active"));
+  const pets = useQuery(petQueries.list());
   const resolveFeedResultSet = useFeedResultSetResolver();
   const speciesOfPet = new Map<string, SpeciesId>(
     (pets.data ?? []).map((p) => [p.id, p.speciesId]),

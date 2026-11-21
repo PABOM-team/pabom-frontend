@@ -17,7 +17,7 @@ import { TopBar } from "@/shared/ui/top-bar";
 /** SCR-S02 회원 탈퇴. 확인 체크 전에는 버튼이 꺼져 있고, 누르면 최종 위험 확인 창(C4) → 첫 화면 + 토스트 */
 export function WithdrawScreen() {
   const resetSession = useResetSession();
-  const { data: pets } = useQuery(petQueries.list("active"));
+  const { data: pets } = useQuery(petQueries.list());
   const [checked, setChecked] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 

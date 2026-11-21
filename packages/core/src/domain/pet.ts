@@ -17,18 +17,6 @@ export type Sex = z.infer<typeof sexSchema>;
 export const SEX_LABEL: Record<Sex, string> = { male: "수컷", female: "암컷", unknown: "모름" };
 export const SEX_SYMBOL: Record<Sex, string> = { male: "♂", female: "♀", unknown: "" };
 
-export const petStatusSchema = z.enum(["active", "ended"]);
-export type PetStatus = z.infer<typeof petStatusSchema>;
-
-/** 함께했던 개체로 바꾸는 이유 (SCR-P06) */
-export const endReasonSchema = z.enum(["rehomed", "deceased", "other"]);
-export type EndReason = z.infer<typeof endReasonSchema>;
-export const END_REASON_LABEL: Record<EndReason, string> = {
-  rehomed: "분양 보냄",
-  deceased: "무지개다리",
-  other: "기타",
-};
-
 export const petSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(20),
@@ -44,9 +32,6 @@ export const petSchema = z.object({
   stageUncertain: z.boolean(),
   acquiredOn: z.iso.date().nullable(),
   photoUrl: z.string().nullable(),
-  status: petStatusSchema,
-  endReason: endReasonSchema.nullable(),
-  endedOn: z.iso.date().nullable(),
   createdAt: z.iso.datetime(),
   /** 오늘 남은 할 일 수 */
   todayRemaining: z.number().int().min(0),
@@ -170,7 +155,7 @@ export const serverFileId = (fileId: string | null) => (fileId ? Number(fileId) 
 
 /**
  * 개체 응답 (백엔드 PetResponse·PetListResponse).
- * 백엔드가 아직 주지 않는 값(상태·할 일 수·기록 수)은 아래 기본값(임시 데이터)으로 채운다. 목업은 진짜 값을 준다.
+ * 백엔드가 아직 주지 않는 값(할 일 수·기록 수)은 아래 기본값(임시 데이터)으로 채운다.
  * 사진 주소는 photoFileId로 GET /files/{id}를 따로 불러 채운다 (endpoints.ts)
  */
 export const petResponseSchema = z.object({
@@ -189,11 +174,7 @@ export const petResponseSchema = z.object({
   photoFileId: z.number().int().nullish(),
   /** 목록 응답에는 없다 */
   createdAt: z.iso.datetime({ offset: true, local: true }).nullish(),
-  // ── 백엔드에 아직 없는 값 (임시 데이터). 스웨거에 status-changes API가 없다 ─────────
-  /** 함께했던 개체 기능이 없어 모두 키우는 중 */
-  status: petStatusSchema.default("active"),
-  endReason: endReasonSchema.nullish(),
-  endedOn: z.iso.date().nullish(),
+  // ── 백엔드에 아직 없는 값 (임시 데이터) ─────────
   /** 오늘 할 일 수는 GET /today에 있지만 개체 목록에는 없어 0 */
   todayRemaining: z.number().int().min(0).default(0),
   /** 기록 수는 개체 응답에 없어 0 */
@@ -225,15 +206,9 @@ export function toPet(res: PetResponse, speciesList: Species[], photoUrl: string
     stageUncertain: stageCode === "juvenile" && res.stageCertainty === "ESTIMATED",
     acquiredOn: res.adoptedAt ?? null,
     photoUrl,
-    status: res.status,
-    endReason: res.endReason ?? null,
-    endedOn: res.endedOn ?? null,
     createdAt: res.createdAt ?? "",
     todayRemaining: res.todayRemaining,
     recordCount: res.recordCount,
     firstRecordOn: res.firstRecordOn ?? null,
   };
 }
-
-export type PetStatusChangeInput =
-  { type: "end"; reason: EndReason; date: string } | { type: "revert" };

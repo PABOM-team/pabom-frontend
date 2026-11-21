@@ -65,7 +65,7 @@ export function AddRecordSheet({
   defaultDate?: string;
 }) {
   const queryClient = useQueryClient();
-  const { data: pets } = useQuery({ ...petQueries.list("active"), enabled: open });
+  const { data: pets } = useQuery({ ...petQueries.list(), enabled: open });
   const [petId, setPetId] = useState<string | null>(null);
   const [item, setItem] = useState<string | null>(null);
   const [intake, setIntake] = useState<Intake | null>(null);

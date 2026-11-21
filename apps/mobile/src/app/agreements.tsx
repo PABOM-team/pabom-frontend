@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { meApi } from "@pabom/core/api/endpoints";
@@ -7,7 +7,6 @@ import { getApiError, getErrorMessage } from "@pabom/core/api/errors";
 import { queryKeys } from "@pabom/core/api/query-keys";
 import { clearSignupSession, getSignupSession, setAccessToken } from "@pabom/core/api/session";
 import { AGREEMENTS, type AgreementType } from "@pabom/core/domain/user";
-import { safeNext } from "@/features/auth";
 import { Button } from "@/shared/ui/button";
 import { Checkbox, CheckboxRow } from "@/shared/ui/form";
 import { ChevronRightIcon } from "@/shared/ui/icons";
@@ -25,9 +24,6 @@ class SignupExpired extends Error {}
  */
 export default function AgreementsScreen() {
   const queryClient = useQueryClient();
-  // 인계 카드 링크로 들어온 사람만 그 카드로 돌려보내고, 나머지는 가입 직후 개체 등록(A04 A안)으로
-  const requested = safeNext(useLocalSearchParams<{ next?: string }>().next);
-  const next = requested?.startsWith("/share/") ? requested : null;
   const [checked, setChecked] = useState<Set<AgreementType>>(new Set());
 
   const allChecked = AGREEMENTS.every((a) => checked.has(a.type));
@@ -51,9 +47,8 @@ export default function AgreementsScreen() {
       setAccessToken(accessToken);
       clearSignupSession();
       queryClient.removeQueries({ queryKey: queryKeys.me });
-      // 인계 카드로 들어온 사람은 시작 안내 없이 바로 등록 화면으로 (FL-10)
-      if (next) router.replace(next as "/home");
-      else router.replace({ pathname: "/pets/new", params: { onboarding: "1" } });
+      // 가입 직후 개체 등록으로 (A04 A안)
+      router.replace({ pathname: "/pets/new", params: { onboarding: "1" } });
     },
     onError: (error) => {
       if (error instanceof SignupExpired || getApiError(error)?.code === "INVALID_TOKEN") {

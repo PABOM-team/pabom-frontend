@@ -8,19 +8,18 @@ import { getQueryClient } from "@pabom/core/api/query-client";
 import { AppShell } from "@/shared/ui/app-shell";
 import { OfflineBanner } from "@/shared/ui/offline-banner";
 import { Toaster } from "@/shared/ui/toast";
-import { MockProvider } from "./mock-provider";
 import { SessionExpiredDialog } from "./session-expired-dialog";
 
 export function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
 
   return (
-    // 개발 중에는 MSW 워커와 충돌하지 않게 Serwist 서비스 워커를 끈다
+    // 개발 중에는 캐시가 화면 갱신을 가리지 않게 Serwist 서비스 워커를 끈다
     <SerwistProvider swUrl="/sw.js" disable={process.env.NODE_ENV === "development"}>
       <QueryClientProvider client={queryClient}>
         <AppShell>
           <OfflineBanner />
-          <MockProvider>{children}</MockProvider>
+          {children}
           <Toaster />
           <SessionExpiredDialog />
         </AppShell>

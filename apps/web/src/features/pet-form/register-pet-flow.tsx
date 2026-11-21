@@ -11,7 +11,6 @@ import { newRequestId } from "@pabom/core/api/adapters";
 import { petsApi, recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
-import { isPetPhotoDisabled, isRoutineDetached } from "@pabom/core/config/env";
 import { WEIGHT_CODE } from "@pabom/core/domain/care";
 import {
   isPetDraftReady,
@@ -142,10 +141,7 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
     },
     onSuccess: async (pet) => {
       await invalidateCareData(queryClient);
-      // 일정 쪽이 이 개체를 모르면(개체·일정이 한쪽만 진짜) 체크 리스트 대신 상세로 간다
-      router.replace(
-        isRoutineDetached ? `/pets/${pet.id}` : `/pets/${pet.id}/routines?from=register`,
-      );
+      router.replace(`/pets/${pet.id}/routines?from=register`);
     },
     onError: (error) => {
       const fields = getFieldErrors(error);
@@ -275,14 +271,11 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
 
         {step === 4 ? (
           <div className="space-y-5">
-            {/* 개체·사진이 한쪽만 진짜 백엔드면 서로 파일 ID를 몰라서 사진 칸을 숨긴다 */}
-            {!isPetPhotoDisabled ? (
-              <PetPhotoPicker
-                value={draft.photo}
-                onChange={(photo) => patch({ photo })}
-                onBusyChange={setUploading}
-              />
-            ) : null}
+            <PetPhotoPicker
+              value={draft.photo}
+              onChange={(photo) => patch({ photo })}
+              onBusyChange={setUploading}
+            />
             <Field label="이름" htmlFor="pet-name" error={nameError}>
               <Input
                 id="pet-name"
@@ -367,8 +360,6 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
           <Button size="xl" disabled={!canSubmit} onClick={() => create.mutate()}>
             {create.isPending || uploading ? (
               <LoaderCircle className="size-5 animate-spin" aria-label="저장 중" />
-            ) : isRoutineDetached ? (
-              "등록하기"
             ) : (
               "등록하고 체크 리스트 보기"
             )}

@@ -21,7 +21,7 @@ class MissingState extends Error {}
 
 /**
  * 카카오·구글이 백엔드 Redirect URI(이 웹의 /api/v1/auth/{provider}/callback)로 돌려보내면
- * 그 경로가 code·state를 붙여 이 화면으로 보낸다(목업은 바로 이 화면으로 온다).
+ * 그 경로가 code·state를 붙여 이 화면으로 보낸다.
  * 이 화면이 백엔드 콜백 API(GET /auth/{provider}/callback?code&state)를 credentials: include로 불러
  * 새 회원이면 가입 토큰, 기존 회원이면 access 토큰과 refresh 쿠키를 받는다.
  * state 쿠키는 로그인 주소를 받을 때 백엔드 주소에 저장돼 있어서 이 요청에 같이 실린다

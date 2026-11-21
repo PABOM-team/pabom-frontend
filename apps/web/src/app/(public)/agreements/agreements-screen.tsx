@@ -4,9 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { safeNext } from "@/features/auth";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getApiError, getErrorMessage } from "@pabom/core/api/errors";
 import { queryKeys } from "@pabom/core/api/query-keys";
@@ -28,9 +27,6 @@ class SignupExpired extends Error {}
 export function AgreementsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  // 인계 카드 링크로 들어온 사람만 그 카드로 돌려보내고, 나머지는 가입 직후 개체 등록(A04 A안)으로
-  const requested = safeNext(useSearchParams().get("next"));
-  const next = requested?.startsWith("/share/") ? requested : null;
   const [checked, setChecked] = useState<Set<AgreementType>>(new Set());
 
   // 로그인을 거치지 않고 들어왔으면 첫 화면으로
@@ -59,8 +55,8 @@ export function AgreementsScreen() {
       setAccessToken(accessToken);
       clearSignupSession();
       queryClient.removeQueries({ queryKey: queryKeys.me });
-      // 인계 카드로 들어온 사람은 시작 안내 없이 바로 등록 화면으로 (FL-10)
-      router.replace(next ?? "/pets/new?onboarding=1");
+      // 가입 직후 개체 등록으로 (A04 A안)
+      router.replace("/pets/new?onboarding=1");
     },
     onError: (error) => {
       if (error instanceof SignupExpired || getApiError(error)?.code === "INVALID_TOKEN") {

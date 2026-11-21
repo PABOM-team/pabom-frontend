@@ -14,12 +14,13 @@ import { semantic } from "@/shared/ui/theme";
 import { TopBar } from "@/shared/ui/top-bar";
 
 const MENU: { href: Href; label: string }[] = [
+  { href: "/settings/notifications", label: "알림" },
   { href: "/settings/guidelines", label: "관리 가이드라인" },
   { href: "/terms", label: "이용약관" },
   { href: { pathname: "/terms", params: { tab: "privacy" } }, label: "개인정보 처리방침" },
 ];
 
-/** SCR-S01 설정(계정 메뉴). Figma 그대로: 메뉴 3개, 로그아웃(확인 창 C4 → 첫 화면), 회원 탈퇴 */
+/** SCR-S01 설정(계정 메뉴). Figma 메뉴 3개 + 알림, 로그아웃(확인 창 C4 → 첫 화면), 회원 탈퇴 */
 export function SettingsScreen() {
   const { data: me } = useQuery(meQueries.detail());
   const logout = useLogout();

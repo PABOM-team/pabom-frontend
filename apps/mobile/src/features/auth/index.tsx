@@ -9,6 +9,7 @@ import { getErrorMessage } from "@pabom/core/api/errors";
 import { clearSession } from "@pabom/core/api/session";
 import type { AuthProvider } from "@pabom/core/domain/user";
 import { meQueries } from "@pabom/core/entities/session";
+import { unregisterPushToken } from "@/features/push";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/display";
 import { toast } from "@/shared/ui/toast";
@@ -127,8 +128,12 @@ function GoogleSymbol() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    // 기기의 카카오·구글 로그인도 지워 다음에 다른 계정을 고를 수 있게 한다
-    mutationFn: () => Promise.all([authApi.logout(), socialLogout()]),
+    mutationFn: async () => {
+      // 이 기기로 더 알림이 오지 않게 access 토큰이 살아 있을 때 먼저 푸시 토큰을 지운다
+      await unregisterPushToken();
+      // 기기의 카카오·구글 로그인도 지워 다음에 다른 계정을 고를 수 있게 한다
+      await Promise.all([authApi.logout(), socialLogout()]);
+    },
     onSettled: () => {
       clearSession();
       queryClient.clear();

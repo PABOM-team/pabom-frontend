@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { socialLogout } from "@/features/auth";
+import { forgetPushToken } from "@/features/push";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { clearSession } from "@pabom/core/api/session";
@@ -28,6 +29,8 @@ export function WithdrawScreen() {
     onSuccess: () => {
       // 기기에 남은 카카오·구글 로그인도 지워 다음에 다른 계정으로 가입할 수 있게 한다
       void socialLogout();
+      // 푸시 토큰은 서버가 탈퇴와 함께 지운다. 기기에 남은 값만 정리한다
+      void forgetPushToken();
       clearSession();
       queryClient.clear();
       router.replace("/welcome");

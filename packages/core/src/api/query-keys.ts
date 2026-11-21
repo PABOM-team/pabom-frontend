@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 /** 쿼리 키를 한곳에 모은다. 저장 뒤 다시 불러올 범위를 맞추기 쉽게 */
 export const queryKeys = {
   me: ["me"] as const,
+  notificationSettings: ["me", "notification-settings"] as const,
   species: ["species"] as const,
   morphs: (serverId: number) => ["species", serverId, "morphs"] as const,
   careStandards: (speciesId: string) => ["species", speciesId, "care-standards"] as const,

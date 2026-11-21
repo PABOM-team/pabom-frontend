@@ -85,12 +85,18 @@ export function RoutineEditSheet({
 }) {
   const { refresh } = useRoutineMutation();
   const [shown, setShown] = useState<Routine | null>(null);
+  // 지금 열려 있는 창이 값을 받아 온 항목. 닫히면 비워서, 같은 항목을 다시 열 때도
+  // 저장·되돌리기 뒤의 최신 주기로 칸을 다시 채운다 (QA T03-04)
+  const [openedId, setOpenedId] = useState<string | null>(null);
   const [intervalText, setIntervalText] = useState("");
   const [food, setFood] = useState("");
-  if (routine && routine.id !== shown?.id) {
+  if (routine && routine.id !== openedId) {
+    setOpenedId(routine.id);
     setShown(routine);
     setIntervalText(String(routine.intervalDays));
     setFood(routine.foodName ?? "");
+  } else if (!routine && openedId !== null) {
+    setOpenedId(null);
   }
   const current = routine ?? shown;
   const label = current?.careItemName ?? "";
@@ -135,7 +141,8 @@ export function RoutineEditSheet({
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        <>
+        // 되돌리기가 있으면 두 버튼을 위아래로 쌓는다. 한 줄이면 좁은 화면에서 저장이 밀려난다
+        <View style={[styles.footer, current?.customized && styles.footerStacked]}>
           {current?.customized ? (
             <Button variant="outline" size="xl" disabled={pending} onPress={() => reset.mutate()}>
               가이드라인 주기로 되돌리기
@@ -143,13 +150,13 @@ export function RoutineEditSheet({
           ) : null}
           <Button
             size="xl"
-            style={{ flex: 1 }}
+            style={current?.customized ? undefined : { flex: 1 }}
             disabled={invalid || pending}
             onPress={() => save.mutate()}
           >
             저장
           </Button>
-        </>
+        </View>
       }
     >
       <SheetLabel first>주기</SheetLabel>
@@ -198,5 +205,7 @@ const styles = StyleSheet.create({
   },
   rowBody: { flex: 1, minWidth: 0 },
   rowTitle: { flexDirection: "row", alignItems: "center", gap: 6 },
+  footer: { flex: 1, flexDirection: "row", gap: 8 },
+  footerStacked: { flexDirection: "column" },
   edit: { flexShrink: 0, paddingHorizontal: 4, minHeight: 44, justifyContent: "center" },
 });

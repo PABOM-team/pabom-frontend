@@ -246,16 +246,18 @@ export function AddRecordSheet({
           value={memo}
           onChangeText={setMemo}
         />
+        {/* iOS 는 이미 모달을 띄운 화면에서 형제 Modal 을 또 띄우지 못한다(아무 반응 없음).
+            달력 시트는 이 시트의 Modal 안에 그려 그 위로 뜨게 한다 */}
+        <DatePickerSheet
+          open={calendarOpen}
+          onOpenChange={setCalendarOpen}
+          title="날짜 고르기"
+          value={when.kind === "date" ? when.ymd : null}
+          max={todayYmd()}
+          hint="오늘 뒤 날짜는 고를 수 없어요"
+          onConfirm={(ymd) => setWhen(ymd === todayYmd() ? { kind: "now" } : { kind: "date", ymd })}
+        />
       </Sheet>
-      <DatePickerSheet
-        open={calendarOpen}
-        onOpenChange={setCalendarOpen}
-        title="날짜 고르기"
-        value={when.kind === "date" ? when.ymd : null}
-        max={todayYmd()}
-        hint="오늘 뒤 날짜는 고를 수 없어요"
-        onConfirm={(ymd) => setWhen(ymd === todayYmd() ? { kind: "now" } : { kind: "date", ymd })}
-      />
       <PhotoViewer
         open={viewer !== null}
         onOpenChange={(o) => !o && setViewer(null)}

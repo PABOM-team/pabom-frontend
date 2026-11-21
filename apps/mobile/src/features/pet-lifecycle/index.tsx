@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { petsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { invalidateCareData } from "@pabom/core/api/query-keys";
+import { invalidateCareData, queryKeys } from "@pabom/core/api/query-keys";
 import { isPetStatusChangeSupported } from "@pabom/core/config/env";
 import {
   END_REASON_LABEL,
@@ -109,15 +109,34 @@ export function DeletePetDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  /**
+   * 지운 뒤 이동은 확인 창 Modal 이 다 내려간 뒤에 한다. 닫히는 중에 화면을 바꾸거나, 상세를 다시 불러 404
+   * (없는 개체 화면)로 바뀌며 창이 통째로 빠지면 iOS 에서 보이지 않는 창이 남아 아무것도 눌리지 않는다
+   */
+  const deleted = useRef(false);
   const remove = useMutation({
     mutationFn: () => petsApi.remove(pet.id),
     onSuccess: () => {
+      deleted.current = true;
       onOpenChange(false);
-      router.replace(pet.status === "ended" ? "/pets/archived" : "/pets");
     },
-    onError: (error) => toast(getErrorMessage(error, "삭제하지 못했어요.")),
-    onSettled: () => invalidateCareData(queryClient),
+    onError: (error) => {
+      toast(getErrorMessage(error, "삭제하지 못했어요."));
+      void invalidateCareData(queryClient);
+    },
   });
+
+  const afterClosed = () => {
+    if (!deleted.current) return;
+    deleted.current = false;
+    // replace 는 맨 위 화면만 바꿔 아래에 깔린 지운 개체의 상세·수정·기록 화면이 남는다. 뒤로 오면 404 가 뜨니
+    // 쌓인 화면을 탭 바로 위까지 모두 걷어 낸 뒤 목록으로 간다
+    if (router.canDismiss()) router.dismissAll();
+    router.navigate(pet.status === "ended" ? "/pets/archived" : "/pets");
+    // 떠나는 상세 화면이 지운 개체를 다시 불러 404 화면을 띄우지 않게, 그 개체 상세는 다시 부르지 않고 버린다
+    queryClient.removeQueries({ queryKey: queryKeys.pet(pet.id), exact: true });
+    void invalidateCareData(queryClient);
+  };
 
   return (
     <ConfirmDialog
@@ -131,8 +150,9 @@ export function DeletePetDialog({
       }
       confirmLabel="삭제"
       tone="danger"
-      pending={remove.isPending}
+      pending={remove.isPending || remove.isSuccess}
       onConfirm={() => remove.mutate()}
+      onClosed={afterClosed}
     />
   );
 }

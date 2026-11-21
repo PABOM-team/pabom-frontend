@@ -297,7 +297,13 @@ const TASK_ORDER: Record<TaskState, number> = { todo: 0, planned: 0, done: 1, sk
 /** GET /today → 앱 오늘 할 일. 앞 날짜를 조회했으면 할 일을 '예정'으로 */
 export function toToday(raw: BackendToday, today = format(new Date(), "yyyy-MM-dd")): Today {
   const future = raw.date > today;
-  const items = raw.pets.flatMap((pet) => pet.tasks.map((task) => toTask(pet, task, future)));
+  // 앞 날짜를 조회해도 백엔드는 그때까지 안 한 할 일을 OVERDUE(원래 예정일 그대로)로 함께 준다.
+  // 앞 날짜에는 그날 예정된 할 일만 보여야 하므로(U1) 예정일이 조회한 날보다 앞선 것은 뺀다 (QA T06-03)
+  const items = raw.pets.flatMap((pet) =>
+    pet.tasks
+      .filter((task) => !future || task.dueDate >= raw.date)
+      .map((task) => toTask(pet, task, future)),
+  );
   items.sort(
     (a, b) =>
       TASK_ORDER[a.state] - TASK_ORDER[b.state] ||

@@ -1,11 +1,12 @@
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Image, Linking, Pressable, StyleSheet, View } from "react-native";
 import { filesApi } from "@pabom/core/api/endpoints";
 import type { Photo } from "@pabom/core/domain/record";
 import { resizeImage, toUploadFile } from "@/shared/lib/image";
 import { Spinner } from "./display";
 import { PlusIcon } from "./icons";
+import { Menu } from "./menu";
 import { Text } from "./text";
 import { radius, semantic } from "./theme";
 
@@ -22,6 +23,29 @@ export async function pickImages(limit: number): Promise<Picked[]> {
   });
   if (result.canceled) return [];
   return result.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height }));
+}
+
+/**
+ * 카메라로 한 장 찍는다 (T08-04). 취소하면 빈 목록.
+ * 권한을 거부했으면 설정으로 가는 안내를 띄운다. 카메라가 없는 기기(시뮬레이터)도 안내로 끝낸다
+ */
+export async function takePhoto(): Promise<Picked[]> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert("카메라 권한이 필요해요", "설정에서 파봄의 카메라 접근을 허용해 주세요.", [
+      { text: "닫기", style: "cancel" },
+      { text: "설정으로 가기", onPress: () => void Linking.openSettings() },
+    ]);
+    return [];
+  }
+  try {
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
+    if (result.canceled) return [];
+    return result.assets.map((a) => ({ uri: a.uri, width: a.width, height: a.height }));
+  } catch {
+    Alert.alert("카메라를 열 수 없어요", "앨범에서 사진을 골라 주세요.");
+    return [];
+  }
 }
 
 /** 줄여서 올린다. 사진 한 장 → 서버 파일 */
@@ -75,10 +99,10 @@ export function PhotoInput({
     }
   };
 
-  const pick = async () => {
+  const pick = async (source: "library" | "camera") => {
     const room = max - value.length - pending.length;
     if (room <= 0) return;
-    const picked = await pickImages(room);
+    const picked = source === "camera" ? await takePhoto() : await pickImages(room);
     const items = picked.slice(0, room).map((asset) => ({
       key: `${asset.uri}-${Math.random()}`,
       asset,
@@ -137,14 +161,18 @@ export function PhotoInput({
         </Pressable>
       ))}
       {value.length + pending.length < max ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="사진 추가"
-          onPress={pick}
-          style={[styles.box, styles.dashed, { backgroundColor: semantic.placeholder }]}
-        >
-          <PlusIcon size={20} color={semantic.subtleForeground} />
-        </Pressable>
+        // + 를 누르면 앨범·카메라 중 고른다 (T08-04)
+        <View style={[styles.box, styles.dashed, { backgroundColor: semantic.placeholder }]}>
+          <Menu
+            label="사진 추가"
+            triggerSize={64}
+            trigger={<PlusIcon size={20} color={semantic.subtleForeground} />}
+            items={[
+              { label: "앨범에서 고르기", onSelect: () => void pick("library") },
+              { label: "카메라로 찍기", onSelect: () => void pick("camera") },
+            ]}
+          />
+        </View>
       ) : null}
     </View>
   );

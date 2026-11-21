@@ -1,12 +1,29 @@
 "use client";
 
 import { PlusIcon } from "./icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { filesApi } from "@pabom/core/api/endpoints";
 import type { Photo } from "@pabom/core/domain/record";
 import { resizeImage } from "@/shared/lib/image";
 import { cn } from "@/shared/lib/utils";
 import { Spinner } from "./display";
+import { Menu } from "./menu";
+
+const TOUCH_QUERY = "(pointer: coarse)";
+const subscribeTouch = (onChange: () => void) => {
+  const query = window.matchMedia(TOUCH_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+
+/** 휴대폰·태블릿처럼 손가락으로 쓰는 기기인지. 서버 렌더에서는 아니라고 본다 */
+function useTouchDevice() {
+  return useSyncExternalStore(
+    subscribeTouch,
+    () => window.matchMedia(TOUCH_QUERY).matches,
+    () => false,
+  );
+}
 
 type Pending = { key: string; file: File; status: "uploading" | "failed" };
 
@@ -29,6 +46,9 @@ export function PhotoInput({
   onBusyChange?: (busy: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  // 카메라로 찍기는 휴대폰 브라우저에서만 고르게 한다. 데스크톱은 capture 를 무시하고 파일 창을 연다
+  const touch = useTouchDevice();
   const [pending, setPending] = useState<Pending[]>([]);
   // 여러 장을 동시에 올릴 때 마지막 값에 이어 붙이려고 최신 목록을 들고 있는다
   const latest = useRef(value);
@@ -118,18 +138,45 @@ export function PhotoInput({
         </button>
       ))}
       {value.length + pending.length < max ? (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          aria-label="사진 추가"
-          className={cn(
-            box,
-            "border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
-          )}
-        >
-          <PlusIcon className="size-5" />
-        </button>
+        touch ? (
+          // + 를 누르면 앨범·카메라 중 고른다 (T08-04)
+          <Menu
+            label="사진 추가"
+            trigger={<PlusIcon className="size-5" />}
+            triggerClassName={cn(
+              box,
+              "size-16 rounded-xl border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
+            )}
+            items={[
+              { label: "앨범에서 고르기", onSelect: () => inputRef.current?.click() },
+              { label: "카메라로 찍기", onSelect: () => cameraRef.current?.click() },
+            ]}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            aria-label="사진 추가"
+            className={cn(
+              box,
+              "border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
+            )}
+          >
+            <PlusIcon className="size-5" />
+          </button>
+        )
       ) : null}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(event) => {
+          onFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
       <input
         ref={inputRef}
         type="file"

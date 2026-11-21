@@ -92,10 +92,18 @@ const variantConfig = (base: ExpoConfig): ExpoConfig =>
       }
     : base;
 
+/**
+ * 안드로이드 푸시(FCM) 설정 파일. 운영·개발 앱은 패키지명이 달라 Firebase 앱도 따로라서
+ * EAS 환경 변수(파일 형식) GOOGLE_SERVICES_JSON 에 프로필별 파일을 넣는다. 로컬은 파일 경로를 적는다.
+ * 없으면 빌드는 되지만 안드로이드에서 푸시 토큰을 받지 못한다
+ */
+const googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
+
 const appConfig = ({ config }: ConfigContext): ExpoConfig => {
   const base = variantConfig(config as ExpoConfig);
   const withPlugins: ExpoConfig = {
     ...base,
+    android: googleServicesFile ? { ...base.android, googleServicesFile } : base.android,
     plugins: [...(base.plugins ?? []), ...socialLoginPlugins],
   };
   return kakaoAppKey ? withKakaoSceneDelegate(withPlugins) : withPlugins;

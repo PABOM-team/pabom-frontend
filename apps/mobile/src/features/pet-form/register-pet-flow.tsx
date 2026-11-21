@@ -29,6 +29,7 @@ import {
   type SpeciesId,
 } from "@pabom/core/domain/species";
 import { nowIso, todayYmd } from "@pabom/core/lib/date";
+import { requestPushPermission } from "@/features/push";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
@@ -149,6 +150,8 @@ export function RegisterPetFlow({ onboarding }: { onboarding: boolean }) {
           params: { petId: pet.id, from: "register" },
         });
       }
+      // 첫 개체의 관리 일정이 막 생긴 때라 알림이 왜 필요한지 알 수 있다. 아직 안 물었을 때만 창이 뜬다
+      void requestPushPermission();
     },
     onError: (error) => {
       const fields = getFieldErrors(error);

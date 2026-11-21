@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { socialLogout, useResetSession } from "@/features/auth";
+import { forgetPushToken } from "@/features/push";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { Button } from "@/shared/ui/button";
@@ -26,6 +27,8 @@ export function WithdrawScreen() {
     onSuccess: () => {
       // 기기에 남은 카카오·구글 로그인도 지워 다음에 다른 계정으로 가입할 수 있게 한다
       void socialLogout();
+      // 푸시 토큰은 서버가 탈퇴와 함께 지운다. 기기에 남은 값만 정리한다
+      void forgetPushToken();
       // 탈퇴한 계정의 토큰·회원 정보·돌아갈 곳을 모두 지워, 같은 계정으로 다시 가입하면 약관 동의부터
       resetSession();
       toast("탈퇴했어요. 그동안 고마웠어요.");

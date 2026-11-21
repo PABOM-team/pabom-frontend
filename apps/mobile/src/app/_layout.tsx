@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { getQueryClient } from "@pabom/core/api/query-client";
 import { configureSessionStorage, onSessionExpired } from "@pabom/core/api/session";
 import { meQueries } from "@pabom/core/entities/session";
+import { useNotificationTapRedirect } from "@/features/push";
 import PretendardBold from "../../assets/fonts/Pretendard-Bold.otf";
 import PretendardMedium from "../../assets/fonts/Pretendard-Medium.otf";
 import PretendardRegular from "../../assets/fonts/Pretendard-Regular.otf";
@@ -39,6 +40,9 @@ const FONTS = {
  * QueryClient·API 클라이언트·zod 스키마는 @pabom/core 에서 웹과 같은 것을 쓴다
  */
 export default function RootLayout() {
+  // 알림을 누르면 data.url 화면으로 (꺼져 있던 앱이 알림으로 켜진 경우 포함)
+  useNotificationTapRedirect();
+
   return (
     <QueryClientProvider client={getQueryClient()}>
       <SafeAreaProvider>

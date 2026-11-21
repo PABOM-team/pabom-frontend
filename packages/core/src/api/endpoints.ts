@@ -35,6 +35,11 @@ import {
   type PetStatusChangeInput,
   type PetUpdateInput,
 } from "../domain/pet";
+import {
+  notificationSettingsSchema,
+  type NotificationSettingsInput,
+  type PushTokenInput,
+} from "../domain/notification";
 import type {
   CareRecord,
   CompleteInput,
@@ -413,4 +418,26 @@ export const handoverApi = {
   list: () => api.get("handover-cards").json(z.array(handoverCardSchema)),
   /** API-84 */
   cancel: (code: string) => api.delete(`handover-cards/${code}`).then(noContent),
+};
+
+export const pushTokensApi = {
+  /**
+   * 앱 푸시 토큰 등록 (backend#60). 같은 토큰이면 소유자·마지막 확인 시각만 바뀌는 멱등 PUT 이라
+   * 앱을 켤 때마다 불러도 된다. 응답 204
+   */
+  register: (input: PushTokenInput) => api.put("push-tokens", { json: input }).then(noContent),
+  /** 로그아웃 직전에 이 기기 토큰을 지운다. 없는 토큰이어도 204 */
+  unregister: (token: string) =>
+    api.delete(`push-tokens/${encodeURIComponent(token)}`, { retry: 0 }).then(noContent),
+};
+
+export const notificationSettingsApi = {
+  /** 알림 설정 조회 (backend#61). 설정이 없으면 서버 기본값 */
+  get: () =>
+    api.get("users/me/notification-settings").json(successEnvelope(notificationSettingsSchema)),
+  /** 바꿀 값만 보내고 바뀐 전체 설정을 받는다 */
+  update: (input: NotificationSettingsInput) =>
+    api
+      .patch("users/me/notification-settings", { json: input })
+      .json(successEnvelope(notificationSettingsSchema)),
 };

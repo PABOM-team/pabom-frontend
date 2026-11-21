@@ -2,25 +2,16 @@
 # - iOS: 빌드가 끝나면 TestFlight "파봄(dev)"으로 제출한다
 # - Android: Play 스토어를 거치지 않는 내부 배포 APK. expo.dev 빌드 페이지의 설치 링크·QR을 테스터에게 보낸다
 # 운영 앱 "파봄"은 mobile.yml 에서 main 기준으로만 배포한다.
-# - 자동: develop 에 앱에 들어가는 코드(apps/mobile, packages/core, 의존성)가 바뀌어 들어오면 빌드한다
-# - 수동: Actions → "Mobile (dev)" → Run workflow. 어떤 브랜치를 골라도 develop 최신 커밋을 빌드한다
+# - 수동으로만 돈다: Actions → "Mobile (dev)" → Run workflow. 어떤 브랜치를 골라도 develop 최신 커밋을 빌드한다
+#   (머지마다 자동으로 빌드하면 EAS 빌드 횟수·크레딧이 빨리 닳아서 자동 빌드는 껐다)
 # 서명 키(iOS 인증서, Android 키스토어)는 EAS 서버에 있다. CI(--non-interactive)는 새로 만들 수 없어서,
 # 새 앱은 처음 한 번 로컬에서 `eas credentials` (preview 프로필)로 만들어 둔다
 name: Mobile (dev)
 
 on:
-  push:
-    branches: [develop]
-    paths:
-      - "apps/mobile/**"
-      - "packages/core/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".github/workflows/mobile-dev.yml"
   workflow_dispatch:
 
-# 연달아 머지되면 앞 빌드를 기다리지 않고 마지막 develop 만 올린다
+# 연달아 실행하면 앞 빌드를 기다리지 않고 마지막 develop 만 올린다
 concurrency:
   group: mobile-dev
   cancel-in-progress: true

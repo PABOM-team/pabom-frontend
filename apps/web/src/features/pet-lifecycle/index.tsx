@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { petsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { invalidateCareData } from "@pabom/core/api/query-keys";
+import { invalidateAfterPetDeleted, invalidateCareData } from "@pabom/core/api/query-keys";
 import { isPetStatusChangeSupported } from "@pabom/core/config/env";
 import {
   END_REASON_LABEL,
@@ -117,9 +117,13 @@ export function DeletePetDialog({
     onSuccess: () => {
       onOpenChange(false);
       router.replace(pet.status === "ended" ? "/pets/archived" : "/pets");
+      // 떠나는 상세 화면이 지운 개체의 상세·할 일·기록을 다시 불러 404 가 나지 않게, 그 쿼리들은 다시 부르지 않는다
+      void invalidateAfterPetDeleted(queryClient, pet.id);
     },
-    onError: (error) => toast(getErrorMessage(error, "삭제하지 못했어요.")),
-    onSettled: () => invalidateCareData(queryClient),
+    onError: (error) => {
+      toast(getErrorMessage(error, "삭제하지 못했어요."));
+      void invalidateCareData(queryClient);
+    },
   });
 
   return (

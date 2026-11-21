@@ -3,7 +3,7 @@ import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { petsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
-import { invalidateCareData, queryKeys } from "@pabom/core/api/query-keys";
+import { invalidateAfterPetDeleted, invalidateCareData } from "@pabom/core/api/query-keys";
 import { isPetStatusChangeSupported } from "@pabom/core/config/env";
 import {
   END_REASON_LABEL,
@@ -133,9 +133,8 @@ export function DeletePetDialog({
     // 쌓인 화면을 탭 바로 위까지 모두 걷어 낸 뒤 목록으로 간다
     if (router.canDismiss()) router.dismissAll();
     router.navigate(pet.status === "ended" ? "/pets/archived" : "/pets");
-    // 떠나는 상세 화면이 지운 개체를 다시 불러 404 화면을 띄우지 않게, 그 개체 상세는 다시 부르지 않고 버린다
-    queryClient.removeQueries({ queryKey: queryKeys.pet(pet.id), exact: true });
-    void invalidateCareData(queryClient);
+    // 떠나는 화면이 지운 개체의 상세·할 일·기록을 다시 불러 404 가 나지 않게, 그 쿼리들은 다시 부르지 않는다
+    void invalidateAfterPetDeleted(queryClient, pet.id);
   };
 
   return (

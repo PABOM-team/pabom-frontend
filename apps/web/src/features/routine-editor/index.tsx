@@ -9,9 +9,13 @@ import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { isRoutineFoodNameSupported } from "@pabom/core/config/env";
 import { formatInterval, isFeedItem, RECORD_KIND_HINT } from "@pabom/core/domain/care";
 import {
+  FEED_INTERVAL_ASK,
+  feedIntervalFromAnswer,
+  feedIntervalSavedMessage,
   ROUTINE_INTERVAL_MAX,
   ROUTINE_INTERVAL_MIN,
   type Routine,
+  UNKNOWN_FEED_INTERVAL_DAYS,
 } from "@pabom/core/domain/routine";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
@@ -195,5 +199,60 @@ export function RoutineEditSheet({
         <InfoBox className="mt-4">기록 방식 · {RECORD_KIND_HINT[current.recordKind]}</InfoBox>
       ) : null}
     </Sheet>
+  );
+}
+
+/**
+ * 단계 확인 전 개체의 급여 주기 질문 (P03).
+ * 숫자를 넣으면 그 주기(내가 정한 주기), 비우고 저장하면 매일로 잡는다.
+ */
+export function FeedIntervalAsk({ routine }: { routine: Routine }) {
+  const { refresh } = useRoutineMutation();
+  const [text, setText] = useState(routine.customized ? String(routine.intervalDays) : "");
+  const days = feedIntervalFromAnswer(text);
+
+  const save = useMutation({
+    mutationFn: async (next: number) => {
+      let current = routine;
+      // 모름(매일)이면 직접 정한 주기를 먼저 가이드라인으로 되돌려 '내가 정한 주기' 표시를 남기지 않는다
+      if (next === UNKNOWN_FEED_INTERVAL_DAYS && current.customized) {
+        current = await routinesApi.reset(current.id);
+      }
+      // 이미 그 주기면 다시 저장하지 않는다
+      if (next !== current.intervalDays)
+        await routinesApi.update(current.id, { intervalDays: next });
+      return next;
+    },
+    onSuccess: (next) => toast(feedIntervalSavedMessage(routine.careItemName, next)),
+    onError: (error) => toast(getErrorMessage(error, "저장하지 못했어요.")),
+    onSettled: refresh,
+  });
+
+  return (
+    <section className="mt-3.5 rounded-xl bg-primary-soft p-3.5">
+      <label htmlFor="feed-interval-ask" className="text-body-xl font-bold">
+        {FEED_INTERVAL_ASK.title}
+      </label>
+      <div className="mt-2 flex items-center gap-2">
+        <Input
+          id="feed-interval-ask"
+          inputMode="numeric"
+          wrapperClassName="w-[140px]"
+          suffix="일마다"
+          placeholder="모름"
+          value={text}
+          aria-invalid={days === null || undefined}
+          onChange={(e) => setText(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))}
+        />
+        <Button
+          size="md"
+          disabled={days === null || save.isPending}
+          onClick={() => days !== null && save.mutate(days)}
+        >
+          저장
+        </Button>
+      </div>
+      <p className="mt-1.5 text-body-md text-secondary-text">{FEED_INTERVAL_ASK.hint}</p>
+    </section>
   );
 }

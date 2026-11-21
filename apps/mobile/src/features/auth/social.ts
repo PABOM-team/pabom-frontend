@@ -5,7 +5,7 @@ import {
   isErrorWithCode,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import type { AuthProvider } from "@pabom/core/domain/user";
 
 /** 앱 안에 들어가는 공개 값. 글자 그대로 적어야 번들에 들어간다 */
@@ -48,17 +48,50 @@ export type SocialToken = { accessToken: string } | { idToken: string };
 /** 카카오 SDK는 취소를 문구로만 알려 준다 (iOS ClientFailed(Cancelled), Android Cancelled) */
 const isKakaoCancel = (error: unknown) => error instanceof Error && /cancel/i.test(error.message);
 
+/** 앱으로 돌아온 뒤 카카오 SDK 답을 기다리는 시간. 정상 로그인은 돌아온 뒤 토큰 요청 한 번이라 이 안에 끝난다 */
+const KAKAO_RETURN_GRACE_MS = 3000;
+
+/**
+ * 카카오톡으로 넘어갔다가 동의하지 않고 파봄으로 그냥 돌아오면(상태 표시줄 ◀, 앱 전환)
+ * 카카오 SDK가 아무 답도 주지 않아 로그인 버튼이 계속 로딩 상태로 멈춘다 (QA T01-04).
+ * 앱이 밖에 나갔다 돌아온 뒤 KAKAO_RETURN_GRACE_MS 안에 답이 없으면 취소로 본다.
+ * 반환한 함수로 감시를 멈춘다
+ */
+function rejectWhenReturnedWithoutAnswer(reject: (error: Error) => void) {
+  let leftApp = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const subscription = AppState.addEventListener("change", (state) => {
+    if (state === "background") leftApp = true;
+    if (state === "active" && leftApp) {
+      clearTimeout(timer);
+      timer = setTimeout(() => reject(new LoginCancelled()), KAKAO_RETURN_GRACE_MS);
+    }
+  });
+  return () => {
+    clearTimeout(timer);
+    subscription.remove();
+  };
+}
+
 /**
  * 카카오톡이 있으면 카카오톡으로, 없거나 카카오톡에 계정이 없으면 카카오계정 화면으로 로그인해
  * 카카오 access 토큰을 받는다
  */
 async function kakaoToken(): Promise<SocialToken> {
+  let stopWatching = () => {};
   try {
-    const { accessToken } = await kakaoLogin();
+    const { accessToken } = await Promise.race([
+      kakaoLogin(),
+      new Promise<never>((_, reject) => {
+        stopWatching = rejectWhenReturnedWithoutAnswer(reject);
+      }),
+    ]);
     return { accessToken };
   } catch (error) {
-    if (isKakaoCancel(error)) throw new LoginCancelled();
+    if (error instanceof LoginCancelled || isKakaoCancel(error)) throw new LoginCancelled();
     throw error;
+  } finally {
+    stopWatching();
   }
 }
 

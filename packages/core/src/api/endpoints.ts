@@ -193,8 +193,9 @@ export const filesApi = {
   /** API-60 사진 업로드 (JPEG·PNG). purpose는 쿼리와 본문 둘 다에 싣는다 (스웨거가 둘 다 요구) */
   upload: async (file: Blob, purpose: FilePurpose): Promise<Photo> => {
     const body = new FormData();
-    body.set("file", file);
-    body.set("purpose", FILE_PURPOSE[purpose]);
+    // React Native 의 FormData 에는 set 이 없다 (append·getAll·getParts 뿐). 웹·앱 모두 되는 append 를 쓴다
+    body.append("file", file);
+    body.append("purpose", FILE_PURPOSE[purpose]);
     const saved = await api
       .post("files", { body, searchParams: { purpose: FILE_PURPOSE[purpose] }, timeout: 30_000 })
       .json(successEnvelope(backendFileSchema));

@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { describe, expect, it } from "vitest";
-import { feedIntervalFromAnswer, feedRoutineToAsk, getOccurrences } from "./routine";
+import { feedIntervalFromAnswer, feedRoutineToAsk, getOccurrences, guidelineRange } from "./routine";
 
 const fmt = (dates: Date[]) => dates.map((d) => format(d, "yyyy-MM-dd"));
 
@@ -31,6 +31,24 @@ describe("getOccurrences", () => {
         new Date(2026, 9, 5),
       ),
     ).toEqual([]);
+  });
+});
+
+describe("guidelineRange", () => {
+  it("가이드라인 주기에 고를 폭이 있으면 범위를 준다", () => {
+    expect(guidelineRange({ customized: false, minDays: 7, maxDays: 14 })).toEqual({
+      min: 7,
+      max: 14,
+    });
+  });
+
+  it("한 값뿐인 범위(청소 30~30일)는 숨긴다", () => {
+    expect(guidelineRange({ customized: false, minDays: 30, maxDays: 30 })).toBeNull();
+  });
+
+  it("직접 바꾼 주기나 범위가 없으면 숨긴다", () => {
+    expect(guidelineRange({ customized: true, minDays: 7, maxDays: 14 })).toBeNull();
+    expect(guidelineRange({ customized: false, minDays: null, maxDays: null })).toBeNull();
   });
 });
 

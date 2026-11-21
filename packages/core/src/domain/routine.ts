@@ -51,6 +51,19 @@ export type RoutineUpdateInput = {
 };
 
 /**
+ * 수정 창에 보여 줄 가이드라인 주기 범위 (v1.2 P03).
+ * 직접 바꾼 주기는 범위를 숨기고 되돌리기만 보여 준다. 범위가 한 값뿐인 항목(청소 30~30일,
+ * 분무·물 갈기 1~1일 같은 O/X 항목)은 고를 폭이 없으니 주기만 보여 준다 (QA T03-05)
+ */
+export function guidelineRange(
+  routine: Pick<Routine, "customized" | "minDays" | "maxDays">,
+): { min: number; max: number } | null {
+  const { customized, minDays, maxDays } = routine;
+  if (customized || !minDays || !maxDays || minDays >= maxDays) return null;
+  return { min: minDays, max: maxDays };
+}
+
+/**
  * [from, to] 구간(양 끝 포함)에서 루틴이 돌아오는 날짜를 구한다.
  * 홈 캘린더의 미래 날짜 미리보기와 알림 예약에서 같이 쓴다.
  */

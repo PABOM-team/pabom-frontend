@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import { Redirect, router, usePathname } from "expo-router";
-import { useState, type ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
@@ -10,8 +10,8 @@ import { clearSession, isSignedOut } from "@pabom/core/api/session";
 import type { AuthProvider } from "@pabom/core/domain/user";
 import { meQueries } from "@pabom/core/entities/session";
 import { unregisterPushToken } from "@/features/push";
-import { Button } from "@/shared/ui/button";
-import { Spinner } from "@/shared/ui/display";
+import { Text } from "@/shared/ui/text";
+import { radius, semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
 import {
   completeLogin,
@@ -20,27 +20,33 @@ import {
   parseLoginCallback,
   rememberLoginNext,
 } from "./login";
+import { PawLoader } from "./paw-loader";
 import { isSdkReady, socialLogout } from "./social";
 
 export { completeLogin, parseLoginCallback, safeNext, takeLoginNext } from "./login";
+export { PawLoader } from "./paw-loader";
 export { socialLogout } from "./social";
+export { FootprintWalk, WelcomeHero } from "./welcome-hero";
 
 // 다른 앱에서 돌아왔을 때 열려 있던 인증 창을 닫는다
 WebBrowser.maybeCompleteAuthSession();
 
 /**
- * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양).
+ * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양, Figma A01 하단 고정 영역).
  * 이 빌드에 그 서비스의 SDK 키가 있으면 SDK로 로그인한다 (카카오톡·OS 계정 선택 창, loginWithSdk).
  * 키가 없으면 브라우저 로그인: 앱 주소(redirect_uri)를 넘겨 백엔드에서 로그인 주소를 받고(state 쿠키도 함께) 앱 안 인증 브라우저로 띄운다.
  * 카카오·구글 → 백엔드 app-callback → 앱 스킴(pabom://auth/callback/{provider}?code&state)으로 돌아오면
- * 그 주소의 code·state 로 로그인을 마친다
+ * 그 주소의 code·state 로 로그인을 마친다.
+ * onBusyChange 로 로그인 중인지 알려 주면 첫 화면이 '로그인하고 있어요'(A02)를 덮어 보여 준다
  */
 export function LoginButtons({
   next,
   labels = { kakao: "카카오로 시작하기", google: "Google 계정으로 시작하기" },
+  onBusyChange,
 }: {
   next?: string | null;
   labels?: Record<AuthProvider, string>;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const login = useMutation({
     mutationFn: async (provider: AuthProvider) => {
@@ -57,6 +63,10 @@ export function LoginButtons({
     onError: (error) => toast(getErrorMessage(error, "로그인을 시작하지 못했어요.")),
   });
 
+  useEffect(() => {
+    onBusyChange?.(login.isPending);
+  }, [login.isPending, onBusyChange]);
+
   const start = (provider: AuthProvider) => {
     rememberLoginNext(next);
     login.mutate(provider);
@@ -66,28 +76,67 @@ export function LoginButtons({
   const loadingOf = (provider: AuthProvider) => login.isPending && login.variables === provider;
 
   return (
-    <View style={{ gap: 8 }}>
-      <Button
-        variant="kakao"
-        size="xl"
+    <View style={{ gap: 12 }}>
+      <SocialButton
+        provider="kakao"
         disabled={login.isPending}
         loading={loadingOf("kakao")}
-        icon={<KakaoSymbol />}
         onPress={() => start("kakao")}
       >
         {labels.kakao}
-      </Button>
-      <Button
-        variant="outline"
-        size="xl"
+      </SocialButton>
+      <SocialButton
+        provider="google"
         disabled={login.isPending}
         loading={loadingOf("google")}
-        icon={<GoogleSymbol />}
         onPress={() => start("google")}
       >
         {labels.google}
-      </Button>
+      </SocialButton>
     </View>
+  );
+}
+
+/** 카카오(노랑 · 심볼 18) · 구글(흰 바탕 · 회색 테두리 · G 20) 버튼. 56px · 모서리 12 */
+function SocialButton({
+  provider,
+  children,
+  disabled,
+  loading,
+  onPress,
+}: {
+  provider: AuthProvider;
+  children: string;
+  disabled: boolean;
+  loading: boolean;
+  onPress: () => void;
+}) {
+  const kakao = provider === "kakao";
+  const textColor = kakao ? semantic.kakaoForeground : semantic.foreground;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled, busy: loading }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.social,
+        kakao ? styles.kakao : styles.google,
+        { gap: kakao ? 8 : 10 },
+        pressed && styles.pressed,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator color={textColor} />
+      ) : (
+        <>
+          {kakao ? <KakaoSymbol /> : <GoogleSymbol />}
+          <Text variant={kakao ? "body-xl" : "body-lg"} weight="medium" color={textColor}>
+            {children}
+          </Text>
+        </>
+      )}
+    </Pressable>
   );
 }
 
@@ -104,7 +153,7 @@ function KakaoSymbol() {
 
 function GoogleSymbol() {
   return (
-    <Svg viewBox="0 0 18 18" width={18} height={18}>
+    <Svg viewBox="0 0 18 18" width={20} height={20}>
       <Path
         fill="#4285F4"
         d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
@@ -154,12 +203,23 @@ export function useLogout() {
   });
 }
 
-export function FullScreenLoading() {
+/** 화면을 불러오는 동안 (Figma 파봄 로딩). label 을 주면 아래에 한 줄 안내 */
+export function FullScreenLoading({ label }: { label?: string }) {
   return (
     <View style={styles.loading}>
-      <Spinner />
+      <PawLoader />
+      {label ? (
+        <Text variant="body-xl" weight="medium" color={semantic.mutedForeground}>
+          {label}
+        </Text>
+      ) : null}
     </View>
   );
+}
+
+/** SCR-A02 로그인 처리 중 */
+export function LoginLoading() {
+  return <FullScreenLoading label="로그인하고 있어요" />;
 }
 
 /**
@@ -186,5 +246,22 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    backgroundColor: semantic.screen,
+  },
+  social: {
+    height: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    borderRadius: radius.lg,
+  },
+  kakao: { backgroundColor: semantic.kakao },
+  google: { backgroundColor: semantic.card, borderWidth: 1, borderColor: semantic.input },
+  pressed: { opacity: 0.7 },
 });

@@ -1,108 +1,41 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { notificationSettingsApi } from "@pabom/core/api/endpoints";
-import { getErrorMessage } from "@pabom/core/api/errors";
-import { queryKeys } from "@pabom/core/api/query-keys";
-import {
-  DEFAULT_REMINDER_TIME,
-  formatReminderTime,
-  reminderTimeOptions,
-  type NotificationSettings,
-  type NotificationSettingsInput,
-} from "@pabom/core/domain/notification";
-import { notificationSettingsQueries } from "@pabom/core/entities/notification";
-import { openPushSettings, requestPushPermission, usePushPermission } from "@/features/push";
+import { formatReminderTime, reminderTimeOptions } from "@pabom/core/domain/notification";
+import { openPushSettings } from "@/features/push";
 import { Button } from "@/shared/ui/button";
-import { InfoBox, Skeleton } from "@/shared/ui/display";
+import { LoadError, Skeleton } from "@/shared/ui/display";
 import { Switch } from "@/shared/ui/form";
 import { CheckIcon, ChevronRightIcon } from "@/shared/ui/icons";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { Sheet } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
-import { semantic } from "@/shared/ui/theme";
-import { toast } from "@/shared/ui/toast";
+import { radius, semantic } from "@/shared/ui/theme";
 import { TopBar } from "@/shared/ui/top-bar";
+import { Group, GroupRow, PAGE_PADDING, RowText, SectionLabel } from "./settings-ui";
+import { useCareReminder } from "./use-care-reminder";
 
 const TIME_OPTIONS = reminderTimeOptions();
 
-/** 이 기기의 시간대. 서버는 이 시간대 기준으로 알림 시각을 맞춘다 */
-const deviceTimeZone = () => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-  } catch {
-    return undefined;
-  }
-};
-
 /**
- * 설정 > 알림. 케어 알림 켜기·끄기와 받을 시각.
+ * 설정 > 알림. 할 일 알림 켜기·끄기와 받을 시각 (Figma 프레임 없음, S01 묶음 모양을 따른다).
  * 서버 설정(보낼지)과 기기 권한(받을 수 있는지)이 따로라서, 켤 때 기기 권한도 함께 묻는다
  */
 export function NotificationSettingsScreen() {
-  const queryClient = useQueryClient();
-  const {
-    data: settings,
-    isPending,
-    isError,
-    refetch,
-  } = useQuery(notificationSettingsQueries.detail());
-  const { permission, setPermission } = usePushPermission();
+  const reminder = useCareReminder();
+  const { isPending, isError, refetch } = reminder.query;
   const [timeOpen, setTimeOpen] = useState(false);
 
-  const update = useMutation({
-    mutationFn: (input: NotificationSettingsInput) => {
-      // 시간대가 바뀌었으면(해외 이동 등) 같이 맞춘다
-      const timeZone = deviceTimeZone();
-      return notificationSettingsApi.update(
-        timeZone && timeZone !== settings?.timeZone ? { ...input, timeZone } : input,
-      );
-    },
-    // 스위치가 바로 움직이게 먼저 바꿔 두고, 실패하면 되돌린다
-    onMutate: async (input) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.notificationSettings });
-      const previous = queryClient.getQueryData<NotificationSettings>(
-        queryKeys.notificationSettings,
-      );
-      if (previous) {
-        queryClient.setQueryData(queryKeys.notificationSettings, { ...previous, ...input });
-      }
-      return { previous };
-    },
-    onError: (error, _input, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(queryKeys.notificationSettings, context.previous);
-      }
-      toast(getErrorMessage(error, "알림 설정을 바꾸지 못했어요."));
-    },
-    onSuccess: (next) => queryClient.setQueryData(queryKeys.notificationSettings, next),
-  });
-
-  const toggleCare = async (on: boolean) => {
-    if (on && permission !== "granted") {
-      const next = await requestPushPermission();
-      setPermission(next);
-      if (next !== "granted") {
-        toast("기기 설정에서 파봄 알림을 허용해 주세요.");
-        return;
-      }
-    }
-    update.mutate({ careReminderEnabled: on });
-  };
-
-  const denied = permission === "denied";
-  // 기기에서 막혀 있으면 서버 설정이 켜져 있어도 알림이 오지 않으니 꺼진 것으로 보여 준다
-  const careOn = Boolean(settings?.careReminderEnabled) && permission === "granted";
-  const time = settings?.careReminderTime ?? DEFAULT_REMINDER_TIME;
-
   return (
-    <Screen>
-      <TopBar title="알림" fallbackHref="/settings" />
-      <ScreenBody>
-        {denied ? (
-          <InfoBox style={styles.notice}>
-            <Text variant="body-md" color={semantic.secondaryText}>
-              기기 설정에서 파봄 알림이 꺼져 있어요. 알림을 받으려면 설정에서 허용해 주세요.
+    <Screen style={{ backgroundColor: semantic.screen }}>
+      <TopBar title="알림" fallbackHref="/settings" style={{ backgroundColor: semantic.screen }} />
+      <ScreenBody flush contentStyle={styles.content}>
+        {reminder.denied ? (
+          <View style={styles.notice}>
+            <Text variant="body-lg" weight="semibold" color={semantic.primary}>
+              기기 설정에서 파봄 알림이 꺼져 있어요
+            </Text>
+            <Text variant="body-lg" color={semantic.secondaryText} style={styles.relaxed}>
+              알림을 받으려면 설정에서 허용해 주세요.
             </Text>
             <Button
               variant="outline"
@@ -112,66 +45,48 @@ export function NotificationSettingsScreen() {
             >
               설정 열기
             </Button>
-          </InfoBox>
+          </View>
         ) : null}
 
+        <SectionLabel>할 일 알림</SectionLabel>
         {isPending ? (
-          <View style={{ gap: 12 }}>
-            <Skeleton height={64} />
-            <Skeleton height={50} />
-          </View>
+          <Skeleton height={124} style={{ borderRadius: radius["2xl"] }} />
         ) : isError ? (
-          <InfoBox style={styles.notice}>
-            <Text variant="body-md" color={semantic.secondaryText}>
-              알림 설정을 불러오지 못했어요.
-            </Text>
-            <Button
-              variant="outline"
-              size="sm"
-              style={{ alignSelf: "flex-start", marginTop: 8 }}
-              onPress={() => void refetch()}
-            >
-              다시 불러오기
-            </Button>
-          </InfoBox>
+          <Group style={styles.error}>
+            <LoadError onRetry={() => void refetch()} />
+          </Group>
         ) : (
-          <View>
-            <View style={styles.switchRow}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="body-xl">케어 알림</Text>
-                <Text variant="body-md" color={semantic.mutedForeground}>
-                  오늘 할 관리가 있으면 정한 시각에 알려 드려요.
-                </Text>
-              </View>
+          <Group>
+            <GroupRow>
+              <RowText title="할 일 알림" description="오늘 남은 할 일이 있으면 알려 드려요" />
               <Switch
-                accessibilityLabel="케어 알림"
-                checked={careOn}
-                disabled={permission === null || denied}
-                onChange={(on) => void toggleCare(on)}
+                accessibilityLabel="할 일 알림"
+                checked={reminder.careOn}
+                disabled={reminder.switchDisabled}
+                onChange={(on) => void reminder.toggleCare(on)}
               />
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: !careOn }}
-              disabled={!careOn}
+            </GroupRow>
+            <GroupRow
+              divider
+              disabled={!reminder.careOn}
               onPress={() => setTimeOpen(true)}
-              style={[styles.row, !careOn && { opacity: 0.5 }]}
+              style={!reminder.careOn && { opacity: 0.5 }}
             >
-              <Text variant="body-xl">알림 시각</Text>
-              <View style={styles.rowValue}>
-                <Text variant="body-lg" color={semantic.mutedForeground}>
-                  {formatReminderTime(time)}
-                </Text>
-                <ChevronRightIcon size={16} color={semantic.subtleForeground} />
-              </View>
-            </Pressable>
-          </View>
+              <Text variant="body-lg" style={styles.grow}>
+                알림 시각
+              </Text>
+              <Text variant="body-lg" color={semantic.mutedForeground}>
+                {formatReminderTime(reminder.time)}
+              </Text>
+              <ChevronRightIcon size={20} color={semantic.subtleForeground} />
+            </GroupRow>
+          </Group>
         )}
       </ScreenBody>
 
       <Sheet open={timeOpen} onOpenChange={setTimeOpen} title="알림 시각">
         {TIME_OPTIONS.map((option) => {
-          const selected = option === time;
+          const selected = option === reminder.time;
           return (
             <Pressable
               key={option}
@@ -179,7 +94,7 @@ export function NotificationSettingsScreen() {
               accessibilityState={{ selected }}
               onPress={() => {
                 setTimeOpen(false);
-                if (!selected) update.mutate({ careReminderTime: option });
+                if (!selected) reminder.setTime(option);
               }}
               style={styles.timeOption}
             >
@@ -200,25 +115,16 @@ export function NotificationSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  notice: { marginBottom: 16 },
-  switchRow: {
-    minHeight: 64,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
+  content: { paddingHorizontal: PAGE_PADDING, paddingTop: 0 },
+  notice: {
+    marginTop: 8,
+    padding: 16,
+    borderRadius: radius.xl,
+    backgroundColor: semantic.primarySoft,
   },
-  row: {
-    height: 50,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  rowValue: { flexDirection: "row", alignItems: "center", gap: 4 },
+  relaxed: { marginTop: 2, lineHeight: 20 },
+  error: { paddingVertical: 24 },
+  grow: { flex: 1, minWidth: 0 },
   timeOption: {
     height: 48,
     flexDirection: "row",

@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -9,11 +7,16 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardPadding, useScrollToFocusedInput } from "./keyboard";
+import { SurfaceProvider } from "./surface";
 import { semantic, spacing } from "./theme";
 
 /**
  * 한 화면의 뼈대. 위 제목 줄과 아래 고정 영역 사이만 스크롤된다.
+ * 바탕은 Figma 화면처럼 gray-100(semantic.screen)이고 그 위에 흰 카드를 올린다.
+ * 흰 화면(로그인·약관 등)은 tone="white".
  * 좌우 여백은 디자인 시스템 Grid(375 기준 20px) 토큰 `gutter` 를 쓴다
  */
 export function Screen({
@@ -21,19 +24,30 @@ export function Screen({
   style,
   /** 탭 화면처럼 위 안전 영역을 바깥에서 처리하면 false */
   topInset = true,
+  tone = "gray",
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   topInset?: boolean;
+  tone?: "gray" | "white";
 }) {
   const insets = useSafeAreaInsets();
+  // 키보드가 올라오는 프레임에 맞춰 화면이 줄어든다. 아래 버튼은 키보드 위 12 에 붙는다 (ScreenFooter 가 안전 영역만큼 이미 띄움)
+  const keyboardPadding = useKeyboardPadding(Math.max(insets.bottom - 12, 0));
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={[styles.screen, topInset && { paddingTop: insets.top }, style]}
-    >
-      {children}
-    </KeyboardAvoidingView>
+    <SurfaceProvider value={tone}>
+      <Animated.View
+        style={[
+          styles.screen,
+          { backgroundColor: tone === "gray" ? semantic.screen : semantic.background },
+          topInset && { paddingTop: insets.top },
+          style,
+          keyboardPadding,
+        ]}
+      >
+        {children}
+      </Animated.View>
+    </SurfaceProvider>
   );
 }
 
@@ -53,10 +67,16 @@ export function ScreenBody({
   flush?: boolean;
   gap?: number;
 }) {
+  // 키보드가 뜨면 입력 중인 칸이 가려지지 않게 스크롤한다
+  const { ref, scrollEventThrottle, onScroll, onLayout } = useScrollToFocusedInput();
   return (
     <ScrollView
+      ref={ref}
+      scrollEventThrottle={scrollEventThrottle}
+      onLayout={onLayout}
       style={[styles.body, style]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
       contentContainerStyle={[
         styles.bodyContent,
         !flush && { paddingHorizontal: spacing.gutter },
@@ -64,13 +84,17 @@ export function ScreenBody({
         contentStyle,
       ]}
       {...props}
+      onScroll={(event) => {
+        onScroll(event);
+        props.onScroll?.(event);
+      }}
     >
       {children}
     </ScrollView>
   );
 }
 
-/** 하단 고정 버튼 영역 */
+/** 하단 고정 버튼 영역. 바탕은 화면 색을 그대로 비춘다 */
 export function ScreenFooter({
   children,
   style,
@@ -101,13 +125,12 @@ export function ScreenCenter({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: semantic.background },
+  screen: { flex: 1 },
   body: { flex: 1 },
   bodyContent: { paddingTop: 8, paddingBottom: 24 },
   footer: {
     flexShrink: 0,
     gap: 8,
-    backgroundColor: semantic.background,
     paddingHorizontal: spacing.gutter,
     paddingTop: 10,
   },

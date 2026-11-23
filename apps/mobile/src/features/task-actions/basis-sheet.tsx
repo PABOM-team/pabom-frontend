@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { LayoutAnimation, Pressable, StyleSheet, View } from "react-native";
 import { petQueries } from "@/entities/pet";
 import { speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
 import { CARE_DISCLAIMER, formatInterval } from "@pabom/core/domain/care";
 import { EVIDENCE_LEVEL_LABEL } from "@pabom/core/domain/species";
 import type { Task } from "@pabom/core/domain/today";
 import { InfoBox } from "@/shared/ui/display";
-import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "@/shared/ui/icons";
+import { ChevronDownIcon, ChevronUpIcon } from "@/shared/ui/icons";
 import { Sheet } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
 import { radius, semantic } from "@/shared/ui/theme";
@@ -70,10 +70,23 @@ export function BasisSheet({
     });
   };
 
+  // 펼친 칸의 한 줄: 근거 수준 · 출처 (v1.2 5-1). 누르면 그 개체 종의 가이드라인으로
+  const sourceLine = [
+    standard?.evidenceLevel ? `근거 수준 · ${EVIDENCE_LEVEL_LABEL[standard.evidenceLevel]}` : null,
+    standard?.sourceRefs ? `출처 · ${standard.sourceRefs}` : (routine?.basis.sourceText ?? null),
+  ]
+    .filter(Boolean)
+    .join("  |  ");
+
+  const toggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((v) => !v);
+  };
+
   return (
     <Sheet open={Boolean(task)} onOpenChange={onOpenChange} title="왜 이 할 일이 있나요?">
       <View>
-        <View style={styles.row}>
+        <View style={[styles.row, styles.rowDivider]}>
           <Text variant="body-lg" color={semantic.mutedForeground} style={styles.term}>
             할 일
           </Text>
@@ -92,54 +105,35 @@ export function BasisSheet({
         </View>
       </View>
       {description ? (
-        <Text variant="body-lg" color={semantic.secondaryText} style={[styles.mt3, styles.relaxed]}>
+        <Text variant="body-lg" style={styles.mt3}>
           {description}
         </Text>
       ) : null}
 
-      <View
-        style={[styles.expander, { borderColor: expanded ? semantic.primary : semantic.input }]}
-      >
+      {/* 펼치면 근거 수준·출처(있을 때)와 종 가이드라인(S04-3) 링크 (Figma H04 펼침, v1.2 5-1) */}
+      <View style={styles.expander}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ expanded }}
-          onPress={() => setExpanded((v) => !v)}
+          onPress={toggle}
+          hitSlop={12}
           style={styles.expanderButton}
         >
-          <Text variant="body-lg">자세히 보기</Text>
+          <Text variant="body-lg" weight="medium" style={styles.detail}>
+            자세히 보기
+          </Text>
           {expanded ? (
-            <ChevronUpIcon size={16} color={semantic.primary} />
+            <ChevronUpIcon size={14} color={semantic.primary} />
           ) : (
-            <ChevronDownIcon size={16} color={semantic.mutedForeground} />
+            <ChevronDownIcon size={14} color={semantic.mutedForeground} />
           )}
         </Pressable>
-        {/* 펼치면 근거 수준·출처(있을 때)와 종 가이드라인(S04-3) 링크 (Figma H04 펼침, v1.2 5-1) */}
-        {expanded ? (
-          <View style={styles.expanderBody}>
-            {/* 근거 수준(교재 근거·수의 기관 자료·팀 판단)과 출처는 종 가이드라인 항목에서 가져온다 (v1.2 5-1) */}
-            {standard?.evidenceLevel ? (
-              <Text variant="body-lg" color={semantic.secondaryText}>
-                근거 수준 · {EVIDENCE_LEVEL_LABEL[standard.evidenceLevel]}
-              </Text>
-            ) : null}
-            {standard?.sourceRefs ? (
-              <Text variant="body-lg" color={semantic.secondaryText}>
-                출처 · {standard.sourceRefs}
-              </Text>
-            ) : routine?.basis.sourceText ? (
-              <Text variant="body-lg" color={semantic.secondaryText}>
-                {routine.basis.sourceText}
-              </Text>
-            ) : null}
-            {detail ? (
-              <Pressable accessibilityRole="link" onPress={openGuideline} style={styles.link}>
-                <Text variant="body-lg" weight="medium" color={semantic.primary}>
-                  이러한 기준을 기반으로 제안을 드렸어요
-                </Text>
-                <ChevronRightIcon size={14} color={semantic.primary} />
-              </Pressable>
-            ) : null}
-          </View>
+        {expanded && detail ? (
+          <Pressable accessibilityRole="link" onPress={openGuideline} style={styles.link}>
+            <Text variant="body-lg" weight="medium" color={semantic.primary}>
+              {sourceLine || "이러한 기준을 기반으로 제안을 드렸어요"} ›
+            </Text>
+          </Pressable>
         ) : null}
       </View>
 
@@ -149,31 +143,19 @@ export function BasisSheet({
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
-  },
-  term: { width: 104, flexShrink: 0 },
+  row: { flexDirection: "row", gap: 8, paddingVertical: 8 },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: semantic.border },
+  term: { width: 96, flexShrink: 0 },
   detail: { flex: 1, minWidth: 0 },
-  relaxed: { lineHeight: 24 },
   mt3: { marginTop: 12 },
-  expander: { marginTop: 12, borderRadius: radius.lg, borderWidth: 1 },
-  expanderButton: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  expander: {
+    marginTop: 12,
+    gap: 10,
+    borderRadius: radius["2xl"],
+    backgroundColor: semantic.muted,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  expanderBody: { gap: 6, paddingHorizontal: 14, paddingBottom: 14 },
-  link: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 2,
-  },
+  expanderButton: { minHeight: 24, flexDirection: "row", alignItems: "center", gap: 8 },
+  link: { minHeight: 24 },
 });

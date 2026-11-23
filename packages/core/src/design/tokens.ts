@@ -50,15 +50,15 @@ export const colors = {
     200: "#ffc9c9",
     300: "#ffa2a2",
     400: "#ff6467",
-    500: "#fb2c36",
-    600: "#e7000b",
+    500: "#f04452",
+    600: "#d9303f",
     700: "#c10007",
     800: "#9f0712",
     900: "#82181a",
     950: "#460809",
   },
   green: {
-    50: "#e6faee",
+    50: "#f0fdf4",
     100: "#dcfce7",
     200: "#b9f8cf",
     300: "#7bf1a8",
@@ -86,7 +86,7 @@ export const colors = {
   gray: {
     50: "#fafafa",
     100: "#f4f4f5",
-    200: "#e4e4e7",
+    200: "#f0f0f3",
     300: "#d4d4d8",
     400: "#9f9fa9",
     500: "#71717b",
@@ -137,7 +137,7 @@ export function toNativeTextStyle(token: TextStyleToken) {
   };
 }
 
-/** 반경(px): 0 · 4 · 6 · 8 · 12 · 16 · 20 · circle */
+/** 반경(px): 0 · 4 · 6 · 8 · 12 · 16 · 20 · 24 · 28 · 32 · 36 · circle */
 export const radius = {
   xs: 4,
   sm: 6,
@@ -145,6 +145,10 @@ export const radius = {
   lg: 12,
   xl: 16,
   "2xl": 20,
+  "3xl": 24,
+  "4xl": 28,
+  "5xl": 32,
+  "6xl": 36,
   full: 9999,
 } as const;
 

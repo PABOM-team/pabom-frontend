@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { formatDateTime, timeOf, toYmd, withTime, ymdOf } from "@pabom/core/lib/date";
 import { Button } from "./button";
@@ -25,7 +25,13 @@ const fromClock = ({ pm, hour, minute }: Clock) =>
 /** 시각 끝 숫자를 읽는 소리에 맞춘 조사: 8:30(삼십)으로, 8:02(이)로 */
 const roParticle = (iso: string) => (/[036]$/.test(timeOf(iso)) ? "으로" : "로");
 
-/** 가로로 넘기는 숫자 고르기 한 칸 (오전·오후 / 시 / 분) */
+/** 고른 값 칸 높이 (Figma 시각 고르기: 흰 32px 칸 위아래로 앞뒤 값) */
+const ROW = 32;
+
+/**
+ * 세로로 굴리는 값 고르기 한 칸 (오전·오후 / 시 / 분).
+ * 가운데 흰 칸이 고른 값이고, 위아래 흐린 값을 누르거나 굴려서 바꾼다
+ */
 function Wheel<T extends string | number>({
   label,
   options,
@@ -39,27 +45,77 @@ function Wheel<T extends string | number>({
   onChange: (value: T) => void;
   render?: (value: T) => string;
 }) {
+  const ref = useRef<ComponentRef<typeof ScrollView>>(null);
+  /** 굴리거나 눌러서 바꾼 값이면 이미 그 자리에 있으니 다시 옮기지 않는다 */
+  const fromWheel = useRef(false);
+  const index = Math.max(0, options.indexOf(value));
+
+  // 바깥에서 값이 바뀌면(시트를 다시 열 때 등) 그 자리로 옮긴다
+  useEffect(() => {
+    if (fromWheel.current) {
+      fromWheel.current = false;
+      return;
+    }
+    ref.current?.scrollTo({ y: index * ROW, animated: false });
+  }, [index]);
+
+  const pick = (next: T | undefined) => {
+    if (next === undefined || next === value) return;
+    fromWheel.current = true;
+    onChange(next);
+  };
+
+  const settle = (offsetY: number) =>
+    pick(options[Math.min(options.length - 1, Math.max(0, Math.round(offsetY / ROW)))]);
+
+  const step = (delta: number) => {
+    const next = options[index + delta];
+    if (next === undefined) return;
+    ref.current?.scrollTo({ y: (index + delta) * ROW, animated: true });
+    pick(next);
+  };
+
   return (
-    <View style={styles.wheel} accessibilityLabel={label}>
+    <View
+      style={styles.wheel}
+      accessible
+      accessibilityLabel={label}
+      accessibilityRole="adjustable"
+      accessibilityValue={{ text: render(value) }}
+      accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+      onAccessibilityAction={(e) => step(e.nativeEvent.actionName === "increment" ? 1 : -1)}
+    >
+      <View style={styles.wheelSelected} pointerEvents="none" />
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
+        ref={ref}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ROW}
+        decelerationRate="fast"
+        contentOffset={{ x: 0, y: index * ROW }}
         contentContainerStyle={styles.wheelContent}
+        onMomentumScrollEnd={(e) => settle(e.nativeEvent.contentOffset.y)}
+        onScrollEndDrag={(e) => {
+          // 손을 떼며 멈추면 관성 끝 이벤트가 오지 않을 수 있다
+          if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.05)
+            settle(e.nativeEvent.contentOffset.y);
+        }}
       >
-        {options.map((option) => {
+        {options.map((option, i) => {
           const selected = option === value;
           return (
             <Pressable
               key={String(option)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              onPress={() => onChange(option)}
-              style={[styles.wheelItem, selected && { backgroundColor: semantic.primary }]}
+              onPress={() => {
+                ref.current?.scrollTo({ y: i * ROW, animated: true });
+                pick(option);
+              }}
+              style={styles.wheelItem}
             >
               <Text
-                variant="body-xl"
-                weight="bold"
-                color={selected ? "#ffffff" : semantic.foreground}
+                variant={selected ? "body-xl" : "body-lg"}
+                weight={selected ? "semibold" : "regular"}
+                color={selected ? semantic.foreground : semantic.subtleForeground}
               >
                 {render(option)}
               </Text>
@@ -152,22 +208,26 @@ export function DateTimeField({
 }
 
 const styles = StyleSheet.create({
+  /** Figma 시각 고르기: gray-100 · 모서리 12 · 세 칸 */
   clock: {
     marginTop: 12,
-    gap: 6,
+    flexDirection: "row",
+    gap: 12,
     borderRadius: radius.lg,
-    backgroundColor: semantic.muted,
-    padding: 10,
+    backgroundColor: semantic.secondary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  wheel: { height: 40 },
-  wheelContent: { gap: 4, alignItems: "center" },
-  wheelItem: {
-    minWidth: 48,
-    height: 40,
-    paddingHorizontal: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  wheel: { flex: 1, height: ROW * 3 },
+  wheelSelected: {
+    position: "absolute",
+    top: ROW,
+    left: 0,
+    right: 0,
+    height: ROW,
     borderRadius: radius.md,
-    backgroundColor: semantic.background,
+    backgroundColor: semantic.card,
   },
+  wheelContent: { paddingVertical: ROW },
+  wheelItem: { height: ROW, alignItems: "center", justifyContent: "center" },
 });

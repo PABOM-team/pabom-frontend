@@ -8,18 +8,18 @@ import { queryKeys } from "@pabom/core/api/query-keys";
 import { clearSignupSession, getSignupSession, setAccessToken } from "@pabom/core/api/session";
 import { AGREEMENTS, type AgreementType } from "@pabom/core/domain/user";
 import { Button } from "@/shared/ui/button";
-import { Checkbox, CheckboxRow } from "@/shared/ui/form";
+import { Checkbox } from "@/shared/ui/form";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
 import { Text } from "@/shared/ui/text";
-import { semantic } from "@/shared/ui/theme";
+import { radius, semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
 
 /** 가입 토큰이 없거나 10분이 지나 처음부터 다시 로그인해야 할 때 */
 class SignupExpired extends Error {}
 
 /**
- * SCR-A03 첫 로그인 약관 동의. Figma 그대로 머리줄 없이 제목·동의 목록·시작하기만.
+ * SCR-A03 첫 로그인 약관 동의. Figma 그대로 머리줄 없이 제목·흰 카드 동의 목록·시작하기만.
  * 로그인 결과로 받은 가입 토큰으로 동의를 보내고, 가입이 끝나면 access 토큰을 받는다
  */
 export default function AgreementsScreen() {
@@ -68,62 +68,41 @@ export default function AgreementsScreen() {
     <Screen>
       {/* 저장 중에는 입력을 흐리게 잠근다 (C2-2) */}
       <ScreenBody
-        contentStyle={{ paddingTop: 24 }}
+        gap={12}
+        contentStyle={styles.body}
         pointerEvents={agree.isPending ? "none" : "auto"}
         style={agree.isPending && { opacity: 0.5 }}
       >
-        <Text variant="title-sm" style={{ lineHeight: 32 }}>
-          파봄을 쓰려면{"\n"}동의가 필요해요
-        </Text>
-        <CheckboxRow
-          checked={allChecked}
-          onChange={(on) => setChecked(on ? new Set(AGREEMENTS.map((a) => a.type)) : new Set())}
-          style={styles.allRow}
-        >
-          <Text variant="body-xl" weight="bold">
-            전체 동의
-          </Text>
-        </CheckboxRow>
-        {AGREEMENTS.map((agreement) => (
-          <View key={agreement.type} style={styles.row}>
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: checked.has(agreement.type) }}
-              onPress={() => toggle(agreement.type, !checked.has(agreement.type))}
-              style={styles.rowLabel}
-            >
-              <Checkbox
-                checked={checked.has(agreement.type)}
-                onChange={(on) => toggle(agreement.type, on)}
-              />
-              <Text variant="body-lg" numberOfLines={1} style={{ flex: 1 }}>
-                [{agreement.required ? "필수" : "선택"}] {agreement.label}
-              </Text>
-            </Pressable>
-            {agreement.href ? (
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel={`${agreement.label} 보기`}
-                hitSlop={8}
-                onPress={() =>
-                  router.push(
-                    agreement.href.includes("privacy")
-                      ? { pathname: "/terms", params: { tab: "privacy" } }
-                      : "/terms",
-                  )
-                }
-                style={styles.view}
-              >
-                <Text variant="body-lg" color={semantic.mutedForeground}>
-                  보기
-                </Text>
-                <ChevronRightIcon size={14} color={semantic.mutedForeground} />
-              </Pressable>
-            ) : null}
-          </View>
-        ))}
+        <Text variant="title-xs">파봄을 쓰려면{"\n"}동의가 필요해요</Text>
+        <View style={styles.card}>
+          <AgreementRow
+            label="전체 동의"
+            checked={allChecked}
+            onToggle={(on) => setChecked(on ? new Set(AGREEMENTS.map((a) => a.type)) : new Set())}
+            divider
+          />
+          {AGREEMENTS.map((agreement, i) => (
+            <AgreementRow
+              key={agreement.type}
+              label={`[${agreement.required ? "필수" : "선택"}] ${agreement.label}`}
+              checked={checked.has(agreement.type)}
+              onToggle={(on) => toggle(agreement.type, on)}
+              divider={i < AGREEMENTS.length - 1}
+              onView={
+                agreement.href
+                  ? () =>
+                      router.push(
+                        agreement.href.includes("privacy")
+                          ? { pathname: "/terms", params: { tab: "privacy" } }
+                          : "/terms",
+                      )
+                  : undefined
+              }
+            />
+          ))}
+        </View>
       </ScreenBody>
-      <ScreenFooter>
+      <ScreenFooter minBottom={26}>
         <Button
           size="xl"
           disabled={!requiredDone}
@@ -143,22 +122,76 @@ export default function AgreementsScreen() {
   );
 }
 
+/** 동의 목록 한 줄 (Figma 줄: 체크박스 22 · 글 · 보기 ›, 구분선은 글 아래부터) */
+function AgreementRow({
+  label,
+  checked,
+  onToggle,
+  onView,
+  divider = false,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: (on: boolean) => void;
+  onView?: () => void;
+  divider?: boolean;
+}) {
+  return (
+    <View style={styles.row}>
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
+        onPress={() => onToggle(!checked)}
+        style={styles.rowLabel}
+      >
+        <Checkbox checked={checked} onChange={onToggle} />
+        <Text variant="body-lg" numberOfLines={1} style={{ flex: 1 }}>
+          {label}
+        </Text>
+      </Pressable>
+      {onView ? (
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={`${label} 보기`}
+          hitSlop={8}
+          onPress={onView}
+          style={styles.view}
+        >
+          <Text variant="body-lg" color={semantic.mutedForeground}>
+            보기
+          </Text>
+          <ChevronRightIcon size={20} color={semantic.subtleForeground} />
+        </Pressable>
+      ) : null}
+      {divider ? <View style={styles.divider} /> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  allRow: {
-    marginTop: 28,
-    paddingBottom: 14,
-    minHeight: 0,
-    borderBottomWidth: 1.5,
-    borderBottomColor: semantic.foreground,
+  body: { paddingTop: 24, paddingHorizontal: 16 },
+  card: {
+    overflow: "hidden",
+    paddingVertical: 4,
+    borderRadius: radius["2xl"],
+    backgroundColor: semantic.card,
   },
   row: {
-    height: 50,
+    minHeight: 50,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  rowLabel: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10 },
-  view: { flexDirection: "row", alignItems: "center", gap: 4 },
+  rowLabel: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 },
+  view: { flexDirection: "row", alignItems: "center", gap: 2 },
+  divider: {
+    position: "absolute",
+    left: 50,
+    right: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: semantic.border,
+  },
 });

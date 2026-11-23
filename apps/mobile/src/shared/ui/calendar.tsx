@@ -60,9 +60,9 @@ function YearMonthPicker({
           onPress={() => setYear((y) => subYears(y, 1))}
           style={!canPrevYear && { opacity: 0.3 }}
         >
-          <ChevronLeftIcon size={16} color={semantic.mutedForeground} />
+          <ChevronLeftIcon size={16} color={semantic.foreground} />
         </IconButton>
-        <Text variant="body-xl" weight="bold">
+        <Text variant="body-xl" weight="semibold">
           {format(year, "yyyy년")}
         </Text>
         <IconButton
@@ -72,7 +72,7 @@ function YearMonthPicker({
           onPress={() => setYear((y) => addYears(y, 1))}
           style={!canNextYear && { opacity: 0.3 }}
         >
-          <ChevronRightIcon size={16} color={semantic.mutedForeground} />
+          <ChevronRightIcon size={16} color={semantic.foreground} />
         </IconButton>
       </View>
       <View style={styles.monthGrid}>
@@ -98,10 +98,10 @@ function YearMonthPicker({
             >
               <Text
                 variant="body-lg"
-                weight={selected ? "bold" : "regular"}
+                weight={selected ? "semibold" : "regular"}
                 color={
                   selected
-                    ? "#ffffff"
+                    ? semantic.primaryForeground
                     : disabled
                       ? semantic.disabledForeground
                       : semantic.foreground
@@ -117,7 +117,10 @@ function YearMonthPicker({
   );
 }
 
-/** 달력 한 달 (D3). min/max 밖의 날은 고를 수 없다 */
+/**
+ * 달력 한 달 (Figma 달력 · D3). 날 칸 34 동그라미: 고름 primary · 오늘 파란 테두리 · 못 고름 gray-300.
+ * min/max 밖의 날은 고를 수 없다
+ */
 export function Calendar({
   value,
   onChange,
@@ -148,7 +151,7 @@ export function Calendar({
           onPress={() => setMonth((m) => subMonths(m, 1))}
           style={[!canPrev && { opacity: 0.3 }, picking && { opacity: 0 }]}
         >
-          <ChevronLeftIcon size={16} color={semantic.mutedForeground} />
+          <ChevronLeftIcon size={16} color={semantic.foreground} />
         </IconButton>
         <Pressable
           accessibilityRole="button"
@@ -160,11 +163,11 @@ export function Calendar({
             pressed && { backgroundColor: semantic.muted },
           ]}
         >
-          <Text variant="body-xl" weight="bold">
+          <Text variant="body-xl" weight="semibold">
             {format(month, "yyyy년 M월")}
           </Text>
           <View style={picking && { transform: [{ rotate: "180deg" }] }}>
-            <ChevronDownIcon size={16} color={semantic.mutedForeground} />
+            <ChevronDownIcon size={16} color={semantic.foreground} />
           </View>
         </Pressable>
         <IconButton
@@ -174,7 +177,7 @@ export function Calendar({
           onPress={() => setMonth((m) => addMonths(m, 1))}
           style={[!canNext && { opacity: 0.3 }, picking && { opacity: 0 }]}
         >
-          <ChevronRightIcon size={16} color={semantic.mutedForeground} />
+          <ChevronRightIcon size={16} color={semantic.foreground} />
         </IconButton>
       </View>
       {picking ? (
@@ -192,7 +195,7 @@ export function Calendar({
           <View style={styles.weekRow}>
             {WEEKDAYS.map((d) => (
               <View key={d} style={styles.weekCell}>
-                <Text variant="body-md" color={semantic.mutedForeground}>
+                <Text variant="body-md" weight="medium" color={semantic.mutedForeground}>
                   {d}
                 </Text>
               </View>
@@ -225,10 +228,10 @@ export function Calendar({
                       >
                         <Text
                           variant="body-lg"
-                          weight={selected || isToday ? "bold" : "regular"}
+                          weight={selected || (isToday && !disabled) ? "semibold" : "regular"}
                           color={
                             selected
-                              ? "#ffffff"
+                              ? semantic.primaryForeground
                               : disabled
                                 ? semantic.disabledForeground
                                 : isToday
@@ -371,11 +374,13 @@ export function DateField({
 }
 
 const styles = StyleSheet.create({
+  /** 이전·다음 16 아이콘이 날 칸 열(좌우 8)에 맞도록 44 터치 칸을 바깥으로 넓힌다 */
   nav: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    marginHorizontal: -4,
+    paddingBottom: 4,
   },
   monthTitle: {
     height: 40,
@@ -394,11 +399,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: radius.lg,
   },
-  weekRow: { flexDirection: "row" },
-  weekCell: { flex: 1, alignItems: "center", paddingVertical: 6 },
-  dayGrid: { rowGap: 4 },
-  dayRow: { flexDirection: "row" },
-  dayCell: { flex: 1, alignItems: "center" },
-  day: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  today: { borderWidth: 1.5, borderColor: semantic.primary },
+  weekRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  weekCell: { width: 34, alignItems: "center" },
+  dayGrid: { rowGap: 4, marginTop: 4 },
+  dayRow: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 8 },
+  dayCell: { width: 34, alignItems: "center" },
+  day: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  today: { borderWidth: 1.3, borderColor: semantic.primary },
 });

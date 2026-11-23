@@ -29,7 +29,8 @@ export default function TermsScreen() {
   const doc = DOCS[tab];
 
   return (
-    <Screen>
+    // 목차 상자·원문 자리 막대가 회색이라 흰 화면에 그린다
+    <Screen tone="white">
       <TopBar title={doc.title} fallbackHref="/settings" />
       <ScreenBody>
         <Segmented

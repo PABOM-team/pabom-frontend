@@ -40,14 +40,14 @@
   --color-red-200: #ffc9c9;
   --color-red-300: #ffa2a2;
   --color-red-400: #ff6467;
-  --color-red-500: #fb2c36;
-  --color-red-600: #e7000b;
+  --color-red-500: #f04452;
+  --color-red-600: #d9303f;
   --color-red-700: #c10007;
   --color-red-800: #9f0712;
   --color-red-900: #82181a;
   --color-red-950: #460809;
 
-  --color-green-50: #e6faee;
+  --color-green-50: #f0fdf4;
   --color-green-100: #dcfce7;
   --color-green-200: #b9f8cf;
   --color-green-300: #7bf1a8;
@@ -73,7 +73,7 @@
 
   --color-gray-50: #fafafa;
   --color-gray-100: #f4f4f5;
-  --color-gray-200: #e4e4e7;
+  --color-gray-200: #f0f0f3;
   --color-gray-300: #d4d4d8;
   --color-gray-400: #9f9fa9;
   --color-gray-500: #71717b;
@@ -128,6 +128,10 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  --radius-5xl: 32px;
+  --radius-6xl: 36px;
   --radius-3xl: 20px;
   --radius-4xl: 20px;
 

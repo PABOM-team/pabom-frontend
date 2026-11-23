@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "rea
 import { goBack } from "@/shared/lib/navigation";
 import { ChevronLeftIcon, XIcon } from "./icons";
 import { Text } from "./text";
-import { semantic, spacing } from "./theme";
+import { colors, semantic, spacing } from "./theme";
 
 type TopBarProps = {
   title?: ReactNode;
@@ -17,7 +17,10 @@ type TopBarProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-/** 화면 위 제목 줄 (52px). 좌우 여백은 그리드 20에 맞추고, 아이콘 버튼은 44px 터치 타깃 */
+/**
+ * 화면 위 제목 줄 (Figma 앱바 52px). 왼쪽 ‹·× 24 아이콘 · 제목 body-xl semibold 왼쪽 정렬 · 오른쪽 글·아이콘.
+ * 바탕은 화면 색을 그대로 비추고, 아이콘 버튼은 44px 터치 타깃을 아이콘 바깥으로 넓힌다
+ */
 export function TopBar({
   title,
   leading = "back",
@@ -29,14 +32,18 @@ export function TopBar({
   const press = () => (onLeading ? onLeading() : goBack(fallbackHref));
 
   return (
-    <View style={[styles.bar, leading === "none" && { paddingLeft: spacing.gutter }, style]}>
+    <View style={[styles.bar, style]}>
       {leading !== "none" ? (
-        <IconButton accessibilityLabel={leading === "back" ? "뒤로" : "닫기"} onPress={press}>
+        <IconButton
+          accessibilityLabel={leading === "back" ? "뒤로" : "닫기"}
+          onPress={press}
+          style={styles.leading}
+        >
           {leading === "back" ? <ChevronLeftIcon /> : <XIcon />}
         </IconButton>
       ) : null}
       {typeof title === "string" ? (
-        <Text variant="title-xs" numberOfLines={1} style={styles.title}>
+        <Text variant="body-xl" weight="semibold" numberOfLines={1} style={styles.title}>
           {title}
         </Text>
       ) : (
@@ -72,7 +79,7 @@ export function IconButton({
       style={({ pressed }) => [
         styles.iconButton,
         { width: size, height: size, borderRadius: size / 2 },
-        pressed && { backgroundColor: semantic.muted },
+        pressed && { backgroundColor: colors.gray[200] },
         style,
       ]}
     >
@@ -81,7 +88,7 @@ export function IconButton({
   );
 }
 
-/** 위 제목 줄 오른쪽 글자 버튼 (예: 저장, 건너뛰기) */
+/** 위 제목 줄 오른쪽 글자 버튼 (예: 저장, 건너뛰기). Figma: body-lg medium · info 파랑 */
 export function TopBarAction({
   children,
   onPress,
@@ -99,9 +106,9 @@ export function TopBarAction({
       style={({ pressed }) => [styles.action, pressed && { opacity: 0.6 }]}
     >
       <Text
-        variant="body-xl"
+        variant="body-lg"
         weight="medium"
-        color={disabled ? semantic.disabledForeground : semantic.primary}
+        color={disabled ? semantic.disabledForeground : semantic.info}
       >
         {children}
       </Text>
@@ -115,12 +122,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    backgroundColor: semantic.background,
+    gap: 8,
+    paddingHorizontal: spacing.gutter,
   },
+  /** 44 터치 칸 안의 24 아이콘이 여백 선(gutter)에 붙도록 */
+  leading: { marginLeft: -10, marginRight: -6 },
   title: { flex: 1, minWidth: 0 },
-  trailing: { flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 8 },
+  trailing: { flexDirection: "row", alignItems: "center", gap: 4, marginRight: -10 },
   iconButton: { alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  action: { minHeight: 44, justifyContent: "center", paddingHorizontal: 8, borderRadius: 8 },
+  action: { minHeight: 44, justifyContent: "center", paddingHorizontal: 10, borderRadius: 8 },
 });

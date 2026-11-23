@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { speciesQueries } from "@/entities/species";
 import { petsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage, getFieldErrors } from "@pabom/core/api/errors";
@@ -19,14 +20,16 @@ import {
 import { todayYmd } from "@pabom/core/lib/date";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
-import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
+import { ChipGroup } from "@/shared/ui/chip";
 import { Field, FieldButton, Input } from "@/shared/ui/form";
 import { ChevronDownIcon } from "@/shared/ui/icons";
-import { Screen, ScreenBody } from "@/shared/ui/screen";
+import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
 import { Sheet } from "@/shared/ui/sheet";
+import { Text } from "@/shared/ui/text";
+import { radius, semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
-import { TopBar, TopBarAction } from "@/shared/ui/top-bar";
+import { TopBar } from "@/shared/ui/top-bar";
 import { HatchFields, MorphPicker, PetPhotoPicker, type PhotoValue } from "./fields";
 
 type Draft = {
@@ -57,7 +60,7 @@ const fromPet = (pet: Pet): Draft => ({
 });
 
 /**
- * SCR-P05 개체 정보 수정. 저장은 바뀐 내용이 있을 때만 켜진다.
+ * SCR-P05 개체 정보 수정. 회색 바탕 위 칸들, 아래 고정 '저장'은 바뀐 내용이 있을 때만 켜진다.
  * 종은 고칠 수 없어서(틀렸으면 삭제 뒤 다시 등록 [제안]) 보여 주지 않는다.
  */
 export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void }) {
@@ -126,18 +129,9 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         leading="close"
         title="개체 정보 수정"
         onLeading={() => (dirty ? setExitOpen(true) : back())}
-        trailing={
-          <TopBarAction
-            disabled={!dirty || !valid || uploading || save.isPending}
-            onPress={() => save.mutate()}
-          >
-            저장
-          </TopBarAction>
-        }
       />
-      <ScreenBody gap={20}>
+      <ScreenBody gap={24} contentStyle={styles.body}>
         <PetPhotoPicker
-          variant="edit"
           value={draft.photo}
           onChange={(photo) => patch({ photo })}
           onBusyChange={setUploading}
@@ -156,7 +150,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         <Field label="모프">
           <FieldButton
             placeholder="모프를 골라 주세요"
-            icon={<ChevronDownIcon size={16} />}
+            icon={<ChevronDownIcon size={16} color={semantic.mutedForeground} />}
             onPress={() => setMorphOpen(true)}
           >
             {draft.morph}
@@ -175,7 +169,6 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         <Field label="성별">
           <ChipGroup
             label="성별"
-            size="sm"
             options={sexSchema.options.map((value) => ({ value, label: SEX_LABEL[value] }))}
             value={draft.sex}
             onChange={(sex) => patch({ sex: sex ?? "unknown" })}
@@ -189,10 +182,27 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
             onChange={(acquiredOn) => patch({ acquiredOn })}
           />
         </Field>
-        <Button variant="outline" size="xl" onPress={onDelete}>
-          개체 삭제
-        </Button>
+        {/* Figma P05: 흰 바탕 · 빨간 글자 '개체 삭제' */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={onDelete}
+          style={({ pressed }) => [styles.delete, pressed && styles.pressed]}
+        >
+          <Text variant="body-xl" weight="semibold" color={semantic.destructive}>
+            개체 삭제
+          </Text>
+        </Pressable>
       </ScreenBody>
+      <ScreenFooter minBottom={26}>
+        <Button
+          size="xl"
+          disabled={!dirty || !valid || uploading}
+          loading={save.isPending}
+          onPress={() => save.mutate()}
+        >
+          저장
+        </Button>
+      </ScreenFooter>
 
       <Sheet
         open={morphOpen}
@@ -220,3 +230,15 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  body: { paddingHorizontal: 16 },
+  delete: {
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.lg,
+    backgroundColor: semantic.card,
+  },
+  pressed: { opacity: 0.7 },
+});

@@ -4,9 +4,9 @@ import { Alert, Image, Linking, Pressable, StyleSheet, View } from "react-native
 import { filesApi } from "@pabom/core/api/endpoints";
 import type { Photo } from "@pabom/core/domain/record";
 import { resizeImage, toUploadFile } from "@/shared/lib/image";
-import { Spinner } from "./display";
-import { PlusIcon } from "./icons";
+import { ExclamationCircleIcon, PlusIcon } from "./icons";
 import { Menu } from "./menu";
+import { Spinner } from "./spinner";
 import { Text } from "./text";
 import { radius, semantic } from "./theme";
 
@@ -121,7 +121,7 @@ export function PhotoInput({
           accessibilityRole="button"
           accessibilityLabel={`사진 ${index + 1} 크게 보기`}
           onPress={() => onView?.(index)}
-          style={[styles.box, { borderWidth: 1, borderColor: semantic.input }]}
+          style={[styles.box, styles.photo]}
         >
           <Image source={{ uri: photo.url }} alt="" style={styles.fill} resizeMode="cover" />
         </Pressable>
@@ -133,27 +133,19 @@ export function PhotoInput({
           accessibilityLabel={item.status === "failed" ? "사진 다시 올리기" : "사진 올리는 중"}
           disabled={item.status === "uploading"}
           onPress={() => upload(item)}
-          style={[
-            styles.box,
-            styles.dashed,
-            item.status === "failed"
-              ? { borderColor: semantic.destructive }
-              : { backgroundColor: semantic.placeholder },
-          ]}
+          style={[styles.box, styles.dashed, item.status === "failed" && styles.failed]}
         >
           {item.status === "uploading" ? (
             <>
-              <Spinner />
-              <Text variant="body-sm" color={semantic.mutedForeground}>
+              <Spinner label="사진 올리는 중" />
+              <Text variant="body-md" weight="medium" color={semantic.subtleForeground}>
                 올리는 중
               </Text>
             </>
           ) : (
             <>
-              <Text variant="body-xl" weight="bold" color={semantic.destructive}>
-                !
-              </Text>
-              <Text variant="body-sm" color={semantic.destructive}>
+              <ExclamationCircleIcon size={24} color={semantic.destructive} />
+              <Text variant="body-md" weight="medium" color={semantic.destructive}>
                 다시 시도
               </Text>
             </>
@@ -162,11 +154,11 @@ export function PhotoInput({
       ))}
       {value.length + pending.length < max ? (
         // + 를 누르면 앨범·카메라 중 고른다 (T08-04)
-        <View style={[styles.box, styles.dashed, { backgroundColor: semantic.placeholder }]}>
+        <View style={[styles.box, styles.dashed]}>
           <Menu
             label="사진 추가"
             triggerSize={64}
-            trigger={<PlusIcon size={20} color={semantic.subtleForeground} />}
+            trigger={<PlusIcon size={20} color={semantic.mutedForeground} />}
             items={[
               { label: "앨범에서 고르기", onSelect: () => void pick("library") },
               { label: "카메라로 찍기", onSelect: () => void pick("camera") },
@@ -187,9 +179,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     gap: 2,
   },
-  dashed: { borderWidth: 1.5, borderStyle: "dashed", borderColor: semantic.input },
+  /** Figma 사진 칸: gray-100 바탕 · gray-300 점선 1.5 · 모서리 12 */
+  dashed: {
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: semantic.input,
+    backgroundColor: semantic.secondary,
+  },
+  failed: { borderColor: semantic.destructive, backgroundColor: semantic.card },
+  photo: { backgroundColor: semantic.secondary },
   fill: { width: "100%", height: "100%" },
 });

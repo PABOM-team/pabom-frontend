@@ -3,7 +3,7 @@ import { Image, Modal, ScrollView, StyleSheet, View, useWindowDimensions } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XIcon } from "./icons";
 import { Text } from "./text";
-import { semantic } from "./theme";
+import { alpha, colors, semantic } from "./theme";
 import { IconButton } from "./top-bar";
 
 /** 사진 크게 보기 (U9). 검은 바탕, 옆으로 밀면 다음 사진, × 또는 뒤로 가기로 닫힘 */
@@ -39,9 +39,9 @@ export function PhotoViewer({
       <View style={[styles.root, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <IconButton accessibilityLabel="닫기" size={40} onPress={() => onOpenChange(false)}>
-            <XIcon color="#ffffff" />
+            <XIcon color={colors.white} />
           </IconButton>
-          <Text variant="body-xl" color="#ffffff" style={{ paddingRight: 12 }}>
+          <Text variant="body-xl" color={colors.white} style={{ paddingRight: 12 }}>
             {index + 1} / {photos.length}
           </Text>
         </View>
@@ -67,7 +67,7 @@ export function PhotoViewer({
                   key={photo.id}
                   style={[
                     styles.dot,
-                    { backgroundColor: i === index ? "#ffffff" : "rgba(255,255,255,0.4)" },
+                    { backgroundColor: i === index ? colors.white : alpha(colors.white, 0.4) },
                   ]}
                 />
               ))}

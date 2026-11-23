@@ -1,29 +1,38 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { petQueries } from "@/entities/pet";
 import { recordQueries } from "@/entities/record";
-import { useFeedResultSet } from "@/entities/species";
+import { useDefaultFoodNameResolver, useFeedResultSet } from "@/entities/species";
 import { recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { intakeOptionsFor, type Intake } from "@pabom/core/domain/care";
 import { MEMO_MAX, type CareRecord, type Photo } from "@pabom/core/domain/record";
 import type { SpeciesId } from "@pabom/core/domain/species";
-import { formatDayLabel } from "@pabom/core/lib/date";
+import { formatDayLabel, ymdOf } from "@pabom/core/lib/date";
 import { Button } from "@/shared/ui/button";
-import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { DateTimeField } from "@/shared/ui/date-time-field";
 import { InfoBox, LoadError, Spinner } from "@/shared/ui/display";
-import { Input, Textarea } from "@/shared/ui/form";
+import { Textarea } from "@/shared/ui/form";
 import { PhotoInput } from "@/shared/ui/photo-input";
 import { PhotoViewer } from "@/shared/ui/photo-viewer";
-import { Sheet, SheetLabel } from "@/shared/ui/sheet";
+import { Sheet } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
-import { colors } from "@/shared/ui/theme";
+import { colors, semantic } from "@/shared/ui/theme";
 import { toast } from "@/shared/ui/toast";
+import {
+  AddExtraLink,
+  DetailRow,
+  IntakeChoice,
+  Keypad,
+  pressKey,
+  SheetDivider,
+  StepView,
+  WeightDisplay,
+} from "./parts";
 
 type Draft = {
   occurredAt: string;
@@ -70,10 +79,12 @@ export function EditRecordSheet({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
+  const [extraOpen, setExtraOpen] = useState(false);
 
   if (record && draftFor !== `${record.id}:${record.revisions.length}`) {
     setDraftFor(`${record.id}:${record.revisions.length}`);
     setDraft(toDraft(record));
+    setExtraOpen(false);
   }
 
   const kind = record?.recordKind ?? null;
@@ -85,6 +96,14 @@ export function EditRecordSheet({
     speciesId ?? pets?.find((p) => p.id === record?.petId)?.speciesId,
     kind === "intake" ? record?.careItem : null,
   );
+  const resolveFoodName = useDefaultFoodNameResolver();
+  const foodName =
+    kind === "intake" && record
+      ? resolveFoodName(
+          speciesId ?? pets?.find((p) => p.id === record.petId)?.speciesId,
+          record.careItem,
+        )
+      : null;
   const original = record ? toDraft(record) : null;
   const dirty = Boolean(draft && original && JSON.stringify(draft) !== JSON.stringify(original));
   const weightValue = draft?.weight ? Number(draft.weight) : null;
@@ -130,9 +149,20 @@ export function EditRecordSheet({
     onSettled: refresh,
   });
 
-  const title = record
-    ? `${record.petName} · ${record.careItemName} · ${formatDayLabel(format(parseISO(record.occurredAt), "yyyy-MM-dd"))}`
-    : "기록";
+  const extraVisible = extraOpen || kind === "memo" || Boolean(draft?.memo || draft?.photos.length);
+  const recordDay = draft ? format(parseISO(draft.occurredAt), "M월 d일") : "";
+  const title = !record
+    ? "기록"
+    : kind === "intake"
+      ? `${record.petName}, ${recordDay}에 먹었나요?`
+      : kind === "weight"
+        ? `${record.petName}, 몸무게는 얼마인가요?`
+        : kind === "memo"
+          ? `${record.petName}에게 무슨 일이 있었나요?`
+          : `${record.petName} · ${record.careItemName} · ${formatDayLabel(ymdOf(record.occurredAt))}`;
+  const viewerCaption = record
+    ? `${record.petName} · ${record.careItemName} · ${formatDayLabel(ymdOf(record.occurredAt))}`
+    : "";
 
   return (
     <>
@@ -142,18 +172,9 @@ export function EditRecordSheet({
         title={title}
         footer={
           record && draft ? (
-            <>
-              <Button
-                variant="outline"
-                size="xl"
-                style={styles.deleteButton}
-                onPress={() => setConfirmDelete(true)}
-              >
-                기록 삭제
-              </Button>
+            <View style={styles.footer}>
               <Button
                 size="xl"
-                style={styles.saveButton}
                 disabled={!dirty || weightInvalid || uploading || save.isPending}
                 loading={save.isPending}
                 accessibilityLabel={save.isPending ? "저장 중" : undefined}
@@ -161,7 +182,17 @@ export function EditRecordSheet({
               >
                 저장
               </Button>
-            </>
+              <Pressable
+                accessibilityRole="button"
+                hitSlop={6}
+                onPress={() => setConfirmDelete(true)}
+                style={styles.deleteLink}
+              >
+                <Text variant="body-lg" color={semantic.subtleForeground}>
+                  이 기록 삭제하기
+                </Text>
+              </Pressable>
+            </View>
           ) : null
         }
       >
@@ -172,65 +203,77 @@ export function EditRecordSheet({
         ) : isError || !record || !draft ? (
           <LoadError onRetry={() => refetch()} />
         ) : (
-          <>
+          <StepView key={record.id}>
             {kind === "intake" && record.type === "done" ? (
-              <>
-                <SheetLabel first>얼마나 먹었나요?</SheetLabel>
-                <ChipGroup
-                  label="먹은 정도"
-                  columns={2}
-                  allowDeselect
+              <View style={{ paddingBottom: 16 }}>
+                <IntakeChoice
                   options={intakeOptionsFor(feedResultSet)}
                   value={draft.intake}
                   onChange={(intake) => setDraft({ ...draft, intake })}
                 />
-              </>
+              </View>
             ) : null}
-            {kind === "weight" ? (
-              <>
-                <SheetLabel first>몸무게</SheetLabel>
-                <Input
-                  accessibilityLabel="몸무게"
-                  inputMode="decimal"
-                  keyboardType="decimal-pad"
-                  suffix="g"
-                  value={draft.weight}
-                  onChangeText={(text) =>
-                    setDraft({ ...draft, weight: text.replace(/[^0-9.]/g, "") })
-                  }
-                />
-              </>
-            ) : null}
+            {kind === "weight" ? <WeightDisplay value={draft.weight} /> : null}
             {kind === "check" && record.method === "routine" && !draft.photos.length ? (
-              <InfoBox style={styles.mt1}>
+              <InfoBox style={styles.notice}>
                 O/X 기록이라 고칠 값이 없어요. 시각과 메모만 고칠 수 있어요.
               </InfoBox>
             ) : null}
-            {kind === "memo" || record.method !== "routine" || draft.photos.length ? (
-              <>
-                <SheetLabel first>사진</SheetLabel>
+            {kind === "memo" ? (
+              <View style={styles.extra}>
+                <Textarea
+                  accessibilityLabel="메모"
+                  placeholder="무슨 일이 있었는지 남겨 주세요"
+                  maxLength={MEMO_MAX}
+                  value={draft.memo}
+                  onChangeText={(memo) => setDraft({ ...draft, memo })}
+                />
                 <PhotoInput
                   value={draft.photos}
+                  max={5}
                   onChange={(photos) => setDraft((d) => (d ? { ...d, photos } : d))}
                   onView={setViewer}
                   onBusyChange={setUploading}
                 />
-              </>
+              </View>
             ) : null}
-            <SheetLabel>기록한 시각</SheetLabel>
-            <DateTimeField
-              value={draft.occurredAt}
-              onChange={(occurredAt) => setDraft({ ...draft, occurredAt })}
-            />
-            <SheetLabel>메모 (선택)</SheetLabel>
-            <Textarea
-              accessibilityLabel="메모 (선택)"
-              placeholder="메모를 남겨 주세요"
-              maxLength={MEMO_MAX}
-              value={draft.memo}
-              onChangeText={(memo) => setDraft({ ...draft, memo })}
-            />
-          </>
+            <SheetDivider />
+            <View style={styles.when}>
+              <Text variant="body-xl" color={semantic.secondaryText}>
+                언제
+              </Text>
+              <DateTimeField
+                value={draft.occurredAt}
+                onChange={(occurredAt) => setDraft({ ...draft, occurredAt })}
+              />
+            </View>
+            {foodName ? <DetailRow label="먹이" value={foodName} /> : null}
+            {kind === "memo" ? null : extraVisible ? (
+              <View style={styles.extra}>
+                <Textarea
+                  accessibilityLabel="메모 (선택)"
+                  placeholder="메모를 남겨 주세요"
+                  maxLength={MEMO_MAX}
+                  value={draft.memo}
+                  onChangeText={(memo) => setDraft({ ...draft, memo })}
+                />
+                <PhotoInput
+                  value={draft.photos}
+                  max={5}
+                  onChange={(photos) => setDraft((d) => (d ? { ...d, photos } : d))}
+                  onView={setViewer}
+                  onBusyChange={setUploading}
+                />
+              </View>
+            ) : (
+              <AddExtraLink onPress={() => setExtraOpen(true)} />
+            )}
+            {kind === "weight" ? (
+              <Keypad
+                onKey={(key) => setDraft({ ...draft, weight: pressKey(draft.weight, key) })}
+              />
+            ) : null}
+          </StepView>
         )}
       </Sheet>
       <ConfirmDialog
@@ -252,7 +295,7 @@ export function EditRecordSheet({
           record ? (
             <>
               <Text variant="body-lg" weight="bold" color={colors.white}>
-                {title}
+                {viewerCaption}
               </Text>
               {record.memo ? (
                 <Text variant="body-lg" color={colors.white}>
@@ -268,8 +311,10 @@ export function EditRecordSheet({
 }
 
 const styles = StyleSheet.create({
-  deleteButton: { width: "38%" },
-  saveButton: { flex: 1 },
+  footer: { flex: 1, gap: 4 },
+  deleteLink: { alignSelf: "center", paddingVertical: 8 },
   loading: { alignItems: "center", paddingVertical: 40 },
-  mt1: { marginTop: 4 },
+  notice: { marginBottom: 16 },
+  when: { gap: 8, paddingVertical: 14 },
+  extra: { gap: 12, paddingTop: 6, paddingBottom: 18 },
 });

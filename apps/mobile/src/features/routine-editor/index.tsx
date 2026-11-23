@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { routineSummary } from "@/entities/routine";
+import { TaskIcon } from "@/entities/task";
 import { routinesApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
@@ -31,7 +32,10 @@ function useRoutineMutation() {
   };
 }
 
-/** 체크 리스트 한 줄 (SCR-P03): 항목·주기·기록 방식 · 수정 · 켜기/끄기 */
+/**
+ * 체크 리스트 한 줄 (SCR-P03 할 일 줄): 할 일 아이콘 · 항목·주기·기록 방식 · 켜기/끄기.
+ * 줄을 누르면 수정 창이 열린다 (Figma 줄 ON_CLICK → 수정 창). 꺼진 항목은 이름이 한 단계 옅다
+ */
 export function RoutineRow({
   routine,
   fallbackFoodName,
@@ -54,21 +58,30 @@ export function RoutineRow({
 
   return (
     <View style={styles.row}>
-      <View style={styles.rowBody}>
-        <View style={styles.rowTitle}>
-          <Text variant="body-xl" weight="bold">
-            {label}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label} 수정`}
+        onPress={onEdit}
+        style={({ pressed }) => [styles.rowMain, pressed && { opacity: 0.6 }]}
+      >
+        <TaskIcon careItem={routine.careItem} kind={routine.recordKind} />
+        <View style={styles.rowBody}>
+          <View style={styles.rowTitle}>
+            <Text
+              variant="body-xl"
+              weight="semibold"
+              color={routine.enabled ? semantic.foreground : semantic.secondaryText}
+              numberOfLines={1}
+              style={{ flexShrink: 1 }}
+            >
+              {label}
+            </Text>
+            {routine.customized ? <Badge tone="primary">내가 정한 주기</Badge> : null}
+          </View>
+          <Text variant="body-md" color={semantic.mutedForeground} numberOfLines={1}>
+            {routineSummary(routine, fallbackFoodName)}
           </Text>
-          {routine.customized ? <Badge tone="primary">내가 정한 주기</Badge> : null}
         </View>
-        <Text variant="body-md" color={semantic.mutedForeground} numberOfLines={1}>
-          {routineSummary(routine, fallbackFoodName)}
-        </Text>
-      </View>
-      <Pressable accessibilityRole="button" onPress={onEdit} style={styles.edit}>
-        <Text variant="body-lg" color={semantic.primary}>
-          수정
-        </Text>
       </Pressable>
       <Switch
         checked={enabled}
@@ -143,22 +156,14 @@ export function RoutineEditSheet({
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        // 되돌리기가 있으면 두 버튼을 위아래로 쌓는다. 한 줄이면 좁은 화면에서 저장이 밀려난다
-        <View style={[styles.footer, current?.customized && styles.footerStacked]}>
-          {current?.customized ? (
-            <Button variant="outline" size="xl" disabled={pending} onPress={() => reset.mutate()}>
-              가이드라인 주기로 되돌리기
-            </Button>
-          ) : null}
-          <Button
-            size="xl"
-            style={current?.customized ? undefined : { flex: 1 }}
-            disabled={invalid || pending}
-            onPress={() => save.mutate()}
-          >
-            저장
-          </Button>
-        </View>
+        <Button
+          size="xl"
+          style={{ flex: 1 }}
+          disabled={invalid || pending}
+          onPress={() => save.mutate()}
+        >
+          저장
+        </Button>
       }
     >
       <SheetLabel first>주기</SheetLabel>
@@ -166,7 +171,6 @@ export function RoutineEditSheet({
         inputMode="numeric"
         keyboardType="number-pad"
         maxLength={3}
-        containerStyle={{ width: 140 }}
         suffix="일마다"
         value={intervalText}
         invalid={intervalText !== "" && invalid}
@@ -180,6 +184,25 @@ export function RoutineEditSheet({
         >
           {outOfRange ? "가이드라인 범위 밖 · " : ""}가이드라인 범위: {range.min}~{range.max}일
         </Text>
+      ) : null}
+      {/* 직접 바꾼 주기면 '내가 정한 주기' 표시와 되돌리기 링크 (Figma 수정 창 · 급여 · 내가 정한 주기) */}
+      {current?.customized ? (
+        <>
+          <Text variant="body-md" color={semantic.primary} style={{ marginTop: 6 }}>
+            내가 정한 주기
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={pending}
+            hitSlop={8}
+            onPress={() => reset.mutate()}
+            style={({ pressed }) => [styles.reset, pressed && { opacity: 0.6 }]}
+          >
+            <Text variant="body-lg" weight="medium" color={semantic.primary}>
+              가이드라인 주기로 되돌리기
+            </Text>
+          </Pressable>
+        </>
       ) : null}
       {feed ? (
         <>
@@ -257,8 +280,7 @@ export function FeedIntervalAsk({ routine }: { routine: Routine }) {
 
 const styles = StyleSheet.create({
   ask: {
-    marginTop: 14,
-    borderRadius: radius.xl,
+    borderRadius: radius["2xl"],
     backgroundColor: semantic.primarySoft,
     padding: 14,
   },
@@ -267,13 +289,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
   },
-  rowBody: { flex: 1, minWidth: 0 },
+  rowMain: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12 },
+  rowBody: { flex: 1, minWidth: 0, gap: 2 },
   rowTitle: { flexDirection: "row", alignItems: "center", gap: 6 },
-  footer: { flex: 1, flexDirection: "row", gap: 8 },
-  footerStacked: { flexDirection: "column" },
-  edit: { flexShrink: 0, paddingHorizontal: 4, minHeight: 44, justifyContent: "center" },
+  reset: { alignSelf: "flex-start", marginTop: 6 },
 });

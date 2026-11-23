@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { getQueryClient } from "@pabom/core/api/query-client";
 import { configureSessionStorage, onSessionExpired } from "@pabom/core/api/session";
@@ -17,6 +18,7 @@ import PretendardSemiBold from "../../assets/fonts/Pretendard-SemiBold.otf";
 import { createSessionStorage } from "@/shared/lib/session-storage";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { OfflineBanner } from "@/shared/ui/offline-banner";
+import { PortalHost } from "@/shared/ui/portal";
 import { PabomAppIcon, PabomLogo } from "@/shared/ui/pabom-logo";
 import { semantic, shadows, toNativeShadow } from "@/shared/ui/theme";
 import { Toaster } from "@/shared/ui/toast";
@@ -47,23 +49,26 @@ export default function RootLayout() {
     <QueryClientProvider client={getQueryClient()}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <View style={styles.root}>
-          <OfflineBanner />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: semantic.background },
-              animation: "slide_from_right",
-            }}
-          >
-            <Stack.Screen name="index" options={{ animation: "none" }} />
-            <Stack.Screen name="welcome" options={{ animation: "fade" }} />
-            <Stack.Screen name="(app)" options={{ animation: "fade" }} />
-          </Stack>
+        <GestureHandlerRootView style={styles.root}>
+          {/* 시트·창은 화면 스택 위 같은 층(PortalHost)에 그린다. 토스트는 그보다 위 */}
+          <PortalHost>
+            <OfflineBanner />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: semantic.background },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen name="index" options={{ animation: "none" }} />
+              <Stack.Screen name="welcome" options={{ animation: "fade" }} />
+              <Stack.Screen name="(app)" options={{ animation: "fade" }} />
+            </Stack>
+            <SessionExpiredDialog />
+          </PortalHost>
           <Toaster />
-          <SessionExpiredDialog />
           <SplashGate />
-        </View>
+        </GestureHandlerRootView>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

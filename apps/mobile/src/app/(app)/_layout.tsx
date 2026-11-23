@@ -26,7 +26,8 @@ function AppStack() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: semantic.background },
+        // 화면 바탕은 회색(Figma). 흰색이면 줌 전환으로 작아질 때 화면 가장자리에 흰 띠가 보인다
+        contentStyle: { backgroundColor: semantic.screen },
         animation: "slide_from_right",
       }}
     >

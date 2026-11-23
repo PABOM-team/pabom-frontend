@@ -12,7 +12,7 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   /** null 이면 버튼 1개짜리 안내 창 (C4-4) */
   cancelLabel?: string | null;
-  /** danger: 빨강(삭제), inverse: 검정(나가기) */
+  /** default: 파란 그라데이션 · danger(삭제)·inverse(나가기): 검정 (Figma 확인 창) */
   tone?: "default" | "danger" | "inverse";
   pending?: boolean;
   onConfirm: () => void;
@@ -20,7 +20,10 @@ type ConfirmDialogProps = {
   onClosed?: () => void;
 };
 
-/** 가운데 뜨는 확인 창 (C4). 위험한 행동은 빨간 버튼 */
+/**
+ * 가운데 뜨는 확인 창 (Figma 확인 창, C4). 모서리 20 · 제목 body-xl semibold · 설명 body-lg gray-500.
+ * 버튼은 50px: 닫기는 회색 보조, 확인은 파랑(일반·안내) 또는 검정(삭제·나가기)
+ */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -54,20 +57,20 @@ export function ConfirmDialog({
               },
             ]}
           >
-            <Text variant="title-xs" accessibilityRole="header">
+            <Text variant="body-xl" weight="semibold" accessibilityRole="header">
               {title}
             </Text>
             {description ? (
-              <Text variant="body-lg" color={semantic.secondaryText} style={styles.description}>
+              <Text variant="body-lg" color={semantic.mutedForeground}>
                 {description}
               </Text>
             ) : null}
             <View style={styles.actions}>
               {cancelLabel ? (
                 <Button
-                  variant="outline"
-                  size="lg"
-                  style={{ flex: 1 }}
+                  variant="secondary"
+                  size="xl"
+                  style={styles.action}
                   onPress={() => onOpenChange(false)}
                 >
                   {cancelLabel}
@@ -75,9 +78,9 @@ export function ConfirmDialog({
               ) : null}
               <Button
                 variant={tone === "danger" ? "danger" : tone === "inverse" ? "inverse" : "default"}
-                size="lg"
-                style={{ flex: 1 }}
-                disabled={pending}
+                size="xl"
+                style={styles.action}
+                loading={pending}
                 onPress={onConfirm}
               >
                 {confirmLabel}
@@ -94,12 +97,15 @@ const styles = StyleSheet.create({
   host: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 28 },
   dialog: {
     width: "100%",
-    maxWidth: 336,
+    maxWidth: 334,
+    gap: 10,
     borderRadius: radius["2xl"],
     backgroundColor: semantic.background,
-    padding: 20,
+    paddingTop: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
     ...toNativeShadow(shadows.lg),
   },
-  description: { marginTop: 8, lineHeight: 20 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 20 },
+  actions: { flexDirection: "row", gap: 8, paddingTop: 6 },
+  action: { flex: 1, height: 50 },
 });

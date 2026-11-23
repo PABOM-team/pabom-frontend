@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ExclamationIcon } from "./icons";
 import { Text } from "./text";
-import { semantic, spacing } from "./theme";
+import { alpha, colors, semantic, spacing } from "./theme";
 
 /**
  * 연결이 끊기면 위쪽에 붙는 배너 (C5-1). 연결되면 저절로 사라진다.
@@ -31,7 +31,7 @@ function Banner() {
           인터넷 연결이 끊겼어요
         </Text>
       </View>
-      <Text variant="body-md" weight="medium" color="rgba(255,255,255,0.8)">
+      <Text variant="body-md" weight="medium" color={alpha(colors.white, 0.8)}>
         연결되면 다시 불러와요
       </Text>
     </View>

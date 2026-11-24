@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef } from "react";
 import { authProviderSchema } from "@pabom/core/domain/user";
-import { completeLogin, FullScreenLoading } from "@/features/auth";
+import { completeLogin, LoginLoading } from "@/features/auth";
 import { router } from "expo-router";
 
 /**
@@ -34,5 +34,5 @@ export default function AuthCallbackScreen() {
     });
   }, [params]);
 
-  return <FullScreenLoading />;
+  return <LoginLoading />;
 }

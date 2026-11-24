@@ -1,115 +1,210 @@
-import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams, type Href } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { petQueries } from "@/entities/pet";
 import { speciesQueries } from "@/entities/species";
-import { SPECIES_GROUP_LABEL, SPECIES_GROUPS, type SpeciesGroup } from "@pabom/core/domain/species";
-import { PhotoBox, Skeleton } from "@/shared/ui/display";
-import { ChevronRightIcon } from "@/shared/ui/icons";
+import {
+  SPECIES_GROUP_LABEL,
+  SPECIES_GROUPS,
+  SPECIES_LABEL,
+  type Species,
+  type SpeciesGroup,
+} from "@pabom/core/domain/species";
+import { Skeleton } from "@/shared/ui/display";
+import { ChevronRightIcon, SearchIcon } from "@/shared/ui/icons";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
-import { Text } from "@/shared/ui/text";
-import { semantic } from "@/shared/ui/theme";
+import { Text, textStyles, weightStyle } from "@/shared/ui/text";
+import { radius, semantic } from "@/shared/ui/theme";
 import { TopBar } from "@/shared/ui/top-bar";
+import { Group, GroupRow, PAGE_PADDING, RoundThumb, RowText, SectionLabel } from "./settings-ui";
 
-const isGroup = (value: string | undefined): value is SpeciesGroup =>
-  SPECIES_GROUPS.includes(value as SpeciesGroup);
+type Filter = "all" | SpeciesGroup;
 
-/** SCR-S04 관리 가이드라인 1 분류 → 2 종. 분류·종 목록은 서버에서 받아 그린다 [제안] */
+const FILTERS: readonly { value: Filter; label: string }[] = [
+  { value: "all", label: "전체" },
+  ...SPECIES_GROUPS.map((g) => ({ value: g, label: SPECIES_GROUP_LABEL[g] })),
+];
+
+const isFilter = (value: string | undefined): value is Filter =>
+  FILTERS.some((f) => f.value === value);
+
+/** 검색어가 이름·공식 이름·별칭 어디든 들어 있으면 */
+const matches = (species: Species, query: string) =>
+  [species.commonName, species.officialName, ...species.aliases].some((name) =>
+    name.toLowerCase().includes(query.toLowerCase()),
+  );
+
+/**
+ * SCR-S04 관리 가이드라인 1 종 고르기. 검색 · 분류 칩 · 내 개체 · 전체 종.
+ * 뱀(볼파이톤)은 MVP 범위 밖이라 가이드라인이 없어 '준비 중' 줄만 흐리게 둔다
+ */
 export function GuidelinesScreen() {
-  const { group } = useLocalSearchParams<{ group?: string }>();
-  const { data, isPending } = useQuery(speciesQueries.list());
+  const params = useLocalSearchParams<{ group?: string }>();
+  const [filter, setFilter] = useState<Filter>(isFilter(params.group) ? params.group : "all");
+  const [query, setQuery] = useState("");
+  const species = useQuery(speciesQueries.list());
+  const pets = useQuery(petQueries.list());
+  const list = species.data ?? [];
+  // 종마다 할 일 가짓수 (가이드라인 표의 관리 항목 수). 종 화면에서도 같은 조회를 쓴다
+  const tables = useQueries({
+    queries: list.map((s) => speciesQueries.careStandards(s.id)),
+  });
+  const careCount = (id: Species["id"]) => {
+    const table = tables[list.findIndex((s) => s.id === id)]?.data;
+    return table ? new Set(table.standards.map((row) => row.careItem)).size : null;
+  };
 
-  if (isGroup(group)) {
-    const list = (data ?? []).filter((s) => s.group === group);
+  const searching = query.trim().length > 0;
+  const shown = searching
+    ? list.filter((s) => matches(s, query.trim()))
+    : list.filter((s) => filter === "all" || s.group === filter);
+  const showSnake = !searching && (filter === "all" || filter === "snake");
+  const myPets = filter === "all" || filter === "lizard" ? (pets.data ?? []) : [];
+
+  const speciesRow = (s: Species, index: number) => {
+    const count = careCount(s.id);
     return (
-      <Screen>
-        <TopBar title={SPECIES_GROUP_LABEL[group]} fallbackHref="/settings/guidelines" />
-        <ScreenBody>
-          <Text variant="title-xs" style={styles.heading}>
-            어떤 종인가요?
-          </Text>
-          {isPending ? <Skeleton height={128} /> : null}
-          <View>
-            {list.map((s) => (
-              <Row
-                key={s.id}
-                href={{ pathname: "/settings/guidelines/[speciesId]", params: { speciesId: s.id } }}
-                title={s.commonName}
-              />
-            ))}
-          </View>
-          <Text variant="body-md" color={semantic.mutedForeground} style={{ marginTop: 12 }}>
-            종이 늘면 이 목록만 길어져요
-          </Text>
-        </ScreenBody>
-      </Screen>
+      <GroupRow
+        key={s.id}
+        accessibilityRole="link"
+        divider={index > 0}
+        dividerInset={72}
+        href={{ pathname: "/settings/guidelines/[speciesId]", params: { speciesId: s.id } }}
+      >
+        {/* 종 사진은 받을 데이터가 없어 기본 모양으로 */}
+        <RoundThumb />
+        <RowText
+          title={s.commonName}
+          description={[SPECIES_GROUP_LABEL[s.group], count ? `할 일 ${count}가지` : null]
+            .filter(Boolean)
+            .join(" · ")}
+        />
+        <ChevronRightIcon size={20} color={semantic.foreground} />
+      </GroupRow>
     );
-  }
+  };
 
   return (
-    <Screen>
-      <TopBar title="관리 가이드라인" fallbackHref="/settings" />
-      <ScreenBody>
-        <Text variant="title-xs" style={styles.heading}>
-          어떤 친구의 가이드라인을 볼까요?
+    <Screen style={{ backgroundColor: semantic.screen }}>
+      <TopBar
+        title="관리 가이드라인"
+        fallbackHref="/settings"
+        style={{ backgroundColor: semantic.screen }}
+      />
+      <ScreenBody flush contentStyle={styles.content}>
+        <Text variant="title-sm" style={styles.heading}>
+          {"어떤 종의 가이드라인을\n볼까요?"}
         </Text>
-        <View>
-          {SPECIES_GROUPS.map((g) => {
-            const count = (data ?? []).filter((s) => s.group === g).length;
-            // 뱀(볼파이톤)은 MVP 범위 밖이라 가이드라인이 없다. 줄은 Figma 그대로 두고 누를 곳만 없다
-            return (
-              <Row
-                key={g}
-                href={
-                  g === "snake"
-                    ? undefined
-                    : { pathname: "/settings/guidelines", params: { group: g } }
-                }
-                title={SPECIES_GROUP_LABEL[g]}
-                description={g === "snake" ? "볼파이톤" : data ? `종 ${count}개` : undefined}
-              />
-            );
-          })}
+
+        <View style={styles.search}>
+          <SearchIcon size={20} color={semantic.subtleForeground} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="종 이름으로 찾기"
+            placeholderTextColor={semantic.subtleForeground}
+            returnKeyType="search"
+            accessibilityLabel="종 이름으로 찾기"
+            style={[textStyles["body-xl"], weightStyle("regular"), styles.searchInput]}
+          />
         </View>
+
+        {searching ? null : (
+          <View accessibilityRole="tablist" style={styles.chips}>
+            {FILTERS.map((f) => {
+              const selected = f.value === filter;
+              return (
+                <Pressable
+                  key={f.value}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  onPress={() => setFilter(f.value)}
+                  style={[styles.chip, selected && { backgroundColor: semantic.inverse }]}
+                >
+                  <Text
+                    variant="body-lg"
+                    weight="semibold"
+                    color={selected ? semantic.inverseForeground : semantic.secondaryText}
+                  >
+                    {f.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        {!searching && myPets.length > 0 ? (
+          <>
+            <SectionLabel>내 개체</SectionLabel>
+            <Group>
+              {myPets.map((pet, index) => (
+                <GroupRow
+                  key={pet.id}
+                  accessibilityRole="link"
+                  divider={index > 0}
+                  dividerInset={72}
+                  href={{
+                    pathname: "/settings/guidelines/[speciesId]",
+                    params: { speciesId: pet.speciesId, petId: pet.id },
+                  }}
+                >
+                  <RoundThumb src={pet.photoUrl} />
+                  <RowText
+                    title={pet.name}
+                    description={`${SPECIES_LABEL[pet.speciesId]} 가이드라인`}
+                  />
+                  <ChevronRightIcon size={20} color={semantic.foreground} />
+                </GroupRow>
+              ))}
+            </Group>
+          </>
+        ) : null}
+
+        <SectionLabel>
+          {searching ? `찾은 종 ${shown.length}` : `전체 ${shown.length + (showSnake ? 1 : 0)}종`}
+        </SectionLabel>
+        {species.isPending ? (
+          <Skeleton height={144} style={{ borderRadius: radius["2xl"] }} />
+        ) : shown.length === 0 && !showSnake ? (
+          <Text variant="body-md" color={semantic.mutedForeground}>
+            찾는 종이 없어요
+          </Text>
+        ) : (
+          <Group>
+            {shown.map(speciesRow)}
+            {showSnake ? (
+              <GroupRow divider={shown.length > 0} dividerInset={72}>
+                <RoundThumb dim />
+                <RowText dim title="볼파이톤" description="뱀 · 준비 중이에요" />
+              </GroupRow>
+            ) : null}
+          </Group>
+        )}
       </ScreenBody>
     </Screen>
   );
 }
 
-function Row({ href, title, description }: { href?: Href; title: string; description?: string }) {
-  const body = (
-    <>
-      <PhotoBox />
-      <View style={styles.grow}>
-        <Text variant="body-xl" weight="bold">
-          {title}
-        </Text>
-        {description ? (
-          <Text variant="body-md" color={semantic.mutedForeground}>
-            {description}
-          </Text>
-        ) : null}
-      </View>
-      <ChevronRightIcon size={16} color={semantic.subtleForeground} />
-    </>
-  );
-  return href ? (
-    <Pressable accessibilityRole="link" onPress={() => router.push(href)} style={styles.row}>
-      {body}
-    </Pressable>
-  ) : (
-    <View style={styles.row}>{body}</View>
-  );
-}
-
 const styles = StyleSheet.create({
-  heading: { marginBottom: 8 },
-  row: {
+  content: { paddingHorizontal: PAGE_PADDING, paddingTop: 16 },
+  heading: { lineHeight: 34, marginBottom: 14 },
+  search: {
+    height: 48,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
+    gap: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.lg,
+    backgroundColor: semantic.card,
   },
-  grow: { flex: 1, minWidth: 0 },
+  searchInput: { flex: 1, height: 48, paddingVertical: 0, color: semantic.foreground },
+  chips: { flexDirection: "row", gap: 8, marginTop: 12 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    backgroundColor: semantic.card,
+  },
 });

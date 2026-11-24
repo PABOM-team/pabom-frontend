@@ -1,15 +1,20 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
+  eachMonthOfInterval,
   endOfMonth,
   format,
-  max as maxDate,
+  isSameMonth,
   min as minDate,
+  parseISO,
   startOfMonth,
-  subMonths,
+  subDays,
 } from "date-fns";
+import { ko } from "date-fns/locale";
 import { useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState, type ComponentRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,146 +23,178 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { petQueries } from "@/entities/pet";
-import { recordQueries, RecordRow } from "@/entities/record";
+import { recordQueries, RecordGroup, RecordRow } from "@/entities/record";
 import { feedResultSetOf, speciesQueries } from "@/entities/species";
 import { EditRecordSheet } from "@/features/record-editor";
+import { careItemLabel, compareCareItems, MEMO_CODE } from "@pabom/core/domain/care";
 import type { CareRecord } from "@pabom/core/domain/record";
 import type { SpeciesId } from "@pabom/core/domain/species";
-import { addDays, formatDayLabel, toYmd, ymdOf } from "@pabom/core/lib/date";
-import { LoadError, Segmented, Spinner } from "@/shared/ui/display";
-import { CheckIcon, DotsVerticalIcon } from "@/shared/ui/icons";
-import { PhotoViewer } from "@/shared/ui/photo-viewer";
-import { Screen, ScreenBody } from "@/shared/ui/screen";
+import { fromYmd, toYmd, ymdOf } from "@pabom/core/lib/date";
+import { Button } from "@/shared/ui/button";
+import { LoadError, Spinner, StateMessage } from "@/shared/ui/display";
+import { ChevronDownIcon } from "@/shared/ui/icons";
+import { Screen } from "@/shared/ui/screen";
 import { Sheet } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
-import { semantic, spacing } from "@/shared/ui/theme";
-import { IconButton, TopBar } from "@/shared/ui/top-bar";
+import { radius, semantic } from "@/shared/ui/theme";
+import { TopBar } from "@/shared/ui/top-bar";
 
-const PERIODS = [1, 2, 6, 12] as const;
-type Period = (typeof PERIODS)[number];
-/** 달 탭 한 칸의 최소 너비 (웹 min-w-[64px]) */
-const MONTH_TAB_WIDTH = 64;
+/** Figma 본문 좌우 여백 */
+const GUTTER = 16;
+/** 기록 조회 한 번의 최대 기간 (API-50: 366일) */
+const RANGE_DAYS = 365;
+/** 끝에서 이만큼 안으로 들어오면 다음 쪽을 불러온다 */
+const END_THRESHOLD = 200;
+/** 칩·달을 바꿀 때 목록 바꿈 (Figma SMART_ANIMATE 0.25 ease-out) */
+const SWAP_MS = 250;
 
-/** SCR-P07 전체 기록. 기본 기간 최근 2개월 [제안], 달별로 나눠 보여 준다 */
+const monthKey = (date: Date) => format(date, "yyyy-MM");
+const monthLabel = (date: Date) => format(date, "M월");
+const dayHeading = (ymd: string) => format(fromYmd(ymd), "M월 d일 EEEE", { locale: ko });
+
+/** SCR-P07 전체 기록. 종류 칩으로 좁히고, 달별로 끊김 없이 이어 보며, 'N월 ▾'로 달을 바로 고른다 */
 export function PetRecordsScreen() {
   const { petId } = useLocalSearchParams<{ petId: string }>();
   const { data: detail } = useQuery(petQueries.detail(petId));
-  const [period, setPeriod] = useState<Period>(2);
-  const [periodOpen, setPeriodOpen] = useState(false);
-  const today = new Date();
-  const rangeStart = addDays(subMonths(today, period), 1);
-  const months = Array.from({ length: period + 1 }, (_, i) =>
-    startOfMonth(subMonths(today, period - i)),
-  );
-  const [monthIndex, setMonthIndex] = useState<number | null>(null);
-  const selectedIndex = monthIndex ?? months.length - 1;
-  const tablistRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const [tablistWidth, setTablistWidth] = useState(0);
+  const [today] = useState(() => new Date());
+  const [careItem, setCareItem] = useState<string | null>(null);
+  /** 목록 맨 위 달. null 이면 이번 달(오늘)부터 */
+  const [anchor, setAnchor] = useState<Date | null>(null);
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(today));
+  const [monthOpen, setMonthOpen] = useState(false);
 
-  // 기간을 늘려 달 탭이 넘치면 고른 달이 화면 안에 오도록 가로로 스크롤한다
-  useEffect(() => {
-    if (!tablistWidth) return;
-    const x = Math.max(0, (selectedIndex + 1) * MONTH_TAB_WIDTH - tablistWidth);
-    tablistRef.current?.scrollTo({ x, animated: false });
-  }, [period, selectedIndex, tablistWidth]);
-  const month = months[selectedIndex]!;
-  const from = toYmd(maxDate([month, rangeStart]));
-  const to = toYmd(minDate([endOfMonth(month), today]));
-  const monthOptions = months.map((m) => ({ value: m.toISOString(), label: format(m, "M월") }));
+  const pet = detail?.pet;
+  const chips = [
+    ...new Map(
+      [...(detail?.routines ?? [])]
+        .sort(compareCareItems)
+        .map((r) => [r.careItem, careItemLabel(r.careItem, r.careItemName)] as const),
+    ),
+    [MEMO_CODE, careItemLabel(MEMO_CODE)] as const,
+  ];
+  const firstMonth = startOfMonth(
+    pet?.firstRecordOn ? fromYmd(pet.firstRecordOn) : subDays(today, RANGE_DAYS),
+  );
+  const to = anchor ? minDate([endOfMonth(anchor), today]) : today;
+  const listKey = `${careItem ?? "all"}:${toYmd(to)}`;
+
+  const jumpTo = (month: Date) => {
+    setAnchor(isSameMonth(month, today) ? null : month);
+    setVisibleMonth(startOfMonth(month));
+    setMonthOpen(false);
+  };
 
   return (
-    <Screen>
+    <Screen style={styles.screen}>
       <TopBar
-        title={detail ? `${detail.pet.name}의 전체 기록` : "전체 기록"}
+        title={pet ? `${pet.name}의 전체 기록` : "전체 기록"}
         fallbackHref={{ pathname: "/pets/[petId]", params: { petId } }}
-        trailing={
-          <IconButton accessibilityLabel="조회 기간" size={40} onPress={() => setPeriodOpen(true)}>
-            <DotsVerticalIcon size={20} />
-          </IconButton>
-        }
       />
-      <View style={styles.tabs}>
+      <View style={styles.top}>
         <ScrollView
-          ref={tablistRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-          onLayout={(e) => setTablistWidth(e.nativeEvent.layout.width)}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chips}
         >
-          <View style={{ flex: 1 }}>
-            <Segmented
-              label="달"
-              options={monthOptions}
-              value={month.toISOString()}
-              minItemWidth={MONTH_TAB_WIDTH}
-              onChange={(iso) => setMonthIndex(monthOptions.findIndex((o) => o.value === iso))}
-            />
-          </View>
+          {[[null, "전체"] as const, ...chips].map(([code, label]) => {
+            const selected = code === careItem;
+            return (
+              <Pressable
+                key={code ?? "all"}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setCareItem(code)}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                <Text
+                  variant="body-lg"
+                  weight="semibold"
+                  color={selected ? semantic.inverseForeground : semantic.secondaryText}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
-        <Text variant="body-md" color={semantic.mutedForeground} style={{ marginTop: 8 }}>
-          최근 {period}개월 · {format(rangeStart, "M월 d일")} ~ {format(today, "M월 d일")}
-        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${monthLabel(visibleMonth)}, 달 고르기`}
+          onPress={() => setMonthOpen(true)}
+          style={styles.monthButton}
+        >
+          <Text variant="title-xs">{monthLabel(visibleMonth)}</Text>
+          <ChevronDownIcon size={20} color={semantic.foreground} />
+        </Pressable>
       </View>
-      <MonthRecords
-        key={`${from}-${to}`}
+      <RecordList
+        key={listKey}
         petId={petId}
-        speciesId={detail?.pet.speciesId}
-        from={from}
-        to={to}
-        isOldest={selectedIndex === 0}
-        period={period}
-        onExtend={() => setPeriodOpen(true)}
+        speciesId={pet?.speciesId}
+        careItem={careItem}
+        from={toYmd(subDays(to, RANGE_DAYS))}
+        to={toYmd(to)}
+        onVisibleMonth={setVisibleMonth}
       />
-      <Sheet
-        open={periodOpen}
-        onOpenChange={setPeriodOpen}
-        title="조회 기간"
-        description="고른 기간의 기록을 달별로 보여 줘요."
-      >
-        {PERIODS.map((p) => (
-          <Pressable
-            key={p}
-            accessibilityRole="button"
-            accessibilityState={{ selected: p === period }}
-            onPress={() => {
-              setPeriod(p);
-              setMonthIndex(null);
-              setPeriodOpen(false);
-            }}
-            style={styles.periodRow}
-          >
-            <Text variant="body-xl">최근 {p}개월</Text>
-            {p === period ? <CheckIcon size={16} color={semantic.primary} /> : null}
-          </Pressable>
-        ))}
-      </Sheet>
+      <MonthSheet
+        open={monthOpen}
+        onOpenChange={setMonthOpen}
+        months={eachMonthOfInterval({ start: firstMonth, end: startOfMonth(today) })}
+        current={visibleMonth}
+        onPick={jumpTo}
+      />
     </Screen>
   );
 }
 
-/** 끝에서 이만큼 안으로 들어오면 다음 쪽을 불러온다 */
-const END_THRESHOLD = 200;
+type DayGroup = { day: string; items: CareRecord[] };
+type MonthGroup = { month: string; date: Date; days: DayGroup[] };
 
-function MonthRecords({
+/** 기록을 달 → 날로 묶는다 (응답은 최근 순) */
+const groupByMonth = (records: CareRecord[]): MonthGroup[] =>
+  records.reduce<MonthGroup[]>((months, record) => {
+    const day = ymdOf(record.occurredAt);
+    const date = parseISO(record.occurredAt);
+    const key = monthKey(date);
+    const last = months[months.length - 1];
+    if (!last || last.month !== key) {
+      return [
+        ...months,
+        { month: key, date: startOfMonth(date), days: [{ day, items: [record] }] },
+      ];
+    }
+    const lastDay = last.days[last.days.length - 1]!;
+    const days =
+      lastDay.day === day
+        ? [...last.days.slice(0, -1), { day, items: [...lastDay.items, record] }]
+        : [...last.days, { day, items: [record] }];
+    return [...months.slice(0, -1), { ...last, days }];
+  }, []);
+
+function RecordList({
   petId,
   speciesId,
+  careItem,
   from,
   to,
-  isOldest,
-  period,
-  onExtend,
+  onVisibleMonth,
 }: {
   petId: string;
   speciesId: SpeciesId | undefined;
+  careItem: string | null;
   from: string;
   to: string;
-  isOldest: boolean;
-  period: number;
-  onExtend: () => void;
+  onVisibleMonth: (month: Date) => void;
 }) {
   const [editId, setEditId] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<CareRecord | null>(null);
-  const query = useInfiniteQuery(recordQueries.infinite({ petId, from, to, limit: 20 }));
+  const [appear] = useState(() => new Animated.Value(0));
+  /** 달 묶음의 세로 위치. 스크롤하면서 위 'N월 ▾'를 바꾸는 데만 쓴다 (화면 상태 아님) */
+  const offsets = useRef<Record<string, { y: number; date: Date }>>({});
+  const shownMonth = useRef<string | null>(null);
+  const query = useInfiniteQuery(
+    recordQueries.infinite({ petId, careItem: careItem ?? undefined, from, to, limit: 30 }),
+  );
   // 급여 기록의 먹은 정도 이름을 종의 먹이 묶음에 맞춘다
   const { data: careStandards } = useQuery({
     ...speciesQueries.careStandards(speciesId ?? "crested_gecko"),
@@ -165,12 +202,28 @@ function MonthRecords({
   });
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
 
-  // 웹의 IntersectionObserver 대신 스크롤이 끝에 가까워지면 다음 쪽을 불러온다
+  useEffect(() => {
+    Animated.timing(appear, {
+      toValue: 1,
+      duration: SWAP_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [appear]);
+
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
     const nearEnd =
       contentOffset.y + layoutMeasurement.height >= contentSize.height - END_THRESHOLD;
     if (nearEnd && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    // 달 묶음 머리가 위에 닿으면 위 제목을 그 달로 바꾼다
+    const current = Object.entries(offsets.current)
+      .filter(([, o]) => o.y <= contentOffset.y + 8)
+      .sort(([, a], [, b]) => b.y - a.y)[0];
+    if (current && current[0] !== shownMonth.current) {
+      shownMonth.current = current[0];
+      onVisibleMonth(current[1].date);
+    }
   };
 
   if (query.isPending) {
@@ -182,87 +235,181 @@ function MonthRecords({
   }
   if (query.isError) return <LoadError onRetry={() => query.refetch()} />;
 
-  const records = query.data.pages.flatMap((p) => p.items);
-  const groups = records.reduce<Map<string, CareRecord[]>>((map, record) => {
-    const day = ymdOf(record.occurredAt);
-    return new Map(map).set(day, [...(map.get(day) ?? []), record]);
-  }, new Map());
+  const months = groupByMonth(query.data.pages.flatMap((p) => p.items));
 
   return (
-    <ScreenBody flush contentStyle={{ paddingTop: 0 }} onScroll={onScroll} scrollEventThrottle={16}>
-      {[...groups.entries()].map(([day, items]) => (
-        <View key={day}>
-          <Text variant="body-lg" color={semantic.secondaryText} style={styles.dayHeader}>
-            {formatDayLabel(day)}
-          </Text>
-          <View style={{ paddingHorizontal: spacing.gutter }}>
-            {items.map((record) => (
-              <RecordRow
-                key={record.id}
-                record={record}
-                variant="list"
-                feedResultSet={feedResultSetOf(careStandards, record.careItem)}
-                onPress={() => setEditId(record.id)}
-                onPhotoPress={() => setViewing(record)}
-              />
+    <Animated.View
+      style={{
+        flex: 1,
+        opacity: appear,
+        transform: [
+          { translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) },
+        ],
+      }}
+    >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.list}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
+        {months.length === 0 ? (
+          <StateMessage compact icon={null} title="기록이 없어요" style={{ paddingTop: 80 }} />
+        ) : null}
+        {months.map((month, index) => (
+          <View
+            key={month.month}
+            style={styles.month}
+            onLayout={(e) => {
+              offsets.current = {
+                ...offsets.current,
+                [month.month]: { y: e.nativeEvent.layout.y, date: month.date },
+              };
+            }}
+          >
+            {index > 0 ? (
+              <Text variant="title-xs" accessibilityRole="header" style={styles.monthHeading}>
+                {monthLabel(month.date)}
+              </Text>
+            ) : null}
+            {month.days.map(({ day, items }) => (
+              <View key={day} style={styles.day}>
+                <Text variant="body-xl" weight="semibold" color={semantic.secondaryText}>
+                  {dayHeading(day)}
+                </Text>
+                <RecordGroup>
+                  {items.map((record, i) => (
+                    <RecordRow
+                      key={record.id}
+                      record={record}
+                      variant="list"
+                      first={i === 0}
+                      feedResultSet={feedResultSetOf(careStandards, record.careItem)}
+                      onPress={() => setEditId(record.id)}
+                    />
+                  ))}
+                </RecordGroup>
+              </View>
             ))}
           </View>
-        </View>
-      ))}
-      <View style={styles.sentinel}>
-        {isFetchingNextPage ? (
-          <Spinner />
-        ) : !hasNextPage && isOldest ? (
-          <Text variant="body-md" color={semantic.mutedForeground} align="center">
-            최근 {period}개월 기록을 모두 봤어요 ·{" "}
-            <Text
-              variant="body-md"
-              weight="medium"
-              color={semantic.primary}
-              accessibilityRole="button"
-              onPress={onExtend}
-            >
-              기간 늘리기
-            </Text>
-          </Text>
-        ) : null}
-      </View>
+        ))}
+        <View style={styles.sentinel}>{isFetchingNextPage ? <Spinner /> : null}</View>
+      </ScrollView>
       <EditRecordSheet
         recordId={editId}
         speciesId={speciesId}
         onOpenChange={(open) => !open && setEditId(null)}
       />
-      <PhotoViewer
-        open={Boolean(viewing)}
-        onOpenChange={(o) => !o && setViewing(null)}
-        photos={viewing?.photos ?? []}
-        caption={
-          viewing ? (
-            <Text weight="bold" color="#ffffff">
-              {formatDayLabel(ymdOf(viewing.occurredAt))}
-            </Text>
-          ) : null
-        }
-      />
-    </ScreenBody>
+    </Animated.View>
+  );
+}
+
+/** 월 고르기 시트: 해마다 4×3 · 지금 보는 달은 검정 · 기록 없는 달은 흐리게 */
+function MonthSheet({
+  open,
+  onOpenChange,
+  months,
+  current,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** 고를 수 있는 달 (첫 기록 달 ~ 이번 달) */
+  months: Date[];
+  current: Date;
+  onPick: (month: Date) => void;
+}) {
+  const enabled = new Set(months.map(monthKey));
+  const years = [...new Set(months.map((m) => m.getFullYear()))].reverse();
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="어느 달로 갈까요?"
+      description="기록이 있는 달만 고를 수 있어요"
+      footer={
+        <Button
+          variant="secondary"
+          size="xl"
+          style={{ flex: 1 }}
+          onPress={() => onOpenChange(false)}
+        >
+          닫기
+        </Button>
+      }
+    >
+      {years.map((year) => (
+        <View key={year} style={styles.year}>
+          <Text variant="body-xl" weight="semibold" color={semantic.secondaryText}>
+            {`${year}년`}
+          </Text>
+          <View style={styles.monthGrid}>
+            {Array.from({ length: 12 }, (_, i) => new Date(year, i, 1)).map((month) => {
+              const key = monthKey(month);
+              const selected = key === monthKey(current);
+              const disabled = !enabled.has(key);
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected, disabled }}
+                  disabled={disabled}
+                  onPress={() => onPick(month)}
+                  style={[styles.monthCell, selected && styles.monthCellSelected]}
+                >
+                  <Text
+                    variant="body-xl"
+                    weight="semibold"
+                    color={
+                      selected
+                        ? semantic.inverseForeground
+                        : disabled
+                          ? semantic.disabledForeground
+                          : semantic.foreground
+                    }
+                  >
+                    {monthLabel(month)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexShrink: 0, paddingHorizontal: spacing.gutter, paddingBottom: 8 },
-  periodRow: {
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: semantic.border,
+  screen: { backgroundColor: semantic.screen },
+  top: { flexShrink: 0, gap: 20, paddingHorizontal: GUTTER, paddingTop: 8, paddingBottom: 10 },
+  chipScroll: { marginHorizontal: -GUTTER },
+  chips: { gap: 6, paddingHorizontal: GUTTER },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    backgroundColor: semantic.card,
   },
+  chipSelected: { backgroundColor: semantic.inverse },
+  monthButton: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start" },
   loading: { flex: 1, alignItems: "center", paddingTop: 40 },
-  dayHeader: {
-    backgroundColor: semantic.muted,
-    paddingHorizontal: spacing.gutter,
-    paddingVertical: 6,
-  },
+  list: { gap: 20, paddingHorizontal: GUTTER, paddingTop: 10, paddingBottom: 40 },
+  month: { gap: 20 },
+  monthHeading: { marginTop: 4 },
+  day: { gap: 10 },
   sentinel: { alignItems: "center", paddingVertical: 20 },
+  year: { gap: 10, marginBottom: 12 },
+  monthGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  monthCell: {
+    width: "23%",
+    height: 48,
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.lg,
+    backgroundColor: semantic.secondary,
+  },
+  monthCellSelected: { backgroundColor: semantic.inverse },
 });

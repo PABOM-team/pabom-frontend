@@ -4,9 +4,11 @@ export { Chip, ChipGroup, type ChipSize, type ChipTone } from "./chip";
 export { ConfirmDialog } from "./confirm-dialog";
 export { DateTimeField } from "./date-time-field";
 export {
+  AreaError,
   Avatar,
   Badge,
   Card,
+  Collapsible,
   Divider,
   InfoBox,
   InfoRow,
@@ -14,6 +16,7 @@ export {
   PhotoBox,
   Segmented,
   Skeleton,
+  SkeletonGroup,
   Spinner,
   StateMessage,
   StepProgress,
@@ -22,6 +25,7 @@ export {
 export {
   Checkbox,
   CheckboxRow,
+  CheckToggle,
   Field,
   FieldButton,
   HelpMessage,
@@ -37,6 +41,7 @@ export { PhotoInput, pickImages, takePhoto, uploadPicked } from "./photo-input";
 export { PhotoViewer } from "./photo-viewer";
 export { Screen, ScreenBody, ScreenCenter, ScreenFooter } from "./screen";
 export { AnimatedModal, Sheet, SheetLabel } from "./sheet";
+export { SurfaceProvider, useSurface, type Surface } from "./surface";
 export {
   Text,
   textStyles,

@@ -8,11 +8,11 @@ import type { CompleteInput } from "@pabom/core/domain/record";
 import { canPostpone, type Task } from "@pabom/core/domain/today";
 import { formatShortDay } from "@pabom/core/lib/date";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import type { MenuItem } from "@/shared/ui/menu";
 import { toast } from "@/shared/ui/toast";
 import { BasisSheet } from "./basis-sheet";
 import { CompleteSheet } from "./complete-sheet";
 import { PostponeSheet, SkipSheet } from "./postpone-sheet";
+import { TaskSheet, type TaskMenuItem } from "./task-sheet";
 
 /**
  * 오늘 할 일 카드의 행동 모음 (FL-02·FL-03).
@@ -30,6 +30,7 @@ export function useTaskActions({
   const [postponing, setPostponing] = useState<Task | null>(null);
   const [skipping, setSkipping] = useState<Task | null>(null);
   const [basis, setBasis] = useState<Task | null>(null);
+  const [menuTask, setMenuTask] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [alreadyOpen, setAlreadyOpen] = useState(false);
@@ -117,40 +118,56 @@ export function useTaskActions({
     else setCompleting(task);
   };
 
-  const menuFor = (task: Task): MenuItem[] => {
+  /** 할 일 시트(H02) 항목. 자주 쓰는 순: 미루기 → 이번만 건너뛰기 → 수정하기, 삭제는 맨 아래 회색 */
+  const menuFor = (task: Task): TaskMenuItem[] => {
     if (task.state === "done") {
       return [
-        { label: "수정하기", onSelect: () => task.record && onEditRecord(task.record.id) },
-        { label: "완료 취소", onSelect: () => task.record && cancelRecord.mutate(task.record.id) },
+        {
+          label: "수정하기",
+          icon: "edit",
+          onSelect: () => task.record && onEditRecord(task.record.id),
+        },
+        {
+          label: "완료 취소",
+          icon: "undo",
+          onSelect: () => task.record && cancelRecord.mutate(task.record.id),
+        },
       ];
     }
     if (task.state === "skipped") {
       return [
         {
           label: "건너뛰기 취소",
+          icon: "undo",
           onSelect: () => task.record && cancelRecord.mutate(task.record.id),
         },
-        { label: "수정하기", onSelect: () => onEditRoutine(task) },
+        { label: "수정하기", icon: "edit", onSelect: () => onEditRoutine(task) },
       ];
     }
     // 미룬 할 일은 다시 미루기만 할 수 있다 (U3). 미루기 취소는 Q-50에 따라 화면에서 뺀다
-    const postponeItem: MenuItem[] = canPostpone(task)
-      ? [{ label: "미루기", onSelect: () => setPostponing(task) }]
+    const postponeItem: TaskMenuItem[] = canPostpone(task)
+      ? [{ label: "미루기", icon: "postpone", onSelect: () => setPostponing(task) }]
       : [];
-    // 앞 날짜(U1)의 ⋯: 그날 할 일은 아직 체크를 못 하니 일정 자체를 고치거나 지운다.
+    const deleteItem: TaskMenuItem = {
+      label: "삭제하기",
+      icon: "delete",
+      tone: "danger",
+      onSelect: () => setDeleting(task),
+    };
+    // 앞 날짜(U1): 그날 할 일은 아직 체크를 못 하니 일정 자체를 고치거나 지운다.
     // 이미 미룬 할 일이면 그 날짜에서도 다시 미룰 수 있다 (T06-04)
     if (task.state === "planned") {
       return [
-        { label: "수정하기", onSelect: () => onEditRoutine(task) },
         ...postponeItem,
-        { label: "삭제하기", tone: "danger", onSelect: () => setDeleting(task) },
+        { label: "수정하기", icon: "edit", onSelect: () => onEditRoutine(task) },
+        deleteItem,
       ];
     }
     return [
-      { label: "수정하기", onSelect: () => onEditRoutine(task) },
       ...postponeItem,
-      { label: "건너뛰기", onSelect: () => setSkipping(task) },
-      { label: "삭제하기", tone: "danger", onSelect: () => setDeleting(task) },
+      { label: "이번만 건너뛰기", icon: "skip", onSelect: () => setSkipping(task) },
+      { label: "수정하기", icon: "edit", onSelect: () => onEditRoutine(task) },
+      deleteItem,
     ];
   };
 
@@ -174,6 +191,12 @@ export function useTaskActions({
         pending={skip.isPending}
         onSubmit={(task, reason) => skip.mutate({ task, reason })}
       />
+      <TaskSheet
+        task={menuTask}
+        items={menuTask ? menuFor(menuTask) : []}
+        onOpenChange={(open) => !open && setMenuTask(null)}
+        onOpenBasis={setBasis}
+      />
       <BasisSheet task={basis} onOpenChange={(open) => !open && setBasis(null)} />
       <ConfirmDialog
         open={Boolean(deleting)}
@@ -181,7 +204,7 @@ export function useTaskActions({
         title={deleting ? `'${deleting.careItemName}' 할 일을 삭제할까요?` : ""}
         description="앞으로 오늘 할 일에 뜨지 않아요. 체크 리스트에서 다시 켤 수 있어요."
         confirmLabel="삭제"
-        tone="danger"
+        tone="inverse"
         pending={disable.isPending}
         onConfirm={() => deleting && disable.mutate(deleting)}
       />
@@ -200,5 +223,5 @@ export function useTaskActions({
     </>
   );
 
-  return { check, menuFor, openBasis: setBasis, checkingId, sheets };
+  return { check, openMenu: setMenuTask, openBasis: setBasis, checkingId, sheets };
 }

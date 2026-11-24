@@ -5,11 +5,11 @@ import { postponeQuickDates, type Task } from "@pabom/core/domain/today";
 import { addDays, formatShortDay, toYmd } from "@pabom/core/lib/date";
 import { Button } from "@/shared/ui/button";
 import { DatePickerSheet } from "@/shared/ui/calendar";
-import { Chip, ChipGroup } from "@/shared/ui/chip";
 import { InfoBox } from "@/shared/ui/display";
-import { Sheet, SheetLabel } from "@/shared/ui/sheet";
+import { Sheet } from "@/shared/ui/sheet";
 import { Text } from "@/shared/ui/text";
 import { semantic } from "@/shared/ui/theme";
+import { ChoiceChip } from "./choice-chip";
 
 const POSTPONE_MAX_DAYS = 30;
 
@@ -67,24 +67,33 @@ export function PostponeSheet({
       >
         {already?.originalDueOn ? (
           <>
-            <InfoBox tone="primary" textVariant="body-lg" style={styles.mb3}>
+            <InfoBox tone="primary" style={styles.mb3}>
               {`이미 미룬 할 일이에요 · 원래 ${formatShortDay(already.originalDueOn)} → 지금 ${formatShortDay(already.dueOn)}`}
             </InfoBox>
-            <Text variant="body-lg" color={semantic.secondaryText} style={styles.mb3}>
+            <Text
+              variant="body-md"
+              weight="medium"
+              color={semantic.mutedForeground}
+              style={styles.mb3}
+            >
               {already.petName} · {already.careItemName} · 한 번 더 미룰 수 있어요.
             </Text>
           </>
         ) : null}
-        <View style={styles.chips}>
-          <ChipGroup
-            label="미룰 날"
-            options={quick}
-            value={custom ? null : date}
-            onChange={(v) => v && setDate(v)}
+        <View accessibilityRole="radiogroup" accessibilityLabel="미룰 날" style={styles.chips}>
+          {quick.map((option) => (
+            <ChoiceChip
+              key={option.value}
+              label={option.label}
+              selected={!custom && date === option.value}
+              onPress={() => setDate(option.value)}
+            />
+          ))}
+          <ChoiceChip
+            label={custom ? formatShortDay(date) : "달력에서 고르기"}
+            selected={Boolean(custom)}
+            onPress={() => setCalendarOpen(true)}
           />
-          <Chip selected={Boolean(custom)} onPress={() => setCalendarOpen(true)}>
-            {custom ? formatShortDay(date) : "달력에서 고르기"}
-          </Chip>
         </View>
         {date ? (
           <Text variant="body-lg" weight="medium" color={semantic.primary} style={styles.mt3}>
@@ -154,21 +163,27 @@ export function SkipSheet({
         </Button>
       }
     >
-      <SheetLabel first>이유 (선택)</SheetLabel>
-      <ChipGroup
-        label="건너뛰는 이유"
-        allowDeselect
-        options={SKIP_REASONS.map((value) => ({ value, label: value }))}
-        value={reason}
-        onChange={setReason}
-      />
+      <Text variant="body-lg" weight="medium" color={semantic.secondaryText} style={styles.label}>
+        이유 (선택)
+      </Text>
+      <View accessibilityRole="radiogroup" accessibilityLabel="건너뛰는 이유" style={styles.chips}>
+        {SKIP_REASONS.map((value) => (
+          <ChoiceChip
+            key={value}
+            label={value}
+            selected={reason === value}
+            onPress={() => setReason(reason === value ? null : value)}
+          />
+        ))}
+      </View>
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
   // 웹의 flex-wrap gap-2 한 줄: ChipGroup(contents) + 달력 칩
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  label: { marginBottom: 6 },
   mb3: { marginBottom: 12 },
   mt3: { marginTop: 12 },
 });

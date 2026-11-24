@@ -7,6 +7,9 @@ import type { ViewStyle } from "react-native";
  */
 export const semantic = {
   background: colors.white,
+  /** 화면 바탕 (Figma bg/secondary). 그 위에 흰 카드(card)를 올린다 */
+  screen: colors.gray[100],
+  card: colors.white,
   foreground: colors.gray[900],
   secondaryText: colors.gray[700],
   mutedForeground: colors.gray[500],

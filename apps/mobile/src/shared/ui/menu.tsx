@@ -20,7 +20,8 @@ export type MenuItem = {
   hidden?: boolean;
 };
 
-const MENU_WIDTH = 156;
+const MENU_WIDTH = 160;
+const ITEM_HEIGHT = 46;
 const EDGE = 12;
 
 /**
@@ -40,11 +41,6 @@ export function Menu({
   triggerSize?: number;
 }) {
   const anchor = useRef<HostInstance>(null);
-  /**
-   * 고른 항목은 메뉴 Modal 이 다 내려간 뒤 실행한다. 닫히는 중인 Modal 위에 시트 Modal 을 바로 띄우면
-   * iOS 에서 메뉴가 내려갈 때 위의 시트까지 함께 내려가거나 보이지 않는 창이 남아 화면이 멈춘 것처럼 된다
-   */
-  const pending = useRef<(() => void) | null>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left?: number; right?: number }>({
     top: 0,
@@ -55,7 +51,7 @@ export function Menu({
 
   const show = () => {
     anchor.current?.measureInWindow((x, y, width, height) => {
-      const estimated = visible.length * 46 + 4;
+      const estimated = visible.length * ITEM_HEIGHT + 2;
       const top =
         y + height + 2 + estimated > screenHeight - EDGE ? y - estimated - 2 : y + height + 2;
       // 트리거가 화면 왼쪽 절반이면 왼쪽 끝을 맞춘다. 오른쪽 정렬만 하면 왼쪽 가장자리의 트리거(사진 칸 +)에서
@@ -76,15 +72,7 @@ export function Menu({
           {trigger ?? <DotsHorizontalIcon color={semantic.mutedForeground} />}
         </IconButton>
       </View>
-      <AnimatedModal
-        open={open}
-        onRequestClose={() => setOpen(false)}
-        onClosed={() => {
-          const action = pending.current;
-          pending.current = null;
-          action?.();
-        }}
-      >
+      <AnimatedModal open={open} onRequestClose={() => setOpen(false)}>
         {(progress) => (
           <Animated.View
             style={[
@@ -98,29 +86,30 @@ export function Menu({
               },
             ]}
           >
-            {visible.map((item, index) => (
-              <Pressable
-                key={item.label}
-                accessibilityRole="menuitem"
-                onPress={() => {
-                  pending.current = item.onSelect;
-                  setOpen(false);
-                }}
-                style={({ pressed }) => [
-                  styles.item,
-                  index > 0 && styles.itemDivider,
-                  pressed && { backgroundColor: semantic.muted },
-                ]}
-              >
-                <Text
-                  variant="body-lg"
-                  weight="medium"
-                  color={item.tone === "danger" ? semantic.destructive : semantic.foreground}
+            <View style={styles.menuClip}>
+              {visible.map((item, index) => (
+                <Pressable
+                  key={item.label}
+                  accessibilityRole="menuitem"
+                  onPress={() => {
+                    setOpen(false);
+                    item.onSelect();
+                  }}
+                  style={({ pressed }) => [
+                    styles.item,
+                    index > 0 && styles.itemDivider,
+                    pressed && { backgroundColor: semantic.muted },
+                  ]}
                 >
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    variant="body-lg"
+                    color={item.tone === "danger" ? semantic.destructive : semantic.foreground}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </Animated.View>
         )}
       </AnimatedModal>
@@ -129,17 +118,21 @@ export function Menu({
 }
 
 const styles = StyleSheet.create({
+  /** Figma 팝업 메뉴: 160 · 모서리 12 · gray-300 테두리 · 그림자 */
   menu: {
     position: "absolute",
     minWidth: MENU_WIDTH,
+    borderRadius: radius.lg,
+    backgroundColor: semantic.background,
+    ...toNativeShadow(shadows.md),
+  },
+  /** 그림자는 바깥에, 모서리 자르기는 안쪽에 (iOS 는 overflow hidden 이 그림자도 자른다) */
+  menuClip: {
     overflow: "hidden",
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: semantic.border,
-    backgroundColor: semantic.background,
-    paddingVertical: 2,
-    ...toNativeShadow(shadows.md),
+    borderColor: semantic.input,
   },
-  item: { paddingHorizontal: 16, paddingVertical: 12 },
+  item: { height: ITEM_HEIGHT, justifyContent: "center", paddingHorizontal: 16 },
   itemDivider: { borderTopWidth: 1, borderTopColor: semantic.border },
 });

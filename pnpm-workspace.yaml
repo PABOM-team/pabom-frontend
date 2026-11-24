@@ -11,3 +11,6 @@ allowBuilds:
   msw: true
   sharp: false
   unrs-resolver: false
+
+patchedDependencies:
+  react-native-screens@4.30.1: patches/react-native-screens@4.30.1.patch

@@ -1,6 +1,6 @@
 import { addDays, format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { router } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View, type GestureResponderEvent } from "react-native";
 import type { Pet } from "@pabom/core/domain/pet";
@@ -8,12 +8,20 @@ import { fromYmd, toYmd } from "@pabom/core/lib/date";
 import { Avatar, Skeleton } from "@/shared/ui/display";
 import { PlusIcon } from "@/shared/ui/icons";
 import { Text } from "@/shared/ui/text";
-import { colors, radius, semantic, spacing } from "@/shared/ui/theme";
+import { colors, radius, semantic } from "@/shared/ui/theme";
+import { ZoomPressable } from "@/shared/ui/zoom-link";
 
 /** 가로로 이만큼 끌면 주를 넘긴다 (px) */
 const SWIPE_THRESHOLD = 48;
+/** 화면 좌우 여백 (Figma 본문 px 16). 개체 줄이 화면 끝까지 밀리게 한다 */
+export const HOME_GUTTER = 16;
 
-/** 주간 달력 (Figma 주간 캘린더). 기록·할 일이 있는 날에 점. 좌우로 밀면 앞·뒤 주로 */
+const GRADIENT: [string, string] = [semantic.brandFrom, semantic.brand];
+
+/**
+ * 주간 달력 (Figma 주간 캘린더): 흰 카드에 7일, 고른 날은 파랑 그라데이션.
+ * 오늘은 파란 점, 기록이 있는 날은 회색 점. 좌우로 밀면 앞·뒤 주로
+ */
 export function WeekStrip({
   weekStart,
   selected,
@@ -56,57 +64,55 @@ export function WeekStrip({
         const isToday = ymd === today;
         const isSelected = ymd === selected;
         const date = fromYmd(ymd);
-        const textColor = isToday
-          ? colors.white
-          : isSelected
+        const dot = isSelected
+          ? null
+          : isToday
             ? semantic.primary
-            : semantic.foreground;
+            : marked.has(ymd)
+              ? semantic.input
+              : null;
         return (
-          <View key={ymd} style={styles.dayCell}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={format(date, "M월 d일 EEEE", { locale: ko })}
-              onPress={() => onSelect(ymd)}
-              style={[
-                styles.day,
-                isToday && { backgroundColor: semantic.primary },
-                isSelected && !isToday && { backgroundColor: semantic.primarySoft },
-              ]}
-            >
-              <Text
-                variant="body-sm"
-                color={
-                  isToday ? colors.white : isSelected ? semantic.primary : semantic.mutedForeground
-                }
-              >
-                {format(date, "EEEEE", { locale: ko })}
-              </Text>
-              <Text variant="body-xl" weight="medium" color={textColor}>
-                {format(date, "d")}
-              </Text>
-              <View
-                accessibilityElementsHidden
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: marked.has(ymd)
-                      ? isToday
-                        ? colors.white
-                        : semantic.subtleForeground
-                      : "transparent",
-                  },
-                ]}
+          <Pressable
+            key={ymd}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={`${format(date, "M월 d일 EEEE", { locale: ko })}${isToday ? ", 오늘" : ""}`}
+            onPress={() => onSelect(ymd)}
+            style={({ pressed }) => [styles.day, pressed && !isSelected && styles.pressed]}
+          >
+            {isSelected ? (
+              <LinearGradient
+                colors={GRADIENT}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[StyleSheet.absoluteFill, styles.dayFill]}
               />
-            </Pressable>
-          </View>
+            ) : null}
+            <Text
+              variant="body-md"
+              weight="medium"
+              color={isSelected ? colors.white : semantic.mutedForeground}
+            >
+              {format(date, "EEEEE", { locale: ko })}
+            </Text>
+            <Text
+              variant="body-xl"
+              weight="medium"
+              color={isSelected ? colors.white : semantic.foreground}
+            >
+              {format(date, "d")}
+            </Text>
+            {dot ? (
+              <View accessibilityElementsHidden style={[styles.dot, { backgroundColor: dot }]} />
+            ) : null}
+          </Pressable>
         );
       })}
     </View>
   );
 }
 
-/** 개체 고르기 줄 (전체 · 개체들 · 추가). 남은 할 일이 있는 개체에 빨간 점 */
+/** 개체 고르기 줄 (Figma ③): 전체 · 개체 알약 · 추가. 남은 할 일이 있는 개체에 빨간 점 */
 export function PetFilterRow({
   pets,
   selected,
@@ -118,29 +124,12 @@ export function PetFilterRow({
   onSelect: (petId: string | null) => void;
   loading?: boolean;
 }) {
-  const label = (active: boolean, text: string) => (
-    <Text
-      variant="body-md"
-      weight={active ? "bold" : "regular"}
-      color={active ? semantic.primary : semantic.mutedForeground}
-      numberOfLines={1}
-      style={styles.itemLabel}
-    >
-      {text}
-    </Text>
-  );
-
-  // 불러오는 동안은 동그라미 자리만 (C1-1)
+  // 불러오는 동안은 알약 자리만 (C1-1)
   if (loading) {
     return (
-      <View
-        accessibilityLabel="불러오는 중"
-        style={[styles.row, styles.rowBleed, styles.rowContent]}
-      >
-        {[0, 1, 2, 3].map((i) => (
-          <View key={i} style={styles.item}>
-            <Skeleton height={52} width={52} style={styles.circle} />
-          </View>
+      <View accessibilityLabel="불러오는 중" style={styles.skeletonRow}>
+        {[56, 84, 84].map((width, i) => (
+          <Skeleton key={i} height={36} width={width} style={styles.pill} />
         ))}
       </View>
     );
@@ -158,94 +147,123 @@ export function PetFilterRow({
           accessibilityRole="button"
           accessibilityState={{ selected: selected === null }}
           onPress={() => onSelect(null)}
-          style={styles.item}
+          style={[styles.pill, styles.allPill, selected === null && styles.pillSelected]}
         >
-          <View style={[styles.allCircle, selected === null && styles.ring]}>
-            <Text variant="body-md" color={semantic.secondaryText}>
-              전체
-            </Text>
-          </View>
-          {label(selected === null, "전체")}
+          <Text
+            variant="body-lg"
+            weight="semibold"
+            color={selected === null ? semantic.inverseForeground : semantic.foreground}
+          >
+            전체
+          </Text>
         </Pressable>
       ) : null}
-      {pets.map((pet) => (
-        <Pressable
-          key={pet.id}
-          accessibilityRole="button"
-          accessibilityState={{ selected: selected === pet.id }}
-          onPress={() => onSelect(pet.id)}
-          style={styles.item}
-        >
-          <View>
-            <Avatar src={pet.photoUrl} size={52} ring={selected === pet.id} />
-            {pet.todayRemaining > 0 ? (
-              <View accessibilityLabel="남은 할 일 있음" style={styles.remainingDot} />
-            ) : null}
-          </View>
-          {label(selected === pet.id, pet.name)}
-        </Pressable>
-      ))}
-      <Pressable
+      {pets.map((pet) => {
+        const active = selected === pet.id;
+        return (
+          <Pressable
+            key={pet.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`${pet.name}${pet.todayRemaining > 0 ? ", 남은 할 일 있음" : ""}`}
+            onPress={() => onSelect(pet.id)}
+            style={[styles.pill, styles.petPill, active && styles.pillSelected]}
+          >
+            <View>
+              <Avatar src={pet.photoUrl} size={28} style={styles.avatar} />
+              {pet.todayRemaining > 0 ? <View style={styles.remainingDot} /> : null}
+            </View>
+            <Text
+              variant="body-lg"
+              weight={active ? "semibold" : "medium"}
+              color={active ? semantic.inverseForeground : semantic.foreground}
+              numberOfLines={1}
+            >
+              {pet.name}
+            </Text>
+          </Pressable>
+        );
+      })}
+      <ZoomPressable
+        href="/pets/new"
         accessibilityRole="link"
-        onPress={() => router.push("/pets/new")}
-        style={styles.item}
+        accessibilityLabel="개체 추가"
+        style={({ pressed }) => [styles.addCircle, pressed && styles.pressed]}
       >
-        <View style={styles.addCircle}>
-          <PlusIcon size={20} color={semantic.mutedForeground} />
-        </View>
-        {label(false, "추가")}
-      </Pressable>
+        <PlusIcon size={18} color={semantic.foreground} strokeWidth={1.8} />
+      </ZoomPressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  strip: { flexDirection: "row" },
-  dayCell: { flex: 1, alignItems: "center" },
+  strip: {
+    flexDirection: "row",
+    borderRadius: radius["2xl"],
+    backgroundColor: semantic.card,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
   day: {
-    width: "100%",
-    maxWidth: 51,
+    flex: 1,
+    minWidth: 0,
     alignItems: "center",
     gap: 2,
-    borderRadius: radius.md,
-    paddingVertical: 4,
+    overflow: "hidden",
+    borderRadius: radius.lg,
+    paddingVertical: 8,
   },
-  dot: { width: 5, height: 5, borderRadius: radius.full },
-  row: { flexDirection: "row", overflow: "hidden" },
-  // 웹의 -mx-4 px-4: 좌우 여백을 밀어 가로 스크롤이 화면 끝까지 닿는다
-  rowBleed: { marginHorizontal: -spacing.gutter },
-  rowContent: { flexDirection: "row", gap: 12, paddingHorizontal: spacing.gutter },
-  item: { width: 56, flexShrink: 0, alignItems: "center", gap: 6 },
-  itemLabel: { maxWidth: "100%" },
-  circle: { borderRadius: radius.full },
-  allCircle: {
-    width: 52,
-    height: 52,
+  dayFill: { borderRadius: radius.lg },
+  pressed: { backgroundColor: semantic.muted },
+  dot: {
+    position: "absolute",
+    bottom: 3,
+    width: 4,
+    height: 4,
     borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: semantic.muted,
   },
-  ring: { borderWidth: 2.5, borderColor: semantic.primary },
+  // 좌우 여백을 밀어 가로 스크롤이 화면 끝까지 닿는다
+  rowBleed: { flexGrow: 0, marginHorizontal: -HOME_GUTTER },
+  rowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: HOME_GUTTER,
+  },
+  skeletonRow: { flexDirection: "row", gap: 8 },
+  pill: { height: 36, borderRadius: radius.full },
+  allPill: {
+    justifyContent: "center",
+    backgroundColor: semantic.card,
+    paddingHorizontal: 16,
+  },
+  petPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: semantic.card,
+    paddingLeft: 4,
+    paddingRight: 14,
+  },
+  pillSelected: { backgroundColor: semantic.inverse },
+  avatar: { borderWidth: 0, backgroundColor: semantic.primarySoft },
   remainingDot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: -1,
+    left: 21,
     width: 8,
     height: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.white,
+    borderColor: semantic.card,
     backgroundColor: semantic.destructive,
   },
   addCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: semantic.input,
+    borderRadius: radius.full,
+    backgroundColor: semantic.card,
   },
 });

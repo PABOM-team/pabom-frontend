@@ -1,8 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Easing, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, semantic, shadows, spacing, toNativeShadow } from "./theme";
 import { Text } from "./text";
+
+/** 하단 탭 위로 띄운다. iOS 캡슐(아래 20 + 높이 58)보다, Android 막대(80dp)보다 조금 위 */
+const TOAST_BOTTOM = Platform.OS === "android" ? 96 : 80;
 
 type ToastAction = {
   label: string;
@@ -32,7 +35,7 @@ const subscribe = (listener: Listener) => {
   };
 };
 
-/** 화면 아래 검은 토스트 (C3). 한 번에 하나만 보인다 */
+/** 화면 아래 검은 토스트 (Figma 토스트, C3). 한 번에 하나만 보인다 */
 export const toast = (message: string, options?: { action?: ToastAction; duration?: number }) => {
   current = {
     id: ++seq,
@@ -56,7 +59,13 @@ export function Toaster() {
   useEffect(() => {
     if (!item) return;
     opacity.setValue(0);
-    Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: true }).start();
+    // Figma 프로토타입: 아래에서 밀려 들어온다 (MOVE_IN 0.3s ease-out)
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.bezier(0, 0, 0.58, 1),
+      useNativeDriver: true,
+    }).start();
     const timer = setTimeout(dismiss, item.duration);
     return () => clearTimeout(timer);
   }, [item, opacity]);
@@ -66,12 +75,24 @@ export function Toaster() {
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.host, { bottom: 80 + insets.bottom }]}
+      style={[styles.host, { bottom: TOAST_BOTTOM + insets.bottom }]}
       accessibilityLiveRegion="polite"
     >
-      <Animated.View key={item.id} style={[styles.toast, { opacity }]} accessibilityRole="alert">
+      <Animated.View
+        key={item.id}
+        style={[
+          styles.toast,
+          {
+            opacity,
+            transform: [
+              { translateY: opacity.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
+            ],
+          },
+        ]}
+        accessibilityRole="alert"
+      >
         <Text
-          variant="body-lg"
+          variant="body-md"
           weight="medium"
           color={semantic.inverseForeground}
           style={{ flex: 1 }}
@@ -90,7 +111,7 @@ export function Toaster() {
               dismiss();
             }}
           >
-            <Text variant="body-lg" weight="semibold" color={colors.sub[300]}>
+            <Text variant="body-md" weight="semibold" color={colors.primary[300]}>
               {item.action.label}
             </Text>
           </Pressable>
@@ -108,16 +129,17 @@ const styles = StyleSheet.create({
     zIndex: 60,
     alignItems: "center",
   },
+  /** Figma 토스트: gray-900 · 모서리 12 · 14/12 여백 · 글 body-md */
   toast: {
     width: "100%",
-    minHeight: 44,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     borderRadius: radius.lg,
     backgroundColor: semantic.inverse,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     ...toNativeShadow(shadows.md),
   },
   actionDisabled: { opacity: 0.4 },

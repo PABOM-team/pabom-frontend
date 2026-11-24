@@ -1,21 +1,20 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   Animated,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
+  BackHandler,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { XIcon } from "./icons";
+import { SurfaceProvider } from "./surface";
 import { Text } from "./text";
-import { radius, semantic, shadows, spacing, toNativeShadow } from "./theme";
-import { Toaster } from "./toast";
+import { semantic, spacing } from "./theme";
+import { BottomSheet } from "./bottom-sheet";
+import { POPUP_CLOSE, POPUP_OPEN } from "./motion";
+import { Portal } from "./portal";
 import { IconButton } from "./top-bar";
 
 type SheetProps = {
@@ -28,14 +27,10 @@ type SheetProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const DURATION = 200;
-
 /**
- * 열림·닫힘 애니메이션을 가진 모달 바탕. 닫을 때는 애니메이션이 끝난 뒤 Modal 을 내린다
+ * 가운데 창·떠 있는 메뉴처럼 시트가 아닌 겹침 창의 바탕. 앱 맨 위 층(Portal)에 그린다.
  * children 은 진행도(0 닫힘 → 1 열림)를 받아 자기 모양대로 움직인다.
- * onClosed 는 닫힘 애니메이션이 끝나 Modal 이 내려간 뒤 불린다.
- * iOS 는 Modal 창이 실제로 다 내려간 뒤(onDismiss)에 부른다. 그 전에 사진 선택기 같은 네이티브 화면을
- * 띄우면 iOS 가 "다른 화면이 내려가는 중"이라며 조용히 무시한다 (T08-04·T08-10)
+ * 열림·닫힘은 튀지 않는 스프링이고(motion.ts), onClosed 는 닫힘 애니메이션이 끝난 뒤 불린다
  */
 export function AnimatedModal({
   open,
@@ -50,51 +45,75 @@ export function AnimatedModal({
   children: (progress: Animated.Value) => ReactNode;
   dismissOnOverlay?: boolean;
 }) {
-  const [progress] = useState(() => new Animated.Value(0));
-  // visible: Modal 이 떠 있어야 하는가. rendered: iOS 에서 창이 다 내려갈(onDismiss) 때까지 Modal 을 붙여 둔다
-  const [visible, setVisible] = useState(open);
   const [rendered, setRendered] = useState(open);
-  const onClosedRef = useRef(onClosed);
+  if (open && !rendered) setRendered(true);
+  if (!rendered) return null;
+  return (
+    <Portal>
+      <PopupLayer
+        open={open}
+        onRequestClose={onRequestClose}
+        dismissOnOverlay={dismissOnOverlay}
+        onHidden={() => {
+          setRendered(false);
+          onClosed?.();
+        }}
+      >
+        {children}
+      </PopupLayer>
+    </Portal>
+  );
+}
+
+function PopupLayer({
+  open,
+  onRequestClose,
+  onHidden,
+  children,
+  dismissOnOverlay,
+}: {
+  open: boolean;
+  onRequestClose: () => void;
+  onHidden: () => void;
+  children: (progress: Animated.Value) => ReactNode;
+  dismissOnOverlay: boolean;
+}) {
+  const [progress] = useState(() => new Animated.Value(0));
+  const onHiddenRef = useRef(onHidden);
+  const onRequestCloseRef = useRef(onRequestClose);
   useEffect(() => {
-    onClosedRef.current = onClosed;
+    onHiddenRef.current = onHidden;
+    onRequestCloseRef.current = onRequestClose;
   });
-  // 열릴 때는 바로 그리고(렌더 중 갱신), 닫힐 때는 애니메이션이 끝난 뒤 내린다
-  if (open && !visible) {
-    setVisible(true);
-    setRendered(true);
-  }
 
-  const finishClose = () => {
-    setRendered(false);
-    onClosedRef.current?.();
-  };
-
-  useEffect(() => {
-    if (open) {
-      Animated.timing(progress, { toValue: 1, duration: DURATION, useNativeDriver: true }).start();
-      return;
-    }
-    Animated.timing(progress, { toValue: 0, duration: DURATION, useNativeDriver: true }).start(
-      ({ finished }) => {
-        if (!finished) return;
-        setVisible(false);
-        // iOS 는 아래 Modal 의 onDismiss 에서 마무리한다. 안드로이드는 onDismiss 가 없다
-        if (Platform.OS !== "ios") finishClose();
-      },
-    );
+  // 커밋 직후 같은 프레임에 출발한다
+  useLayoutEffect(() => {
+    const animation = Animated.spring(progress, {
+      toValue: open ? 1 : 0,
+      ...(open ? POPUP_OPEN : POPUP_CLOSE),
+      overshootClamping: true,
+      restDisplacementThreshold: 0.001,
+      restSpeedThreshold: 0.01,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished && !open) onHiddenRef.current();
+    });
+    return () => animation.stop();
   }, [open, progress]);
 
-  if (!rendered) return null;
+  // 안드로이드 뒤로 가기는 창부터 닫는다
+  useEffect(() => {
+    if (!open) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      onRequestCloseRef.current();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [open]);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={onRequestClose}
-      onDismiss={Platform.OS === "ios" ? finishClose : undefined}
-    >
+    <View style={StyleSheet.absoluteFill} pointerEvents={open ? "box-none" : "none"}>
       <Animated.View style={[styles.overlay, { opacity: progress }]}>
         <Pressable
           accessibilityLabel="닫기"
@@ -102,15 +121,13 @@ export function AnimatedModal({
           onPress={dismissOnOverlay ? onRequestClose : undefined}
         />
       </Animated.View>
-      {children(progress)}
-      {/* 네이티브 Modal 은 루트 화면 위 따로 뜬 창이라 루트의 Toaster 를 가린다. 시트가 열린 채 뜨는
-          실패 토스트(미루지 못했어요 등)가 보이도록 모달 안에도 그린다 */}
-      <Toaster />
-    </Modal>
+      {/* 시트·창·메뉴는 흰 바탕이라 안의 칩·안내 상자가 회색 면을 쓴다 */}
+      <SurfaceProvider value="white">{children(progress)}</SurfaceProvider>
+    </View>
   );
 }
 
-/** 아래에서 올라오는 시트 (Figma 시트: 손잡이 · 제목 · × · 내용 · 하단 버튼) */
+/** 아래에서 올라오는 시트 (Figma 시트: 손잡이 · 시트 머리(제목 22 bold · ×) · 내용 · 하단 버튼) */
 export function Sheet({
   open,
   onOpenChange,
@@ -120,79 +137,46 @@ export function Sheet({
   footer,
   style,
 }: SheetProps) {
-  const insets = useSafeAreaInsets();
   const close = () => onOpenChange(false);
 
   return (
-    <AnimatedModal open={open} onRequestClose={close}>
-      {(progress) => (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          pointerEvents="box-none"
-          style={styles.sheetHost}
-        >
-          <Animated.View
-            style={[
-              styles.sheet,
-              {
-                transform: [
-                  {
-                    translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }),
-                  },
-                ],
-              },
-              style,
-            ]}
-          >
-            <View style={styles.handle} accessibilityElementsHidden />
-            <View style={styles.header}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text variant="title-xs" accessibilityRole="header">
-                  {title}
-                </Text>
-                {description ? (
-                  <Text
-                    variant="body-lg"
-                    color={semantic.mutedForeground}
-                    style={styles.description}
-                  >
-                    {description}
-                  </Text>
-                ) : null}
-              </View>
-              <IconButton accessibilityLabel="닫기" size={40} onPress={close} style={styles.close}>
-                <XIcon />
-              </IconButton>
-            </View>
-            <ScrollView
-              style={{ flexGrow: 0 }}
-              contentContainerStyle={styles.content}
-              keyboardShouldPersistTaps="handled"
-            >
-              {children}
-            </ScrollView>
-            {footer ? (
-              <View style={[styles.footer, { paddingBottom: Math.max(16, insets.bottom) }]}>
-                {footer}
-              </View>
-            ) : (
-              <View style={{ height: Math.max(16, insets.bottom) }} />
-            )}
-          </Animated.View>
-        </KeyboardAvoidingView>
-      )}
-    </AnimatedModal>
+    <BottomSheet
+      open={open}
+      onRequestClose={close}
+      style={[{ backgroundColor: semantic.background }, style]}
+      contentStyle={styles.content}
+      header={
+        <View style={styles.header}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text variant="title-xs" accessibilityRole="header" style={styles.title}>
+              {title}
+            </Text>
+            {description ? (
+              <Text variant="body-lg" color={semantic.mutedForeground} style={styles.description}>
+                {description}
+              </Text>
+            ) : null}
+          </View>
+          <IconButton accessibilityLabel="닫기" size={44} onPress={close} style={styles.close}>
+            <XIcon color={semantic.mutedForeground} />
+          </IconButton>
+        </View>
+      }
+      footer={footer ? <View style={styles.footer}>{footer}</View> : undefined}
+    >
+      {children}
+    </BottomSheet>
   );
 }
 
-/** 시트 안 칸 제목 (예: 얼마나 먹었나요?) */
+/** 시트 안 칸 제목 (예: 얼마나 먹었나요?). Figma 라벨: body-lg medium gray-700 */
 export function SheetLabel({ children, first = false }: { children: string; first?: boolean }) {
   return (
     <Text
-      variant="body-xl"
+      variant="body-lg"
       weight="medium"
       color={semantic.secondaryText}
-      style={{ marginTop: first ? 4 : 12, marginBottom: 8 }}
+      style={{ marginTop: first ? 4 : 12, marginBottom: 6 }}
     >
       {children}
     </Text>
@@ -201,32 +185,18 @@ export function SheetLabel({ children, first = false }: { children: string; firs
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: semantic.overlay },
-  sheetHost: { flex: 1, justifyContent: "flex-end" },
-  sheet: {
-    maxHeight: "92%",
-    borderTopLeftRadius: radius["2xl"],
-    borderTopRightRadius: radius["2xl"],
-    backgroundColor: semantic.background,
-    ...toNativeShadow(shadows.lg),
-  },
-  handle: {
-    alignSelf: "center",
-    marginTop: 8,
-    height: 4,
-    width: 36,
-    borderRadius: radius.full,
-    backgroundColor: semantic.input,
-  },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
     paddingHorizontal: spacing.gutter,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
-  description: { marginTop: 6, lineHeight: 20 },
-  close: { marginTop: -4, marginRight: -8 },
+  /** Figma 시트 머리 제목은 22px bold (타이포 토큰 사이 값) */
+  title: { fontSize: 22, lineHeight: 29, letterSpacing: -0.66 },
+  description: { marginTop: 6 },
+  close: { marginTop: -8, marginRight: -10 },
   content: { paddingHorizontal: spacing.gutter, paddingBottom: 8 },
-  footer: { flexDirection: "row", gap: 8, paddingHorizontal: spacing.gutter, paddingTop: 12 },
+  footer: { flexDirection: "row", gap: 8, paddingHorizontal: spacing.gutter },
 });

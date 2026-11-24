@@ -9,6 +9,7 @@ import { josa } from "@pabom/core/lib/josa";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { toast } from "@/shared/ui/toast";
 
+export { ActionSheet, type ActionSheetItem } from "./action-sheet";
 export { useWeightStageToast } from "./use-weight-stage-toast";
 
 /** 개체 삭제 확인 창 (C4 위험 확인) */

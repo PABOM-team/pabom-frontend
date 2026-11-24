@@ -1,0 +1,53 @@
+diff --git a/ios/RNSScreen.mm b/ios/RNSScreen.mm
+index 049fd22427b2bde17fd7ca59b8de65d0ee07b4b5..3be09c83395accb9240c79164b5a91ebed3ffb5a 100644
+--- a/ios/RNSScreen.mm
++++ b/ios/RNSScreen.mm
+@@ -1544,6 +1544,27 @@ - (void)viewWillDisappear:(BOOL)animated
+     [self notifyTransitionProgress:0.0 closing:_closing goingForward:_goingForward];
+     [self setupProgressNotification];
+   }
++
++  // pabom: 화면이 스택에서 빠지는 게 확정되면 JS 에 바로 알린다.
++  // 기본 동작은 전환이 완전히 끝난 viewDidDisappear 에서야 알린다. 줌 전환은 손을 뗀 뒤 눈에 보이는 움직임이
++  // 끝나고도 완료까지 약 0.8~1초가 더 걸려, 그동안 JS 는 이전 화면이 열려 있다고 여겨 누른 화면 이동이 사라졌다.
++  // 네이티브 스택에서는 이미 빠진 뒤라(isNativelyDismissedFromContainer) JS 가 스택을 고쳐도 아무 일도 하지 않고,
++  // 전환 중 새로 쌓는 화면은 RNSScreenStack 이 전환이 끝날 때까지 미뤄 둔다
++  if ([self isMovingFromParentViewController] && self.transitionCoordinator != nil) {
++    if (self.transitionCoordinator.isInteractive) {
++      // 가장자리 스와이프처럼 손가락을 따라가는 동안에는 되돌아갈 수 있으니 손을 떼 확정될 때 알린다
++      __weak RNSScreen *weakSelf = self;
++      [self.transitionCoordinator
++          notifyWhenInteractionChangesUsingBlock:^(id<UIViewControllerTransitionCoordinatorContext> _Nonnull context) {
++            if (!context.isCancelled) {
++              [weakSelf notifyDismissedIfNeeded];
++            }
++          }];
++    } else {
++      // 이미 확정된 닫힘 (줌 전환을 손으로 밀어 놓은 뒤, 뒤로 버튼 등)
++      [self notifyDismissedIfNeeded];
++    }
++  }
+ }
+ 
+ - (void)viewDidAppear:(BOOL)animated
+diff --git a/ios/RNSScreenStack.mm b/ios/RNSScreenStack.mm
+index 5da11964f5932cb44e1131c44a2480803c0a62b5..79d803ad268d17703be40d55083a1747bc1746d7 100644
+--- a/ios/RNSScreenStack.mm
++++ b/ios/RNSScreenStack.mm
+@@ -680,7 +680,15 @@ - (void)setPushViewControllers:(NSArray<UIViewController *> *)controllers
+   // When the transition is ongoing the property won't be updated immediatly. We therefore avoid
+   // making any updated when transition is ongoing and schedule updates for when the transition
+   // is complete.
+-  if (_controller.transitionCoordinator != nil) {
++  // pabom: iOS 18+ 의 UINavigationController 는 진행 중인 전환을 끊고 새 화면을 쌓을 수 있다(끊긴 전환은 그 자리에서 끝난다).
++  // 기본 동작은 전환이 완전히 끝날 때까지 미루는데, 줌 전환은 화면 움직임이 0.2~0.3초에 끝나도 시스템 스프링이 완전히
++  // 멈추는 0.85~0.95초 뒤에야 끝나서, 뒤로 간 직후 누른 화면 이동이 그만큼 늦게 실행됐다.
++  // 손가락으로 끌고 있는(되돌아갈 수 있는) 전환만 기다리고, 이미 확정된 전환은 바로 끊고 쌓는다
++  BOOL canInterruptTransition = NO;
++  if (@available(iOS 18.0, *)) {
++    canInterruptTransition = _controller.transitionCoordinator != nil && !_controller.transitionCoordinator.isInteractive;
++  }
++  if (_controller.transitionCoordinator != nil && !canInterruptTransition) {
+     if (!_updateScheduled) {
+       _updateScheduled = YES;
+       __weak RNSScreenStackView *weakSelf = self;

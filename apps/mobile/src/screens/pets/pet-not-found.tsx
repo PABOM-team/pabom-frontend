@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { StateMessage } from "@/shared/ui/display";
 import { Screen, ScreenCenter } from "@/shared/ui/screen";
+import { semantic } from "@/shared/ui/theme";
 
 /**
  * 웹의 notFound() 대신 그 자리에서 그리는 E01 (app/+not-found.tsx 와 같은 문구).
@@ -8,7 +9,7 @@ import { Screen, ScreenCenter } from "@/shared/ui/screen";
  */
 export function PetNotFound() {
   return (
-    <Screen>
+    <Screen style={{ backgroundColor: semantic.screen }}>
       <ScreenCenter>
         <StateMessage
           icon={null}

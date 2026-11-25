@@ -1,65 +1,126 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { LEGAL_DOCS, type LegalBlock, type LegalDocType } from "@pabom/core/domain/legal";
 import { Segmented } from "@/shared/ui/display";
 import { Screen, ScreenBody } from "@/shared/ui/screen";
 import { TopBar } from "@/shared/ui/top-bar";
 
-type Tab = "terms" | "privacy";
-
-/** [미확정] 약관 원문은 11/20 확정 뒤 게시. 그 전까지 목차와 회색 막대로 자리만 잡는다 */
-const DOCS: Record<Tab, { title: string; version: string; sections: string[] }> = {
-  terms: {
-    title: "이용약관",
-    version: "시행일 2026-10-12 · 버전 v1.0 (예시)",
-    sections: ["제1조 목적", "제2조 정의", "제3조 서비스 내용"],
-  },
-  privacy: {
-    title: "개인정보 처리방침",
-    version: "시행일 2026-10-12 · 버전 v1.0 (예시)",
-    sections: ["1. 수집하는 정보", "2. 이용 목적", "3. 보관 기간과 파기"],
-  },
+const TAB_LABEL: Record<LegalDocType, string> = {
+  terms: "이용약관",
+  privacy: "개인정보 처리방침",
 };
+
+function Block({ block }: { block: LegalBlock }) {
+  switch (block.kind) {
+    case "text":
+      return <p>{block.text}</p>;
+    case "subtitle":
+      return <h3 className="pt-1 font-bold">{block.text}</h3>;
+    case "list":
+      return (
+        <ul className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
+          {block.items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      );
+    case "fields":
+      return (
+        <dl className="space-y-1.5">
+          {block.items.map(({ label, value }) => (
+            <div key={label}>
+              <dt className="inline font-bold">
+                {label}
+                {block.colon ? ":" : ""}
+              </dt>{" "}
+              <dd className="inline">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      );
+    case "table":
+      return (
+        <div className="overflow-x-auto rounded-md border border-border">
+          <table className="w-full text-left text-body-md">
+            <thead className="bg-muted text-muted-foreground">
+              <tr>
+                {block.head.map((h) => (
+                  <th key={h} className="px-2.5 py-2 font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row) => (
+                <tr key={row.join("|")} className="border-t border-border">
+                  {row.map((cell, j) => (
+                    <td key={j} className="px-2.5 py-2 align-top">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    case "note":
+      return <p className="border-l-[3px] border-border pl-3 text-secondary-text">{block.text}</p>;
+  }
+}
+
+function Blocks({ blocks }: { blocks: readonly LegalBlock[] }) {
+  return (
+    <div className="space-y-2.5 text-body-lg leading-relaxed">
+      {blocks.map((block, i) => (
+        <Block key={i} block={block} />
+      ))}
+    </div>
+  );
+}
 
 export function TermsScreen() {
   const router = useRouter();
-  const tab: Tab = useSearchParams().get("tab") === "privacy" ? "privacy" : "terms";
-  const doc = DOCS[tab];
+  const tab: LegalDocType = useSearchParams().get("tab") === "privacy" ? "privacy" : "terms";
+  const doc = LEGAL_DOCS[tab];
 
   return (
     <Screen>
-      <TopBar title={doc.title} fallbackHref="/settings" />
+      <TopBar title={TAB_LABEL[tab]} fallbackHref="/settings" />
       <ScreenBody>
         <Segmented
           label="문서"
           options={[
-            { value: "terms", label: "이용약관" },
-            { value: "privacy", label: "개인정보 처리방침" },
+            { value: "terms", label: TAB_LABEL.terms },
+            { value: "privacy", label: TAB_LABEL.privacy },
           ]}
           value={tab}
           onChange={(next) => router.replace(next === "privacy" ? "/terms?tab=privacy" : "/terms")}
         />
-        <p className="mt-3 text-body-md text-muted-foreground">{doc.version}</p>
-        <nav className="mt-3 rounded-md bg-muted p-3 text-body-lg">
+        <h1 className="mt-5 text-title-xs">{doc.title}</h1>
+        <p className="mt-1.5 text-body-md text-muted-foreground">{doc.meta}</p>
+        <div className="mt-4">
+          <Blocks blocks={doc.intro} />
+        </div>
+        <nav className="mt-4 rounded-md bg-muted p-3 text-body-lg">
           <p className="mb-1 font-bold">목차</p>
           {doc.sections.map((s, i) => (
-            <a key={s} href={`#sec-${i}`} className="block py-0.5 text-primary">
-              {s}
+            <a key={s.title} href={`#sec-${i}`} className="block py-0.5 text-primary">
+              {s.title}
             </a>
           ))}
         </nav>
-        {/* 원문 확정 전이라 Figma처럼 앞 두 조만 막대로 보여 준다 */}
-        {doc.sections.slice(0, 2).map((s, i) => (
-          <section key={s} id={`sec-${i}`} className="mt-5">
-            <h2 className="mb-2.5 text-body-lg font-bold">{s}</h2>
-            <div className="space-y-2" aria-label="원문 준비 중">
-              {[100, 100, 100, 62].map((w, j) => (
-                <div key={j} className="h-2.5 rounded-full bg-muted" style={{ width: `${w}%` }} />
-              ))}
-            </div>
+        {doc.sections.map((s, i) => (
+          <section key={s.title} id={`sec-${i}`} className="mt-6 scroll-mt-4">
+            <h2 className="mb-2.5 text-body-xl font-bold">{s.title}</h2>
+            <Blocks blocks={s.blocks} />
           </section>
         ))}
-        <p className="mt-6 text-body-lg font-medium text-primary">이전 버전 보기</p>
+        <div className="mt-6 border-t border-border pt-4">
+          <Blocks blocks={doc.outro} />
+        </div>
       </ScreenBody>
     </Screen>
   );

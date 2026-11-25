@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import {
   ScrollView,
   StyleSheet,
   View,
+  type ScrollViewInstance,
   type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
@@ -59,6 +60,7 @@ export function ScreenBody({
   flush = false,
   /** 세로 간격(gap) */
   gap,
+  scrollRef,
   ...props
 }: Omit<ScrollViewProps, "style" | "contentContainerStyle"> & {
   children: ReactNode;
@@ -66,12 +68,17 @@ export function ScreenBody({
   contentStyle?: StyleProp<ViewStyle>;
   flush?: boolean;
   gap?: number;
+  /** 바깥에서 직접 스크롤할 때 (약관 목차 등) */
+  scrollRef?: RefObject<ScrollViewInstance | null>;
 }) {
   // 키보드가 뜨면 입력 중인 칸이 가려지지 않게 스크롤한다
   const { ref, scrollEventThrottle, onScroll, onLayout } = useScrollToFocusedInput();
   return (
     <ScrollView
-      ref={ref}
+      ref={(node) => {
+        ref.current = node;
+        if (scrollRef) scrollRef.current = node;
+      }}
       scrollEventThrottle={scrollEventThrottle}
       onLayout={onLayout}
       style={[styles.body, style]}

@@ -15,6 +15,8 @@ export const taskSchema = z.object({
   careItemName: z.string(),
   recordKind: recordKindSchema,
   title: z.string(),
+  /** 급여 할 일의 먹이 이름. 완료한 급여는 기록에 적은 이름. 없으면 가이드라인 기본 먹이로 보인다 */
+  foodName: z.string().nullable(),
   /** N일마다. 백엔드 오늘 할 일 응답(Task)에는 아직 없어 null일 수 있다 [백엔드 요청] */
   intervalDays: z.number().int().nullable(),
   dueOn: z.iso.date(),

@@ -237,6 +237,8 @@ export const backendTaskSchema = z.object({
       unit: z.string().nullish(),
     })
     .nullish(),
+  /** 급여 할 일의 먹이 이름. 완료한 급여는 기록에 적은 먹이 이름이 온다 (backend#73) */
+  foodName: z.string().nullish(),
   // ── 백엔드에 아직 없는 값. [백엔드 요청] 화면(D1 카드 두 번째 줄)에 필요하다 ──
   /** N일마다 */
   intervalDays: z.number().int().nullish(),

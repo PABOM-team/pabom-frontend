@@ -14,11 +14,15 @@ export const todayQueries = {
     }),
 };
 
-/** 할 일 카드 제목. 급여 할 일은 가이드라인 기본 먹이 이름을 붙인다 (오늘 할 일 응답에 먹이 이름이 없어서) */
+/**
+ * 할 일 카드 제목. 급여 할 일은 먹이 이름을 붙인다.
+ * 오늘 할 일 응답의 먹이 이름(완료한 급여는 기록에 적은 이름)이 먼저, 없으면 넘겨받은 기본 먹이 이름
+ */
 export function taskTitle(
-  task: Pick<Task, "title" | "recordKind">,
-  foodName: string | null = null,
+  task: Pick<Task, "title" | "recordKind"> & { foodName?: string | null },
+  fallbackFoodName: string | null = null,
 ) {
+  const foodName = task.foodName || fallbackFoodName;
   return foodName && isFeedItem(task.recordKind) && !task.title.includes(" · ")
     ? `${task.title} · ${foodName}`
     : task.title;

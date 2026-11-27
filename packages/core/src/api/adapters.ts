@@ -27,6 +27,7 @@ import {
   careTitle,
   compareCareItems,
   INTAKE_LABEL,
+  isFeedItem,
   recordKindOf,
   routineLabel,
   SKIP_REASONS,
@@ -271,8 +272,9 @@ function toTask(pet: { petId: number; name: string }, raw: BackendTask, future: 
     careItem,
     careItemName,
     recordKind,
-    // 먹이 이름은 오늘 할 일 응답에 없어 항목 이름만 (급여 · 먹이 이름은 일정 화면에서) [백엔드 확인 필요]
+    // 먹이 이름은 따로 두고 화면에서 붙인다 (없으면 가이드라인 기본 먹이로, taskTitle)
     title: careTitle(careItemName, recordKind),
+    foodName: isFeedItem(recordKind) ? text(raw.foodName) : null,
     intervalDays: raw.intervalDays ?? null,
     dueOn: raw.dueDate,
     originalDueOn: raw.originalDueDate ?? null,

@@ -65,4 +65,20 @@ describe("toToday", () => {
     expect(item?.state).toBe("todo");
     expect(item?.overdueDays).toBe(1);
   });
+
+  it("급여 할 일은 응답의 먹이 이름(기록에 적은 이름)을 받고, 비어 있으면 null로 둔다 (backend#73)", () => {
+    const feed = { itemCode: "FEED", itemName: "급여", resultType: "FEED" } as const;
+    const raw = today("2026-11-21", [
+      task({ routineId: 1, ...feed, status: "DONE", foodName: "인공 사료" }),
+      task({ routineId: 2, ...feed, foodName: "" }),
+      task({ routineId: 3, ...feed }),
+      task({ routineId: 4, foodName: "인공 사료" }),
+    ]);
+    const byId = new Map(toToday(raw, "2026-11-21").items.map((t) => [t.routineId, t]));
+    expect(byId.get("1")?.foodName).toBe("인공 사료");
+    expect(byId.get("2")?.foodName).toBeNull();
+    expect(byId.get("3")?.foodName).toBeNull();
+    // 급여가 아닌 할 일에는 먹이 이름을 두지 않는다
+    expect(byId.get("4")?.foodName).toBeNull();
+  });
 });

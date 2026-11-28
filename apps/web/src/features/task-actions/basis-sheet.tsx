@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "@/shared/ui/icons";
+import { ChevronDownIcon, ChevronUpIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
@@ -9,7 +9,6 @@ import { speciesQueries, stageName, useSpeciesMap } from "@/entities/species";
 import { CARE_DISCLAIMER, formatInterval } from "@pabom/core/domain/care";
 import { EVIDENCE_LEVEL_LABEL } from "@pabom/core/domain/species";
 import type { Task } from "@pabom/core/domain/today";
-import { cn } from "@/shared/lib/utils";
 import { InfoBox } from "@/shared/ui/display";
 import { Sheet } from "@/shared/ui/sheet";
 
@@ -61,63 +60,54 @@ export function BasisSheet({
   const description =
     standard?.description && standard.description !== condition ? standard.description : null;
 
+  // 펼친 칸의 한 줄: 근거 수준 · 출처 (v1.2 5-1). 누르면 그 개체 종의 가이드라인으로
+  const sourceLine = [
+    standard?.evidenceLevel ? `근거 수준 · ${EVIDENCE_LEVEL_LABEL[standard.evidenceLevel]}` : null,
+    standard?.sourceRefs ? `출처 · ${standard.sourceRefs}` : (routine?.basis.sourceText ?? null),
+  ]
+    .filter(Boolean)
+    .join("  |  ");
+
   return (
     <Sheet open={Boolean(task)} onOpenChange={onOpenChange} title="왜 이 할 일이 있나요?">
       <dl className="text-body-lg">
-        <div className="flex border-b border-border py-2.5">
-          <dt className="w-[104px] shrink-0 text-muted-foreground">할 일</dt>
-          <dd>
+        <div className="flex gap-2 border-b border-border py-2">
+          <dt className="w-24 shrink-0 text-muted-foreground">할 일</dt>
+          <dd className="min-w-0 flex-1 text-foreground">
             {current?.title.split(" · ")[0]}
             {current?.intervalDays != null ? ` · ${formatInterval(current.intervalDays)}` : ""}
           </dd>
         </div>
-        <div className="flex border-b border-border py-2.5">
-          <dt className="w-[104px] shrink-0 text-muted-foreground">적용 조건</dt>
-          <dd>{condition}</dd>
+        <div className="flex gap-2 py-2">
+          <dt className="w-24 shrink-0 text-muted-foreground">적용 조건</dt>
+          <dd className="min-w-0 flex-1 text-foreground">{condition}</dd>
         </div>
       </dl>
-      {description ? (
-        <p className="mt-3 text-body-lg leading-relaxed text-secondary-text">{description}</p>
-      ) : null}
+      {description ? <p className="mt-3 text-body-lg text-foreground">{description}</p> : null}
 
-      <div className={cn("mt-3 rounded-lg border", expanded ? "border-primary" : "border-input")}>
+      {/* 펼치면 근거 수준·출처(있을 때)와 종 가이드라인(S04-3) 링크 (Figma H04 펼침, v1.2 5-1) */}
+      <div className="mt-3 flex flex-col gap-2.5 rounded-2xl bg-muted px-3.5 py-3">
         <button
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((v) => !v)}
-          className="flex min-h-11 w-full items-center justify-between px-3.5 py-3 text-body-lg"
+          className="flex min-h-6 w-full items-center gap-2 text-left text-body-lg font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
-          자세히 보기
+          <span className="min-w-0 flex-1">자세히 보기</span>
           {expanded ? (
-            <ChevronUpIcon className="size-4 text-primary" />
+            <ChevronUpIcon className="size-3.5 text-primary" />
           ) : (
-            <ChevronDownIcon className="size-4 text-muted-foreground" />
+            <ChevronDownIcon className="size-3.5 text-muted-foreground" />
           )}
         </button>
-        {/* 펼치면 근거 수준·출처(있을 때)와 종 가이드라인(S04-3) 링크 (Figma H04 펼침, v1.2 5-1) */}
-        {expanded ? (
-          <div className="space-y-1.5 px-3.5 pb-3.5 text-body-lg">
-            {/* 근거 수준(교재 근거·수의 기관 자료·팀 판단)과 출처는 종 가이드라인 항목에서 가져온다 (v1.2 5-1) */}
-            {standard?.evidenceLevel ? (
-              <p className="text-secondary-text">
-                근거 수준 · {EVIDENCE_LEVEL_LABEL[standard.evidenceLevel]}
-              </p>
-            ) : null}
-            {standard?.sourceRefs ? (
-              <p className="text-secondary-text">출처 · {standard.sourceRefs}</p>
-            ) : routine?.basis.sourceText ? (
-              <p className="text-secondary-text">{routine.basis.sourceText}</p>
-            ) : null}
-            {detail ? (
-              <Link
-                href={`/settings/guidelines/${detail.pet.speciesId}`}
-                className="inline-flex min-h-11 items-center gap-0.5 font-medium text-primary"
-              >
-                이러한 기준을 기반으로 제안을 드렸어요
-                <ChevronRightIcon className="size-3.5" />
-              </Link>
-            ) : null}
-          </div>
+        {expanded && detail ? (
+          <Link
+            href={`/settings/guidelines/${detail.pet.speciesId}`}
+            onClick={() => onOpenChange(false)}
+            className="min-h-6 text-body-lg font-medium whitespace-pre-wrap text-primary"
+          >
+            {sourceLine || "이러한 기준을 기반으로 제안을 드렸어요"} ›
+          </Link>
         ) : null}
       </div>
 

@@ -2,31 +2,34 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  PlusIcon,
-} from "@/shared/ui/icons";
+import { ko } from "date-fns/locale";
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
-import { recordQueries, RecordRow } from "@/entities/record";
+import { recordQueries } from "@/entities/record";
 import { useDefaultFoodNameResolver, useFeedResultSetResolver } from "@/entities/species";
-import { SuggestionCard, TaskCard, todayQueries } from "@/entities/task";
+import { SuggestionCard, TaskCard, TaskGroup, todayQueries } from "@/entities/task";
 import { AddRecordSheet, EditRecordSheet } from "@/features/record-editor";
 import { useTaskActions } from "@/features/task-actions";
 import { isWeightItem, WEIGHT_CODE } from "@pabom/core/domain/care";
 import type { Pet } from "@pabom/core/domain/pet";
 import { isKnownStage, type FeedResultSet, type SpeciesId } from "@pabom/core/domain/species";
 import type { CareRecord } from "@pabom/core/domain/record";
-import { formatDayLabel, fromYmd, toYmd, todayYmd, ymdOf } from "@pabom/core/lib/date";
+import {
+  formatDayLabel,
+  formatRelativeDay,
+  fromYmd,
+  toYmd,
+  todayYmd,
+  ymdOf,
+} from "@pabom/core/lib/date";
+import { cn } from "@/shared/lib/utils";
 import { LoadError, Skeleton } from "@/shared/ui/display";
 import { PhotoViewer } from "@/shared/ui/photo-viewer";
-import { ScreenBody } from "@/shared/ui/screen";
+import { Screen, ScreenBody } from "@/shared/ui/screen";
+import { PastRecordRow } from "./past-record-row";
 import { PetFilterRow, WeekStrip } from "./week-strip";
 
 const weekStartOf = (ymd: string) => toYmd(startOfWeek(fromYmd(ymd), { weekStartsOn: 0 }));
@@ -85,50 +88,49 @@ export function HomeScreen() {
   const mode = selected === today ? "today" : selected < today ? "past" : "future";
   const noPets = pets.data?.length === 0;
 
+  const relative = formatRelativeDay(selected);
+
   return (
-    <>
-      <header className="flex h-[52px] shrink-0 items-center gap-1 px-4">
-        <h1 className="text-title-xs font-bold">{format(fromYmd(selected), "yyyy년 M월")}</h1>
-        <button
-          type="button"
-          aria-label="이전 주"
-          onClick={() => moveWeek(-7)}
-          className="p-1 text-muted-foreground"
-        >
-          <ChevronLeftIcon className="size-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="다음 주"
-          onClick={() => moveWeek(7)}
-          className="-ml-1 p-1 text-muted-foreground"
-        >
-          <ChevronRightIcon className="size-4" />
-        </button>
-        <div className="flex flex-1 justify-center">
+    <Screen>
+      <header className="flex shrink-0 items-center justify-between gap-2 px-5 py-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <p
+            className={cn(
+              "text-body-lg font-semibold",
+              mode === "today" ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            {relative}
+          </p>
+          <h1 className="truncate text-title-sm text-foreground">
+            {format(fromYmd(selected), "M월 d일 EEEE", { locale: ko })}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
           {mode !== "today" ? (
             <button
               type="button"
+              aria-label="오늘로 돌아가기"
               onClick={() => select(today)}
-              className="h-6 rounded-full border border-primary px-2.5 text-body-md font-medium text-primary"
+              className={cn(headerButton, "h-8 px-3.5 text-body-md font-medium text-primary")}
             >
-              오늘
+              오늘로
+            </button>
+          ) : null}
+          {!noPets ? (
+            <button
+              type="button"
+              aria-label="기록 추가"
+              onClick={() => setAddOpen({ petId: petId ?? undefined })}
+              className={cn(headerButton, "size-10 justify-center text-primary")}
+            >
+              <PlusIcon className="size-5" />
             </button>
           ) : null}
         </div>
-        {!noPets ? (
-          <button
-            type="button"
-            onClick={() => setAddOpen({ petId: petId ?? undefined })}
-            className="flex h-11 items-center gap-0.5 text-body-lg font-medium text-primary"
-          >
-            <PlusIcon className="size-4" />
-            기록
-          </button>
-        ) : null}
       </header>
 
-      <ScreenBody className="space-y-3">
+      <ScreenBody flush gap={12} className="px-4">
         <WeekStrip
           weekStart={weekStart}
           selected={selected}
@@ -149,13 +151,15 @@ export function HomeScreen() {
         ) : noPets ? (
           <Link
             href="/pets/new"
-            className="flex flex-col items-center rounded-xl border-[1.3px] border-dashed border-input px-4 py-6 text-center"
+            className={cn(stateCard, "transition-colors hover:bg-gray-50 active:bg-muted")}
           >
             <span className="flex size-11 items-center justify-center rounded-full border-[1.5px] border-dashed border-input text-muted-foreground">
               <PlusIcon className="size-5" />
             </span>
-            <span className="mt-3 text-body-xl font-bold">개체를 등록해 보세요</span>
-            <span className="mt-1.5 text-body-lg text-muted-foreground">
+            <span className="mt-3 text-body-xl font-semibold text-foreground">
+              개체를 등록해 보세요
+            </span>
+            <span className="mt-1 text-body-lg text-muted-foreground">
               등록하면 오늘 할 일이 여기에 생겨요
             </span>
           </Link>
@@ -164,7 +168,6 @@ export function HomeScreen() {
             date={selected}
             petId={petId}
             feedResultSetFor={feedResultSetFor}
-            foodNameFor={foodNameFor}
             onEdit={setEditRecordId}
             onAdd={() => setAddOpen({ petId: petId ?? undefined })}
           />
@@ -194,17 +197,22 @@ export function HomeScreen() {
         recordId={editRecordId}
         onOpenChange={(open) => !open && setEditRecordId(null)}
       />
-    </>
+    </Screen>
   );
 }
 
+/** 머리 오른쪽 흰 동그라미·알약 버튼 (오늘로 · 기록 추가) */
+const headerButton =
+  "flex shrink-0 items-center rounded-full bg-card transition-colors outline-none hover:bg-gray-200 focus-visible:ring-3 focus-visible:ring-ring/40 active:bg-gray-200";
+
+/** 빈 상태·다 마침 카드 (흰 카드, 가운데 정렬) */
+const stateCard = "flex flex-col items-center rounded-2xl bg-card px-4 py-6 text-center";
+
 function TaskSkeleton() {
   return (
-    <div className="space-y-3" aria-label="불러오는 중">
-      <Skeleton className="h-5 w-40" />
-      <Skeleton className="h-[66px]" />
-      <Skeleton className="h-[66px]" />
-      <Skeleton className="h-[66px]" />
+    <div className="flex flex-col gap-3" aria-label="불러오는 중">
+      <Skeleton height={18} width={120} />
+      <Skeleton height={190} className="rounded-2xl" />
     </div>
   );
 }
@@ -239,24 +247,26 @@ function TaskList({
 
   if (mode === "future") {
     return (
-      <section className="space-y-3">
-        <h2 className="text-body-xl font-bold">
-          {formatDayLabel(date)} · 예정된 할 일 {data.items.length}
-        </h2>
-        {data.items.map((task) => (
-          <TaskCard
-            key={task.routineId}
-            task={task}
-            feedResultSet={feedResultSetFor(task.petId, task.careItem)}
-            foodName={foodNameFor(task.petId, task.careItem)}
-            onOpen={() => actions.openBasis(task)}
-            menu={actions.menuFor(task)}
-          />
-        ))}
+      <section className="flex flex-col gap-3">
+        <Summary>{`예정된 할 일 ${data.items.length}개`}</Summary>
         {data.items.length ? (
-          <p className="pt-1 text-center text-body-md text-muted-foreground">
-            예정일이 되면 체크할 수 있어요
-          </p>
+          <>
+            <TaskGroup>
+              {data.items.map((task, i) => (
+                <TaskCard
+                  key={task.routineId}
+                  task={task}
+                  divider={i > 0}
+                  feedResultSet={feedResultSetFor(task.petId, task.careItem)}
+                  foodName={foodNameFor(task.petId, task.careItem)}
+                  onOpen={() => actions.openMenu(task)}
+                />
+              ))}
+            </TaskGroup>
+            <p className="text-center text-body-md font-medium text-muted-foreground">
+              체크는 그날이 되면 할 수 있어요
+            </p>
+          </>
         ) : null}
       </section>
     );
@@ -270,38 +280,44 @@ function TaskList({
   const remaining = todo.length + suggestions.length;
 
   return (
-    <section className="space-y-3">
+    <section className="flex flex-col gap-3">
       {remaining > 0 ? (
-        <h2 className="text-body-xl font-bold">
-          오늘의 할 일 <span className="text-primary">{remaining}개 남음</span>
-        </h2>
+        <>
+          <Summary>{`할 일 ${remaining}개 남음`}</Summary>
+          <TaskGroup>
+            {suggestions.map((pet, i) => (
+              <SuggestionCard
+                key={`weigh-${pet.id}`}
+                divider={i > 0}
+                petName={pet.name}
+                careItem={WEIGHT_CODE}
+                title="체중 재기"
+                subline="단계 미정 · 체중을 재면 생애 단계를 제안해 드려요"
+                onCheck={() => onWeigh(pet)}
+              />
+            ))}
+            {todo.map((task, i) => (
+              <TaskCard
+                key={task.routineId}
+                task={task}
+                divider={suggestions.length + i > 0}
+                feedResultSet={feedResultSetFor(task.petId, task.careItem)}
+                foodName={foodNameFor(task.petId, task.careItem)}
+                checking={actions.checkingId === task.routineId}
+                onCheck={() => actions.check(task)}
+                onOpen={() => actions.openMenu(task)}
+              />
+            ))}
+          </TaskGroup>
+        </>
       ) : null}
-      {suggestions.map((pet) => (
-        <SuggestionCard
-          key={`weigh-${pet.id}`}
-          petName={pet.name}
-          title="체중 재기"
-          subline="단계 미정 · 체중을 재면 생애 단계를 제안해 드려요"
-          onCheck={() => onWeigh(pet)}
-        />
-      ))}
-      {todo.map((task) => (
-        <TaskCard
-          key={task.routineId}
-          task={task}
-          feedResultSet={feedResultSetFor(task.petId, task.careItem)}
-          foodName={foodNameFor(task.petId, task.careItem)}
-          checking={actions.checkingId === task.routineId}
-          onCheck={() => actions.check(task)}
-          onOpen={() => actions.openBasis(task)}
-          menu={actions.menuFor(task)}
-        />
-      ))}
       {remaining === 0 && finished.length > 0 ? (
-        <div className="flex flex-col items-center rounded-xl border-[1.3px] border-input px-4 py-6 text-center">
-          <CheckIcon className="size-7 text-foreground" strokeWidth={1.6} aria-hidden />
-          <p className="mt-2 text-body-xl font-bold">오늘 할 일을 모두 마쳤어요</p>
-          <p className="mt-1 text-body-lg text-muted-foreground">
+        <div className={stateCard}>
+          <CheckIcon className="size-5 text-foreground" aria-hidden />
+          <p className="mt-3 text-body-lg font-semibold text-foreground">
+            오늘 할 일을 모두 마쳤어요
+          </p>
+          <p className="mt-1 text-body-md font-medium text-muted-foreground">
             완료 {doneCount}
             {skipCount ? ` · 건너뜀 ${skipCount}` : ""}
           </p>
@@ -313,31 +329,38 @@ function TaskList({
             type="button"
             aria-expanded={showFinished}
             onClick={() => setShowFinished((v) => !v)}
-            className="flex w-full items-center justify-between rounded-xl border-[1.3px] border-input px-3.5 py-3 text-body-lg text-secondary-text"
+            className="flex w-full items-center justify-between rounded-2xl bg-card px-4 py-3 text-body-lg text-foreground transition-colors outline-none hover:bg-gray-50 focus-visible:ring-3 focus-visible:ring-ring/40 active:bg-muted"
           >
             완료·건너뜀 {finished.length}개 {showFinished ? "접기" : "보기"}
             {showFinished ? (
-              <ChevronUpIcon className="size-4 text-muted-foreground" />
+              <ChevronUpIcon className="size-4 text-subtle-foreground" />
             ) : (
-              <ChevronDownIcon className="size-4 text-muted-foreground" />
+              <ChevronDownIcon className="size-4 text-subtle-foreground" />
             )}
           </button>
-          {showFinished
-            ? finished.map((task) => (
+          {showFinished ? (
+            <TaskGroup>
+              {finished.map((task, i) => (
                 <TaskCard
                   key={task.routineId}
                   task={task}
+                  divider={i > 0}
                   feedResultSet={feedResultSetFor(task.petId, task.careItem)}
                   foodName={foodNameFor(task.petId, task.careItem)}
-                  onOpen={() => actions.openBasis(task)}
-                  menu={actions.menuFor(task)}
+                  onOpen={() => actions.openMenu(task)}
                 />
-              ))
-            : null}
+              ))}
+            </TaskGroup>
+          ) : null}
         </>
       ) : null}
     </section>
   );
+}
+
+/** 요약 한 줄 (Figma ④): 할 일 4개 남음 · 예정된 할 일 3개 · 이날 기록 4개 */
+function Summary({ children }: { children: string }) {
+  return <h2 className="text-body-lg font-semibold text-muted-foreground">{children}</h2>;
 }
 
 /** 지난 날짜: 그날 남긴 기록. 기록 없는 날에 '안 함'으로 표시하지 않는다 */
@@ -345,14 +368,12 @@ function PastDay({
   date,
   petId,
   feedResultSetFor,
-  foodNameFor,
   onEdit,
   onAdd,
 }: {
   date: string;
   petId: string | null;
   feedResultSetFor: FeedResultSetFor;
-  foodNameFor: FoodNameFor;
   onEdit: (recordId: string) => void;
   onAdd: () => void;
 }) {
@@ -365,25 +386,27 @@ function PastDay({
   if (isError) return <LoadError onRetry={() => refetch()} />;
 
   return (
-    <section>
-      <h2 className="mb-1 text-body-xl font-bold">
-        {formatDayLabel(date)} · 기록 {data.items.length}
-      </h2>
-      {data.items.map((record) => (
-        <RecordRow
-          key={record.id}
-          record={record}
-          variant="day"
-          feedResultSet={feedResultSetFor(record.petId, record.careItem)}
-          onClick={() => onEdit(record.id)}
-          onPhotoClick={() => setViewing(record)}
-        />
-      ))}
+    <section className="flex flex-col gap-3">
+      <Summary>{`이날 기록 ${data.items.length}개`}</Summary>
+      {data.items.length ? (
+        <TaskGroup>
+          {data.items.map((record, i) => (
+            <PastRecordRow
+              key={record.id}
+              record={record}
+              divider={i > 0}
+              feedResultSet={feedResultSetFor(record.petId, record.careItem)}
+              onClick={() => onEdit(record.id)}
+              onPhotoClick={() => setViewing(record)}
+            />
+          ))}
+        </TaskGroup>
+      ) : null}
       {date >= toYmd(subDays(new Date(), 365)) ? (
         <button
           type="button"
           onClick={onAdd}
-          className="mt-3 flex items-center gap-0.5 text-body-lg font-bold text-primary"
+          className="flex min-h-11 items-center gap-0.5 self-start text-body-lg font-semibold text-primary transition-opacity outline-none focus-visible:ring-3 focus-visible:ring-ring/40 active:opacity-70"
         >
           <PlusIcon className="size-4" />
           이날 기록 추가

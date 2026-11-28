@@ -87,7 +87,8 @@ export function TermsScreen() {
   const doc = LEGAL_DOCS[tab];
 
   return (
-    <Screen>
+    // 목차 상자·원문 자리 막대가 회색이라 흰 화면에 그린다
+    <Screen tone="white">
       <TopBar title={TAB_LABEL[tab]} fallbackHref="/settings" />
       <ScreenBody>
         <Segmented

@@ -55,9 +55,6 @@ for (const [name, px] of Object.entries(radius)) {
   if (name === "full") continue;
   push(`  --radius-${name}: ${px}px;`);
 }
-// Tailwind 기본 단계(3xl·4xl)는 디자인 시스템 최대 반경(20)으로 묶는다
-push(`  --radius-3xl: ${radius["2xl"]}px;`);
-push(`  --radius-4xl: ${radius["2xl"]}px;`);
 push();
 
 push("  /* ---- Shadow ---- */");

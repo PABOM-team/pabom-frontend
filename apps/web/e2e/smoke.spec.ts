@@ -12,7 +12,7 @@ test("카카오로 시작하면 오늘 할 일과 개체 목록을 본다", asyn
   await page.goto("/welcome");
   await page.getByRole("button", { name: "카카오로 시작하기" }).click();
   await expect(page).toHaveURL(/\/home$/);
-  await expect(page.getByRole("link", { name: "오늘" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "홈" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("오늘의 할 일")).toBeVisible();
 
   await page.getByRole("link", { name: "개체" }).click();

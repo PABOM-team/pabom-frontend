@@ -1,11 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
 import { ChevronRightIcon } from "@/shared/ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { meApi } from "@pabom/core/api/endpoints";
 import { getApiError, getErrorMessage } from "@pabom/core/api/errors";
 import { queryKeys } from "@pabom/core/api/query-keys";
@@ -21,7 +20,7 @@ import { toast } from "@/shared/ui/toast";
 class SignupExpired extends Error {}
 
 /**
- * SCR-A03 첫 로그인 약관 동의. Figma 그대로 머리줄 없이 제목·동의 목록·시작하기만.
+ * SCR-A03 첫 로그인 약관 동의. Figma 그대로 머리줄 없이 제목·흰 카드 동의 목록·시작하기만.
  * 로그인 결과로 받은 가입 토큰으로 동의를 보내고, 가입이 끝나면 access 토큰을 받는다
  */
 export function AgreementsScreen() {
@@ -72,61 +71,42 @@ export function AgreementsScreen() {
   return (
     <Screen>
       {/* 저장 중에는 입력을 흐리게 잠근다 (C2-2) */}
-      <ScreenBody className={cn("pt-6", agree.isPending && "pointer-events-none opacity-50")}>
-        <h1 className="text-title-sm leading-snug font-bold">
+      <ScreenBody
+        className={cn("px-4 pt-6 *:shrink-0", agree.isPending && "pointer-events-none opacity-50")}
+        gap={12}
+      >
+        <h1 className="text-title-xs whitespace-pre-line text-foreground">
           파봄을 쓰려면
           <br />
           동의가 필요해요
         </h1>
-        <label className="mt-7 flex items-center gap-2.5 border-b-[1.5px] border-foreground pb-3.5 text-body-xl font-bold">
-          <Checkbox
+        <div className="overflow-hidden rounded-2xl bg-card py-1">
+          <AgreementRow
+            label="전체 동의"
             checked={allChecked}
-            onCheckedChange={(on) =>
-              setChecked(on === true ? new Set(AGREEMENTS.map((a) => a.type)) : new Set())
-            }
+            onToggle={(on) => setChecked(on ? new Set(AGREEMENTS.map((a) => a.type)) : new Set())}
+            divider
           />
-          전체 동의
-        </label>
-        <ul>
-          {AGREEMENTS.map((agreement) => (
-            <li
+          {AGREEMENTS.map((agreement, i) => (
+            <AgreementRow
               key={agreement.type}
-              className="flex h-[50px] items-center gap-2.5 border-b border-border"
-            >
-              <label className="flex min-w-0 flex-1 items-center gap-2.5 text-body-lg">
-                <Checkbox
-                  checked={checked.has(agreement.type)}
-                  onCheckedChange={(on) => toggle(agreement.type, on === true)}
-                />
-                <span className="truncate">
-                  [{agreement.required ? "필수" : "선택"}] {agreement.label}
-                </span>
-              </label>
-              {agreement.href ? (
-                <Link
-                  href={agreement.href}
-                  className="flex items-center gap-1 text-body-lg text-muted-foreground"
-                  aria-label={`${agreement.label} 보기`}
-                >
-                  보기
-                  <ChevronRightIcon className="size-3.5" />
-                </Link>
-              ) : null}
-            </li>
+              label={`[${agreement.required ? "필수" : "선택"}] ${agreement.label}`}
+              checked={checked.has(agreement.type)}
+              onToggle={(on) => toggle(agreement.type, on)}
+              divider={i < AGREEMENTS.length - 1}
+              href={agreement.href ?? undefined}
+            />
           ))}
-        </ul>
+        </div>
       </ScreenBody>
-      <ScreenFooter>
+      <ScreenFooter className="pb-[max(26px,env(safe-area-inset-bottom))]">
         <Button
           size="xl"
-          disabled={!requiredDone || agree.isPending}
+          disabled={!requiredDone}
+          loading={agree.isPending}
           onClick={() => agree.mutate()}
         >
-          {agree.isPending ? (
-            <LoaderCircle className="size-5 animate-spin" aria-label="저장 중" />
-          ) : (
-            "시작하기"
-          )}
+          시작하기
         </Button>
         {/* 필수 항목을 모두 체크하기 전에는 비활성 (Figma A03 · C2-1) */}
         {!requiredDone ? (
@@ -136,5 +116,46 @@ export function AgreementsScreen() {
         ) : null}
       </ScreenFooter>
     </Screen>
+  );
+}
+
+/** 동의 목록 한 줄 (Figma 줄: 체크박스 22 · 글 · 보기 ›, 구분선은 글 아래부터) */
+function AgreementRow({
+  label,
+  checked,
+  onToggle,
+  href,
+  divider = false,
+}: {
+  label: string;
+  checked: boolean;
+  onToggle: (on: boolean) => void;
+  href?: string;
+  divider?: boolean;
+}) {
+  const id = useId();
+  return (
+    <div className="relative flex min-h-12.5 items-center gap-3 px-4 py-3">
+      <Checkbox id={id} checked={checked} onCheckedChange={(on) => onToggle(on === true)} />
+      <label
+        htmlFor={id}
+        className="min-w-0 flex-1 cursor-pointer truncate text-body-lg text-foreground"
+      >
+        {label}
+      </label>
+      {href ? (
+        <Link
+          href={href}
+          aria-label={`${label} 보기`}
+          className="-m-2 flex items-center gap-0.5 p-2 text-body-lg text-muted-foreground"
+        >
+          보기
+          <ChevronRightIcon className="size-5 text-subtle-foreground" />
+        </Link>
+      ) : null}
+      {divider ? (
+        <span aria-hidden className="absolute right-0 bottom-0 left-12.5 h-px bg-border" />
+      ) : null}
+    </div>
   );
 }

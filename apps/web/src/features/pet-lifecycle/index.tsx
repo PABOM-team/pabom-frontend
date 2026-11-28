@@ -1,5 +1,6 @@
 "use client";
 
+export { ActionSheet, type ActionSheetItem } from "./action-sheet";
 export { useWeightStageToast } from "./use-weight-stage-toast";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";

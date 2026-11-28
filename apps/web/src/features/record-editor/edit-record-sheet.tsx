@@ -2,28 +2,36 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { petQueries } from "@/entities/pet";
 import { recordQueries } from "@/entities/record";
-import { useFeedResultSet } from "@/entities/species";
+import { useDefaultFoodNameResolver, useFeedResultSet } from "@/entities/species";
 import { recordsApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { invalidateCareData } from "@pabom/core/api/query-keys";
 import { intakeOptionsFor, type Intake } from "@pabom/core/domain/care";
 import { MEMO_MAX, type CareRecord, type Photo } from "@pabom/core/domain/record";
 import type { SpeciesId } from "@pabom/core/domain/species";
-import { formatDayLabel } from "@pabom/core/lib/date";
+import { formatDayLabel, ymdOf } from "@pabom/core/lib/date";
 import { Button } from "@/shared/ui/button";
-import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { DateTimeField } from "@/shared/ui/date-time-field";
 import { InfoBox, LoadError, Spinner } from "@/shared/ui/display";
-import { Input, Textarea } from "@/shared/ui/form";
+import { Textarea } from "@/shared/ui/form";
 import { PhotoInput } from "@/shared/ui/photo-input";
 import { PhotoViewer } from "@/shared/ui/photo-viewer";
-import { Sheet, SheetLabel } from "@/shared/ui/sheet";
+import { Sheet } from "@/shared/ui/sheet";
 import { toast } from "@/shared/ui/toast";
+import {
+  AddExtraLink,
+  DetailRow,
+  IntakeChoice,
+  Keypad,
+  pressKey,
+  SheetDivider,
+  StepView,
+  WeightDisplay,
+} from "./parts";
 
 type Draft = {
   occurredAt: string;
@@ -70,10 +78,12 @@ export function EditRecordSheet({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
+  const [extraOpen, setExtraOpen] = useState(false);
 
   if (record && draftFor !== `${record.id}:${record.revisions.length}`) {
     setDraftFor(`${record.id}:${record.revisions.length}`);
     setDraft(toDraft(record));
+    setExtraOpen(false);
   }
 
   const kind = record?.recordKind ?? null;
@@ -81,10 +91,11 @@ export function EditRecordSheet({
     ...petQueries.list(),
     enabled: speciesId === undefined && kind === "intake",
   });
-  const feedResultSet = useFeedResultSet(
-    speciesId ?? pets?.find((p) => p.id === record?.petId)?.speciesId,
-    kind === "intake" ? record?.careItem : null,
-  );
+  const petSpecies = speciesId ?? pets?.find((p) => p.id === record?.petId)?.speciesId;
+  const feedResultSet = useFeedResultSet(petSpecies, kind === "intake" ? record?.careItem : null);
+  const resolveFoodName = useDefaultFoodNameResolver();
+  const foodName =
+    kind === "intake" && record ? resolveFoodName(petSpecies, record.careItem) : null;
   const original = record ? toDraft(record) : null;
   const dirty = Boolean(draft && original && JSON.stringify(draft) !== JSON.stringify(original));
   const weightValue = draft?.weight ? Number(draft.weight) : null;
@@ -130,9 +141,40 @@ export function EditRecordSheet({
     onSettled: refresh,
   });
 
-  const title = record
-    ? `${record.petName} · ${record.careItemName} · ${formatDayLabel(format(parseISO(record.occurredAt), "yyyy-MM-dd"))}`
-    : "기록";
+  const extraVisible = extraOpen || kind === "memo" || Boolean(draft?.memo || draft?.photos.length);
+  const recordDay = draft ? format(parseISO(draft.occurredAt), "M월 d일") : "";
+  const title = !record
+    ? "기록"
+    : kind === "intake"
+      ? `${record.petName}, ${recordDay}에 먹었나요?`
+      : kind === "weight"
+        ? `${record.petName}, 몸무게는 얼마인가요?`
+        : kind === "memo"
+          ? `${record.petName}에게 무슨 일이 있었나요?`
+          : `${record.petName} · ${record.careItemName} · ${formatDayLabel(ymdOf(record.occurredAt))}`;
+  const viewerCaption = record
+    ? `${record.petName} · ${record.careItemName} · ${formatDayLabel(ymdOf(record.occurredAt))}`
+    : "";
+
+  const memoAndPhotos = (label: string, placeholder: string) =>
+    draft ? (
+      <div className="flex flex-col gap-3 pt-1.5 pb-4.5">
+        <Textarea
+          aria-label={label}
+          placeholder={placeholder}
+          maxLength={MEMO_MAX}
+          value={draft.memo}
+          onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
+        />
+        <PhotoInput
+          value={draft.photos}
+          max={5}
+          onChange={(photos) => setDraft((d) => (d ? { ...d, photos } : d))}
+          onView={setViewer}
+          onBusyChange={setUploading}
+        />
+      </div>
+    ) : null;
 
   return (
     <>
@@ -142,28 +184,24 @@ export function EditRecordSheet({
         title={title}
         footer={
           record && draft ? (
-            <>
-              <Button
-                variant="outline"
-                size="xl"
-                className="w-[38%]"
-                onClick={() => setConfirmDelete(true)}
-              >
-                기록 삭제
-              </Button>
+            <div className="flex flex-1 flex-col gap-1">
               <Button
                 size="xl"
-                className="flex-1"
                 disabled={!dirty || weightInvalid || uploading || save.isPending}
+                loading={save.isPending}
+                aria-label={save.isPending ? "저장 중" : undefined}
                 onClick={() => save.mutate()}
               >
-                {save.isPending ? (
-                  <LoaderCircle className="size-5 animate-spin" aria-label="저장 중" />
-                ) : (
-                  "저장"
-                )}
+                저장
               </Button>
-            </>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="self-center py-2 text-body-lg text-subtle-foreground transition-opacity hover:text-muted-foreground active:opacity-60"
+              >
+                이 기록 삭제하기
+              </button>
+            </div>
           ) : null
         }
       >
@@ -174,68 +212,45 @@ export function EditRecordSheet({
         ) : isError || !record || !draft ? (
           <LoadError onRetry={() => refetch()} />
         ) : (
-          <>
+          <StepView key={record.id}>
             {kind === "intake" && record.type === "done" ? (
-              <>
-                <SheetLabel className="mt-1">얼마나 먹었나요?</SheetLabel>
-                <ChipGroup
-                  label="먹은 정도"
-                  columns={2}
-                  allowDeselect
+              <div className="pb-4">
+                <IntakeChoice
                   options={intakeOptionsFor(feedResultSet)}
                   value={draft.intake}
                   onChange={(intake) => setDraft({ ...draft, intake })}
                 />
-              </>
+              </div>
             ) : null}
-            {kind === "weight" ? (
-              <>
-                <SheetLabel className="mt-1">
-                  <label htmlFor="edit-weight">몸무게</label>
-                </SheetLabel>
-                <Input
-                  id="edit-weight"
-                  inputMode="decimal"
-                  suffix="g"
-                  value={draft.weight}
-                  onChange={(e) =>
-                    setDraft({ ...draft, weight: e.target.value.replace(/[^0-9.]/g, "") })
-                  }
-                />
-              </>
-            ) : null}
+            {kind === "weight" ? <WeightDisplay value={draft.weight} /> : null}
             {kind === "check" && record.method === "routine" && !draft.photos.length ? (
-              <InfoBox className="mt-1">
+              <InfoBox className="mb-4">
                 O/X 기록이라 고칠 값이 없어요. 시각과 메모만 고칠 수 있어요.
               </InfoBox>
             ) : null}
-            {kind === "memo" || record.method !== "routine" || draft.photos.length ? (
-              <>
-                <SheetLabel className="mt-1">사진</SheetLabel>
-                <PhotoInput
-                  value={draft.photos}
-                  onChange={(photos) => setDraft((d) => (d ? { ...d, photos } : d))}
-                  onView={setViewer}
-                  onBusyChange={setUploading}
-                />
-              </>
+            {kind === "memo" ? memoAndPhotos("메모", "무슨 일이 있었는지 남겨 주세요") : null}
+            <SheetDivider />
+            <div className="flex flex-col gap-2 py-3.5">
+              <span className="text-body-xl text-secondary-text">언제</span>
+              <DateTimeField
+                value={draft.occurredAt}
+                onChange={(occurredAt) => setDraft({ ...draft, occurredAt })}
+              />
+            </div>
+            {foodName ? <DetailRow label="먹이" value={foodName} /> : null}
+            {kind === "memo" ? null : extraVisible ? (
+              memoAndPhotos("메모 (선택)", "메모를 남겨 주세요")
+            ) : (
+              <AddExtraLink onClick={() => setExtraOpen(true)} />
+            )}
+            {kind === "weight" ? (
+              <Keypad
+                onKey={(key) =>
+                  setDraft((d) => (d ? { ...d, weight: pressKey(d.weight, key) } : d))
+                }
+              />
             ) : null}
-            <SheetLabel>기록한 시각</SheetLabel>
-            <DateTimeField
-              value={draft.occurredAt}
-              onChange={(occurredAt) => setDraft({ ...draft, occurredAt })}
-            />
-            <SheetLabel>
-              <label htmlFor="edit-memo">메모 (선택)</label>
-            </SheetLabel>
-            <Textarea
-              id="edit-memo"
-              placeholder="메모를 남겨 주세요"
-              maxLength={MEMO_MAX}
-              value={draft.memo}
-              onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
-            />
-          </>
+          </StepView>
         )}
       </Sheet>
       <ConfirmDialog
@@ -256,7 +271,7 @@ export function EditRecordSheet({
         caption={
           record ? (
             <>
-              <p className="font-bold">{title}</p>
+              <p className="font-bold">{viewerCaption}</p>
               {record.memo ? <p>{record.memo}</p> : null}
             </>
           ) : null

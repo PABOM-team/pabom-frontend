@@ -27,7 +27,7 @@ export function NotFoundScreen() {
         description="주소가 바뀌었거나 삭제된 정보예요."
         action={
           loggedIn
-            ? { label: "홈 화면으로 가기 (오늘)", onClick: () => router.replace("/home") }
+            ? { label: "홈 화면으로 가기", onClick: () => router.replace("/home") }
             : { label: "처음으로", onClick: () => router.replace("/welcome") }
         }
       />
@@ -45,7 +45,7 @@ export function ErrorScreen({ onRetry }: { onRetry: () => void }) {
         description="잠시 뒤 다시 시도해 주세요."
         action={{ label: "새로고침", onClick: onRetry }}
         secondaryAction={{
-          label: "홈 화면으로 가기 (오늘)",
+          label: "홈 화면으로 가기",
           onClick: () => router.replace("/home"),
         }}
       />

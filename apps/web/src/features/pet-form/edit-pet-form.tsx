@@ -25,10 +25,10 @@ import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { Field, FieldButton, Input } from "@/shared/ui/form";
-import { Screen, ScreenBody } from "@/shared/ui/screen";
+import { Screen, ScreenBody, ScreenFooter } from "@/shared/ui/screen";
 import { Sheet } from "@/shared/ui/sheet";
 import { toast } from "@/shared/ui/toast";
-import { TopBar, TopBarAction } from "@/shared/ui/top-bar";
+import { TopBar } from "@/shared/ui/top-bar";
 import { HatchFields, MorphPicker, PetPhotoPicker, type PhotoValue } from "./fields";
 
 type Draft = {
@@ -59,7 +59,7 @@ const fromPet = (pet: Pet): Draft => ({
 });
 
 /**
- * SCR-P05 개체 정보 수정. 저장은 바뀐 내용이 있을 때만 켜진다.
+ * SCR-P05 개체 정보 수정. 회색 바탕 위 칸들, 아래 고정 '저장'은 바뀐 내용이 있을 때만 켜진다.
  * 종은 고칠 수 없어서(틀렸으면 삭제 뒤 다시 등록 [제안]) 보여 주지 않는다.
  */
 export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void }) {
@@ -126,18 +126,9 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         leading="close"
         title="개체 정보 수정"
         onLeading={() => (dirty ? setExitOpen(true) : back())}
-        trailing={
-          <TopBarAction
-            disabled={!dirty || !valid || uploading || save.isPending}
-            onClick={() => save.mutate()}
-          >
-            저장
-          </TopBarAction>
-        }
       />
-      <ScreenBody className="space-y-5">
+      <ScreenBody className="px-4 *:shrink-0" gap={24}>
         <PetPhotoPicker
-          variant="edit"
           value={draft.photo}
           onChange={(photo) => patch({ photo })}
           onBusyChange={setUploading}
@@ -147,7 +138,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
             id="edit-name"
             maxLength={20}
             value={draft.name}
-            aria-invalid={Boolean(nameError) || undefined}
+            invalid={Boolean(nameError)}
             onChange={(e) => {
               setNameError(null);
               patch({ name: e.target.value });
@@ -157,7 +148,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         <Field label="모프">
           <FieldButton
             placeholder="모프를 골라 주세요"
-            icon={<ChevronDownIcon className="size-4" />}
+            icon={<ChevronDownIcon className="size-4 text-muted-foreground" />}
             onClick={() => setMorphOpen(true)}
           >
             {draft.morph}
@@ -176,7 +167,6 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         <Field label="성별">
           <ChipGroup
             label="성별"
-            size="sm"
             options={sexSchema.options.map((value) => ({ value, label: SEX_LABEL[value] }))}
             value={draft.sex}
             onChange={(sex) => patch({ sex: sex ?? "unknown" })}
@@ -191,10 +181,25 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
             onChange={(acquiredOn) => patch({ acquiredOn })}
           />
         </Field>
-        <Button variant="outline" size="xl" onClick={onDelete}>
+        {/* Figma P05: 흰 바탕 · 빨간 글자 '개체 삭제' */}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex h-14 shrink-0 items-center justify-center rounded-lg bg-card text-body-xl font-semibold text-destructive transition-opacity outline-none focus-visible:ring-3 focus-visible:ring-ring/40 active:opacity-70"
+        >
           개체 삭제
-        </Button>
+        </button>
       </ScreenBody>
+      <ScreenFooter className="pb-[max(26px,env(safe-area-inset-bottom))]">
+        <Button
+          size="xl"
+          disabled={!dirty || !valid || uploading}
+          loading={save.isPending}
+          onClick={() => save.mutate()}
+        >
+          저장
+        </Button>
+      </ScreenFooter>
 
       <Sheet
         open={morphOpen}
@@ -202,7 +207,7 @@ export function EditPetForm({ pet, onDelete }: { pet: Pet; onDelete: () => void 
         title="모프 바꾸기"
         description={species?.commonName}
         footer={
-          <Button size="xl" onClick={() => setMorphOpen(false)}>
+          <Button size="xl" className="flex-1" onClick={() => setMorphOpen(false)}>
             고르기
           </Button>
         }

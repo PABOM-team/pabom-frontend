@@ -130,7 +130,15 @@ export const RECORD_KIND_HINT: Record<RecordKind, string> = {
 };
 
 /** 급여 결과. 미리 선택하지 않고 비워도 저장된다 (SCR-H02) */
-export const INTAKES = ["partial", "all", "none", "unobserved"] as const;
+export const INTAKES = [
+  "partial",
+  "all",
+  "none",
+  "unobserved",
+  // 크레스티드 게코 인공 사료(DIET) 급여 전용. 백엔드가 이 묶음에는 이 둘과 관찰 못함만 받는다
+  "trace_found",
+  "trace_not_found",
+] as const;
 export const intakeSchema = z.enum(INTAKES);
 export type Intake = z.infer<typeof intakeSchema>;
 
@@ -139,6 +147,8 @@ export const INTAKE_LABEL: Record<Intake, string> = {
   all: "전부 먹음",
   none: "안 먹음",
   unobserved: "관찰 못함",
+  trace_found: "먹은 흔적 있음",
+  trace_not_found: "먹은 흔적 없음",
 };
 
 export type IntakeOption = { value: Intake; label: string };
@@ -148,7 +158,8 @@ export type IntakeOption = { value: Intake; label: string };
  * - INSECT(곤충): 전부 먹음 · 일부 먹음 · 안 먹음 · 관찰 못함
  * - DIET(인공 사료): 먹은 흔적 있음 · 먹은 흔적 없음 · 관찰 못함 (일부 먹음 없음)
  * - WHOLE_PREY(통먹이): 먹음 · 안 먹음 · 관찰 못함
- * 값(백엔드 outcome)은 같고 이름만 다르다
+ * 인공 사료는 백엔드 outcome도 따로다 (EATING_TRACE_FOUND·EATING_TRACE_NOT_FOUND, backend#73).
+ * 곤충·통먹이는 값(ATE_ALL·REFUSED…)은 같고 이름만 다르다
  */
 const INTAKE_OPTIONS: Record<FeedResultSet, readonly IntakeOption[]> = {
   INSECT: [
@@ -158,8 +169,8 @@ const INTAKE_OPTIONS: Record<FeedResultSet, readonly IntakeOption[]> = {
     { value: "unobserved", label: INTAKE_LABEL.unobserved },
   ],
   DIET: [
-    { value: "all", label: "먹은 흔적 있음" },
-    { value: "none", label: "먹은 흔적 없음" },
+    { value: "trace_found", label: INTAKE_LABEL.trace_found },
+    { value: "trace_not_found", label: INTAKE_LABEL.trace_not_found },
     { value: "unobserved", label: INTAKE_LABEL.unobserved },
   ],
   WHOLE_PREY: [
@@ -174,8 +185,16 @@ export const intakeOptionsFor = (set: FeedResultSet | null | undefined): readonl
   INTAKE_OPTIONS[set ?? "INSECT"];
 
 /** 먹이 묶음에 맞는 먹은 정도 이름. 그 묶음에 없는 값(인공 사료의 '일부 먹음')은 공통 이름으로 */
-export const intakeLabelFor = (set: FeedResultSet | null | undefined, intake: Intake) =>
-  intakeOptionsFor(set).find((o) => o.value === intake)?.label ?? INTAKE_LABEL[intake];
+export const intakeLabelFor = (set: FeedResultSet | null | undefined, intake: Intake) => {
+  // 먹은 흔적 값이 생기기 전 ATE_ALL·REFUSED로 남은 인공 사료 기록은 먹은 흔적 이름으로 보인다
+  const shown =
+    set === "DIET" && intake === "all"
+      ? "trace_found"
+      : set === "DIET" && intake === "none"
+        ? "trace_not_found"
+        : intake;
+  return intakeOptionsFor(set).find((o) => o.value === shown)?.label ?? INTAKE_LABEL[intake];
+};
 
 export const SKIP_REASONS = ["개체 상태를 보고 쉬기로 함", "일정이 맞지 않음", "기타"] as const;
 

@@ -26,13 +26,23 @@ export const backendMetaSchema = z.object({ timestamp: dateTime, path: z.string(
  * CLEAN·FEED·FEED_INSECT·MIST·SHED_CHECK·UVB_LAMP·WATER·WEIGHT·HUMID_HIDE·MULTIVITAMIN) 앞으로 늘 수 있다.
  * 이름은 careItemName·itemName, 기록 방식은 recordType(OX·FEED·WEIGHT)으로 받는다
  */
-export const backendOutcomeSchema = z.enum(["ATE_ALL", "ATE_PART", "REFUSED", "NOT_OBSERVED"]);
+export const backendOutcomeSchema = z.enum([
+  "ATE_ALL",
+  "ATE_PART",
+  "REFUSED",
+  "NOT_OBSERVED",
+  /** 크레스티드 게코 인공 사료(DIET) 급여 전용 */
+  "EATING_TRACE_FOUND",
+  "EATING_TRACE_NOT_FOUND",
+]);
 export type BackendOutcome = z.infer<typeof backendOutcomeSchema>;
 export const OUTCOME_CODE: Record<Intake, BackendOutcome> = {
   all: "ATE_ALL",
   partial: "ATE_PART",
   none: "REFUSED",
   unobserved: "NOT_OBSERVED",
+  trace_found: "EATING_TRACE_FOUND",
+  trace_not_found: "EATING_TRACE_NOT_FOUND",
 };
 
 export const skipReasonCodeSchema = z.enum(["PET_CONDITION", "SCHEDULE", "OTHER"]);

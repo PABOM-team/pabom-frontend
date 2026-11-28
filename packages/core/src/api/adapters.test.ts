@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BackendTask, BackendToday } from "../domain/backend";
-import { newRequestId, toToday } from "./adapters";
+import { backendTodaySchema, type BackendTask, type BackendToday } from "../domain/backend";
+import { intakeOptionsFor } from "../domain/care";
+import { newRequestId, toCompleteRequest, toToday } from "./adapters";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -80,5 +81,39 @@ describe("toToday", () => {
     expect(byId.get("3")?.foodName).toBeNull();
     // 급여가 아닌 할 일에는 먹이 이름을 두지 않는다
     expect(byId.get("4")?.foodName).toBeNull();
+  });
+
+  it("크레스티드 게코 인공 사료 급여의 먹은 흔적 결과(EATING_TRACE_*)를 받는다 (backend#73)", () => {
+    const raw = today("2026-11-21", [
+      task({
+        routineId: 283,
+        itemCode: "FEED",
+        itemName: "급여",
+        resultType: "FEED",
+        status: "DONE",
+        lastRecord: {
+          recordId: 9,
+          recordType: "DONE",
+          occurredAt: "2026-11-21T12:00:00+09:00",
+          outcome: "EATING_TRACE_FOUND",
+        },
+      }),
+    ]);
+    const parsed = backendTodaySchema.parse(raw);
+    expect(toToday(parsed, "2026-11-21").items[0]?.record?.intake).toBe("trace_found");
+  });
+});
+
+describe("인공 사료(DIET) 급여 결과", () => {
+  it("먹은 흔적 칩은 EATING_TRACE_FOUND·EATING_TRACE_NOT_FOUND로 보낸다 (OUTCOME_NOT_ALLOWED 방지)", () => {
+    const values = intakeOptionsFor("DIET").map((o) => o.value);
+    expect(values).toEqual(["trace_found", "trace_not_found", "unobserved"]);
+    const outcome = (intake: (typeof values)[number]) =>
+      toCompleteRequest({ intake, occurredAt: "2026-11-28T03:26:54.024Z" }).outcome;
+    expect(values.map(outcome)).toEqual(["EATING_TRACE_FOUND", "EATING_TRACE_NOT_FOUND", "NOT_OBSERVED"]);
+  });
+
+  it("곤충 급여는 기존 값(ATE_ALL…)을 그대로 쓴다", () => {
+    expect(intakeOptionsFor("INSECT").map((o) => o.value)).toEqual(["all", "partial", "none", "unobserved"]);
   });
 });

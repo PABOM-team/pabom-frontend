@@ -13,8 +13,8 @@ describe("intakeOptionsFor", () => {
 
   it("인공 사료 묶음은 먹은 흔적 있음·없음·관찰 못함 (일부 먹음 없음)", () => {
     expect(intakeOptionsFor("DIET")).toEqual([
-      { value: "all", label: "먹은 흔적 있음" },
-      { value: "none", label: "먹은 흔적 없음" },
+      { value: "trace_found", label: "먹은 흔적 있음" },
+      { value: "trace_not_found", label: "먹은 흔적 없음" },
       { value: "unobserved", label: "관찰 못함" },
     ]);
   });
@@ -36,7 +36,10 @@ describe("intakeOptionsFor", () => {
 
 describe("intakeLabelFor", () => {
   it("묶음에 맞는 이름을 준다", () => {
+    expect(intakeLabelFor("DIET", "trace_found")).toBe("먹은 흔적 있음");
+    // 백엔드가 먹은 흔적 값을 받기 전에 ATE_ALL·REFUSED로 남은 인공 사료 기록도 같은 이름으로
     expect(intakeLabelFor("DIET", "all")).toBe("먹은 흔적 있음");
+    expect(intakeLabelFor("DIET", "none")).toBe("먹은 흔적 없음");
     expect(intakeLabelFor("WHOLE_PREY", "all")).toBe("먹음");
     expect(intakeLabelFor("INSECT", "all")).toBe("전부 먹음");
     expect(intakeLabelFor(null, "partial")).toBe("일부 먹음");

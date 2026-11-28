@@ -89,6 +89,8 @@ const INTAKE_TITLE: Record<Intake, string> = {
   partial: "조금 먹었어요",
   none: "안 먹었어요",
   unobserved: "확인 못 했어요",
+  trace_found: "먹었어요",
+  trace_not_found: "안 먹었어요",
 };
 
 /**

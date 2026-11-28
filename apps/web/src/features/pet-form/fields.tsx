@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
 import { useRef, useState, type ChangeEvent } from "react";
 import { speciesQueries } from "@/entities/species";
 import { filesApi } from "@pabom/core/api/endpoints";
@@ -15,26 +16,32 @@ import {
 import { todayYmd } from "@pabom/core/lib/date";
 import { resizeImage } from "@/shared/lib/image";
 import { useTouchDevice } from "@/shared/lib/use-touch-device";
-import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { DateField } from "@/shared/ui/calendar";
 import { ChipGroup } from "@/shared/ui/chip";
-import { Avatar, InfoBox, Skeleton, Spinner } from "@/shared/ui/display";
-import { Checkbox, Field, Input } from "@/shared/ui/form";
+import { InfoBox, Skeleton, Spinner } from "@/shared/ui/display";
+import { CheckboxRow, CheckToggle, Field, HelpMessage, Input } from "@/shared/ui/form";
+import { CameraIcon } from "@/shared/ui/icons";
 import { Menu } from "@/shared/ui/menu";
 import { toast } from "@/shared/ui/toast";
+import { FieldLabel, LIZARD_FIGURE } from "./choice";
 
 export type PhotoValue = { fileId: string | null; url: string | null };
 
-/** 동그란 개체 사진 칸. 고르면 줄여서 바로 올린다 */
+const PHOTO = 120;
+
+/**
+ * 동그란 개체 사진 칸 (Figma ⑤ 사진 · 프로필 사진 120, 앱 fields.tsx 와 같다).
+ * 사진이 없으면 흰 원 안에 종 피규어, 오른쪽 아래 검은 카메라 배지. 고르면 줄여서 바로 올린다
+ */
 export function PetPhotoPicker({
   value,
   onChange,
-  variant = "register",
   onBusyChange,
 }: {
   value: PhotoValue;
   onChange: (value: PhotoValue) => void;
+  /** 예전 호출부 호환용. 등록·수정 모두 같은 모양이다 */
   variant?: "register" | "edit";
   onBusyChange?: (busy: boolean) => void;
 }) {
@@ -65,29 +72,39 @@ export function PetPhotoPicker({
   };
 
   const label = value.url ? "사진 바꾸기" : "사진 추가";
-  const avatar = (
-    <Avatar
-      src={value.url}
-      size={72}
-      className={cn(!value.url && variant !== "edit" && "border-[1.5px] border-dashed border-input")}
-    >
-      {uploading ? (
-        <Spinner />
-      ) : variant === "edit" ? null : (
-        <span className="flex items-center gap-0.5 text-body-sm">+ 사진</span>
-      )}
-    </Avatar>
+  const frame = (
+    <span className="relative block" style={{ width: PHOTO, height: PHOTO }}>
+      <span className="absolute inset-0 overflow-hidden rounded-full bg-card">
+        {value.url ? (
+          // 서명 URL 이라 next/image 최적화를 쓰지 않는다
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value.url} alt="" className="size-full object-cover" />
+        ) : (
+          // 피규어는 원보다 살짝 넓게 (Figma 기본 이미지 133×91, 원 왼쪽 -5 · 위 14). 흰 배경 사진이라 곱하기로 섞는다
+          <span className="absolute top-3.5 -left-1.25 h-[91px] w-[133px] mix-blend-multiply">
+            <Image src={LIZARD_FIGURE} alt="" fill sizes="133px" className="object-contain" />
+          </span>
+        )}
+        {uploading ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-gray-900/40">
+            <Spinner />
+          </span>
+        ) : null}
+      </span>
+      <span className="absolute top-21 left-22 flex size-9 items-center justify-center rounded-full border-2 border-card bg-inverse text-inverse-foreground">
+        <CameraIcon className="size-5" />
+      </span>
+    </span>
   );
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      {/* 등록(P02)은 점선 동그라미에 '+ 사진', 정보 수정(P05)은 동그라미만 */}
+    <div className="flex justify-center">
       {touch ? (
         // 휴대폰 브라우저에서는 앨범·카메라 중 고른다 (T08-04)
         <Menu
           label={label}
-          trigger={avatar}
-          triggerClassName="relative size-auto rounded-full hover:bg-transparent data-[state=open]:bg-transparent"
+          trigger={frame}
+          triggerClassName="size-auto rounded-full hover:bg-transparent active:bg-transparent data-[state=open]:bg-transparent"
           items={[
             { label: "앨범에서 고르기", onSelect: () => inputRef.current?.click() },
             { label: "카메라로 찍기", onSelect: () => cameraRef.current?.click() },
@@ -98,19 +115,11 @@ export function PetPhotoPicker({
           type="button"
           onClick={() => inputRef.current?.click()}
           aria-label={label}
-          className="relative"
+          className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         >
-          {avatar}
+          {frame}
         </button>
       )}
-      <span
-        className={cn(
-          "text-body-md",
-          variant === "edit" ? "font-medium text-primary" : "text-muted-foreground",
-        )}
-      >
-        {variant === "edit" ? "사진 바꾸기" : "사진 (선택)"}
-      </span>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onFile} />
       <input
         ref={cameraRef}
@@ -136,7 +145,7 @@ const stageOf = (species: Species | undefined, code: string | null) =>
   species?.lifeStages.find((s) => s.code === code) ?? null;
 
 /**
- * 부화일 + '부화일을 몰라요' + 생애 단계 칩 3개 [어린 개체] [성체] [잘 모르겠어요] (P02 4/4 · P05 · U5, Figma 댓글 #5~#17).
+ * 부화일(제목 줄 오른쪽 '✓ 몰라요') + 생애 단계 칩 3개 [어린 개체] [성체] [잘 모르겠어요] (P02 3/3 · P05 · U5).
  * - 부화일을 넣으면 단계를 미리 골라 주고 "부화일로 보면 어린 개체예요. 다르면 바꿔 주세요." 안내
  * - 부화일을 모르면 직접 고른다. '정확하지 않아요'는 어린 개체일 때만
  * - '잘 모르겠어요'를 고르면 체중 칸(선택)이 나타나고, 체중을 넣으면 단계를 제안해 사용자가 확정한다
@@ -178,8 +187,23 @@ export function HatchFields({
         : "'정확하지 않아요'는 어린 개체일 때만 보여요";
 
   return (
-    <div className="space-y-3">
-      <Field label="부화일" htmlFor="pet-hatched" error={error}>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <FieldLabel htmlFor="pet-hatched">부화일</FieldLabel>
+          <CheckToggle
+            checked={hatchUnknown}
+            onChange={(on) =>
+              onChange({
+                hatchUnknown: on,
+                hatchedOn: null,
+                lifeStageCode: null,
+                stageUncertain: false,
+                weightG: null,
+              })
+            }
+          />
+        </div>
         <DateField
           id="pet-hatched"
           title="부화일"
@@ -199,22 +223,12 @@ export function HatchFields({
             })
           }
         />
-      </Field>
-      <label className="flex min-h-11 items-center gap-2 text-body-lg text-secondary-text">
-        <Checkbox
-          checked={hatchUnknown}
-          onCheckedChange={(on) =>
-            onChange({
-              hatchUnknown: on === true,
-              hatchedOn: null,
-              lifeStageCode: null,
-              stageUncertain: false,
-              weightG: null,
-            })
-          }
-        />
-        부화일을 몰라요
-      </label>
+        {error ? (
+          <HelpMessage tone="error" role="alert">
+            {error}
+          </HelpMessage>
+        ) : null}
+      </div>
 
       {showStage ? (
         <>
@@ -235,13 +249,12 @@ export function HatchFields({
             />
           </Field>
           {lifeStageCode === "juvenile" ? (
-            <label className="flex min-h-11 items-center gap-2 text-body-lg text-secondary-text">
-              <Checkbox
-                checked={stageUncertain}
-                onCheckedChange={(on) => onChange({ stageUncertain: on === true })}
-              />
+            <CheckboxRow
+              checked={stageUncertain}
+              onChange={(on) => onChange({ stageUncertain: on })}
+            >
               정확하지 않아요
-            </label>
+            </CheckboxRow>
           ) : null}
           {unknown ? (
             <WeightSuggestField
@@ -277,7 +290,22 @@ function WeightSuggestField({
   const suggested = species ? lifeStageFromWeight(species, weightG) : null;
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
+      {suggested ? (
+        <InfoBox tone="primary" className="flex items-center justify-between gap-3">
+          <span className="min-w-0 flex-1 font-normal text-secondary-text">
+            체중으로 보면 <strong className="font-bold">{suggested.name}</strong>예요. 다르면 바꿔
+            주세요.
+          </span>
+          <Button
+            size="sm"
+            className="shrink-0"
+            onClick={() => onChange({ lifeStageCode: suggested.code, stageUncertain: false })}
+          >
+            {suggested.name}로 정하기
+          </Button>
+        </InfoBox>
+      ) : null}
       <Field
         label="체중 (선택)"
         htmlFor="pet-weight"
@@ -305,27 +333,13 @@ function WeightSuggestField({
           }}
         />
       </Field>
-      {suggested ? (
-        <InfoBox tone="primary" className="flex items-center justify-between gap-3">
-          <span>
-            체중 {weightG}g으로 보면 <strong>{suggested.name}</strong>예요.
-          </span>
-          <Button
-            size="sm"
-            className="shrink-0"
-            onClick={() => onChange({ lifeStageCode: suggested.code, stageUncertain: false })}
-          >
-            {suggested.name}로 정하기
-          </Button>
-        </InfoBox>
-      ) : null}
     </div>
   );
 }
 
 const MORPH_MAX = 40;
 
-/** 모프 칩 2열 + 기타(직접 입력) (P02 3/4, U4). 모프 목록은 종별 모프 API로 불러온다 */
+/** 모프 칩(줄바꿈) + 기타(직접 입력) (P02 2/3 · U4). 모프 목록은 종별 모프 API로 불러온다. 모프는 선택이라 다시 누르면 비운다 */
 export function MorphPicker({
   species,
   value,
@@ -343,13 +357,13 @@ export function MorphPicker({
   const choice = other ? "__other" : value;
 
   // 모프를 못 불러오면(isPending이 풀리면) 기타(직접 입력)만 보인다
-  if (isPending) return <Skeleton className="h-40" />;
+  if (isPending) return <Skeleton height={148} />;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <ChipGroup
         label="모프"
-        columns={2}
+        allowDeselect
         options={[
           ...known.map((m) => ({ value: m, label: m })),
           { value: "__other", label: "기타(직접 입력)" },

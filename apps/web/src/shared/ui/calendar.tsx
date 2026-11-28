@@ -23,12 +23,15 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "./button";
 import { FieldButton } from "./form";
 import { Sheet } from "./sheet";
+import { IconButton } from "./top-bar";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i);
 
-const NAV_BUTTON =
-  "flex size-10 items-center justify-center rounded-full text-muted-foreground disabled:opacity-30";
+/** 이전·다음 16 아이콘이 날 칸 열(좌우 8)에 맞도록 터치 칸을 바깥으로 넓힌다 */
+const NAV = "-mx-1 flex items-center justify-between pb-1";
+/** 7칸 34px 열을 좌우 8 안쪽에 고르게 벌린다 */
+const WEEK_GRID = "grid grid-cols-[repeat(7,34px)] justify-between px-2";
 
 /** 연·월 고르기. 헤더를 누르면 날짜 격자 대신 보인다 */
 function YearMonthPicker({
@@ -48,26 +51,24 @@ function YearMonthPicker({
 
   return (
     <div>
-      <div className="flex items-center justify-between py-2">
-        <button
-          type="button"
+      <div className={NAV}>
+        <IconButton
           aria-label="이전 해"
+          size={40}
           disabled={!canPrevYear}
           onClick={() => setYear((y) => subYears(y, 1))}
-          className={NAV_BUTTON}
         >
           <ChevronLeftIcon className="size-4" />
-        </button>
-        <p className="text-body-xl font-bold">{format(year, "yyyy년")}</p>
-        <button
-          type="button"
+        </IconButton>
+        <p className="text-body-xl font-semibold text-foreground">{format(year, "yyyy년")}</p>
+        <IconButton
           aria-label="다음 해"
+          size={40}
           disabled={!canNextYear}
           onClick={() => setYear((y) => addYears(y, 1))}
-          className={NAV_BUTTON}
         >
           <ChevronRightIcon className="size-4" />
-        </button>
+        </IconButton>
       </div>
       <div className="grid grid-cols-4 gap-2 py-1">
         {MONTHS.map((i) => {
@@ -84,9 +85,11 @@ function YearMonthPicker({
               aria-pressed={selected}
               onClick={() => onPick(startOfMonth(candidate))}
               className={cn(
-                "flex h-11 items-center justify-center rounded-lg text-body-lg",
-                disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
-                selected && "bg-primary font-bold text-white hover:bg-primary",
+                "flex h-11 items-center justify-center rounded-lg text-body-lg transition-colors",
+                disabled
+                  ? "text-disabled-foreground"
+                  : "text-foreground hover:bg-muted active:bg-muted",
+                selected && "bg-primary font-semibold text-primary-foreground hover:bg-primary",
               )}
             >
               {i + 1}월
@@ -98,7 +101,10 @@ function YearMonthPicker({
   );
 }
 
-/** 달력 한 달 (D3). min/max 밖의 날은 고를 수 없다 */
+/**
+ * 달력 한 달 (Figma 달력 · D3, 앱 calendar.tsx 와 같다). 날 칸 34 동그라미: 고름 primary · 오늘 파란 테두리 · 못 고름 gray-300.
+ * min/max 밖의 날은 고를 수 없다
+ */
 export function Calendar({
   value,
   onChange,
@@ -121,40 +127,37 @@ export function Calendar({
 
   return (
     <div>
-      <div className="flex items-center justify-between py-2">
-        <button
-          type="button"
+      <div className={NAV}>
+        <IconButton
           aria-label="이전 달"
+          size={40}
           disabled={!canPrev}
           onClick={() => setMonth((m) => subMonths(m, 1))}
-          className={cn(NAV_BUTTON, picking && "invisible")}
+          className={cn(picking && "invisible")}
         >
           <ChevronLeftIcon className="size-4" />
-        </button>
+        </IconButton>
         <button
           type="button"
           aria-label="연·월 고르기"
           aria-expanded={picking}
           onClick={() => setPicking((p) => !p)}
-          className="flex h-10 items-center gap-1 rounded-lg px-2 text-body-xl font-bold hover:bg-muted"
+          className="flex h-10 items-center gap-1 rounded-lg px-2 text-body-xl font-semibold text-foreground transition-colors hover:bg-muted active:bg-muted"
         >
           {format(month, "yyyy년 M월")}
           <ChevronDownIcon
-            className={cn(
-              "size-4 text-muted-foreground transition-transform",
-              picking && "rotate-180",
-            )}
+            className={cn("size-4 text-foreground transition-transform", picking && "rotate-180")}
           />
         </button>
-        <button
-          type="button"
+        <IconButton
           aria-label="다음 달"
+          size={40}
           disabled={!canNext}
           onClick={() => setMonth((m) => addMonths(m, 1))}
-          className={cn(NAV_BUTTON, picking && "invisible")}
+          className={cn(picking && "invisible")}
         >
           <ChevronRightIcon className="size-4" />
-        </button>
+        </IconButton>
       </div>
       {picking ? (
         <YearMonthPicker
@@ -168,14 +171,17 @@ export function Calendar({
         />
       ) : (
         <>
-          <div className="grid grid-cols-7 text-center text-body-md text-muted-foreground">
+          <div
+            className={cn(
+              WEEK_GRID,
+              "py-1 text-center text-body-md font-medium text-muted-foreground",
+            )}
+          >
             {WEEKDAYS.map((d) => (
-              <span key={d} className="py-1.5">
-                {d}
-              </span>
+              <span key={d}>{d}</span>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-y-1 text-center">
+          <div className={cn(WEEK_GRID, "mt-1 gap-y-1 text-center")}>
             {Array.from({ length: blanks }, (_, i) => (
               <span key={`b${i}`} />
             ))}
@@ -193,10 +199,14 @@ export function Calendar({
                   aria-label={formatFullDate(day)}
                   onClick={() => onChange(ymd)}
                   className={cn(
-                    "mx-auto flex size-9 items-center justify-center rounded-full text-body-lg",
-                    disabled ? "text-disabled-foreground" : "text-foreground hover:bg-muted",
-                    isToday && !selected && "border-[1.5px] border-primary font-bold text-primary",
-                    selected && "bg-primary font-bold text-white hover:bg-primary",
+                    "flex size-8.5 items-center justify-center rounded-full text-body-lg transition-colors",
+                    disabled
+                      ? "text-disabled-foreground"
+                      : "text-foreground hover:bg-muted active:bg-muted",
+                    isToday && !selected && "border-[1.3px] border-primary",
+                    isToday && !selected && !disabled && "font-semibold text-primary",
+                    selected &&
+                      "bg-primary font-semibold text-primary-foreground hover:bg-primary active:bg-primary",
                   )}
                 >
                   {format(day, "d")}
@@ -302,7 +312,7 @@ export function DateField({
       <FieldButton
         id={id}
         disabled={disabled}
-        aria-invalid={invalid || undefined}
+        invalid={invalid}
         placeholder={placeholder}
         icon={<CalendarIcon />}
         onClick={() => setOpen(true)}

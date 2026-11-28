@@ -92,6 +92,7 @@
   --color-kakao: var(--kakao);
   --color-kakao-foreground: var(--kakao-foreground);
   --color-shell: var(--shell);
+  --color-screen: var(--screen);
 }
 
 :root {
@@ -134,6 +135,8 @@
   --kakao: #fee500;
   --kakao-foreground: #191919;
   --shell: var(--color-gray-100);
+  /* 화면 바탕 (Figma bg/secondary). 그 위에 흰 카드(card)를 올린다 */
+  --screen: var(--color-gray-100);
   --chart-1: var(--color-primary-500);
   --chart-2: var(--color-sub-500);
   --chart-3: var(--color-green-500);
@@ -183,6 +186,7 @@
   --inverse: var(--color-gray-50);
   --inverse-foreground: var(--color-gray-950);
   --shell: var(--color-gray-900);
+  --screen: var(--color-gray-950);
   --sidebar: var(--color-gray-900);
   --sidebar-foreground: var(--color-gray-50);
   --sidebar-primary: var(--color-primary-400);

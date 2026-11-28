@@ -11,8 +11,11 @@ import type { AuthProvider } from "@pabom/core/domain/user";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
-import { Spinner } from "@/shared/ui/display";
 import { toast } from "@/shared/ui/toast";
+import { PawLoader } from "./paw-loader";
+
+export { PawLoader } from "./paw-loader";
+export { FootprintWalk, WelcomeHero } from "./welcome-hero";
 
 /** 로그인 뒤 돌아갈 곳. 같은 사이트 경로만 허용한다 */
 export function safeNext(next: string | null | undefined) {
@@ -61,16 +64,19 @@ function openInExternalBrowser() {
 }
 
 /**
- * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양).
+ * 카카오·구글 로그인 버튼 (각 서비스 가이드 모양, Figma A01 하단 고정 영역).
  * 백엔드에서 로그인 주소를 받아(state 쿠키도 함께) 카카오·구글 화면으로 보낸다.
- * 앱 안 브라우저에서 구글을 누르면 다른 브라우저로 열라는 확인 창 (C4-1)
+ * 앱 안 브라우저에서 구글을 누르면 다른 브라우저로 열라는 확인 창 (C4-1).
+ * onBusyChange 로 로그인 중인지 알려 주면 첫 화면이 '로그인하고 있어요'(A02)를 덮어 보여 준다
  */
 export function LoginButtons({
   next,
   labels = { kakao: "카카오로 시작하기", google: "Google 계정으로 시작하기" },
+  onBusyChange,
 }: {
   next?: string | null;
   labels?: Record<AuthProvider, string>;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [inAppOpen, setInAppOpen] = useState(false);
   const loginUrl = useMutation({
@@ -81,6 +87,10 @@ export function LoginButtons({
   // 주소를 받은 뒤 화면이 넘어갈 때까지도 다시 누르지 못하게 한다
   const busy = loginUrl.isPending || loginUrl.isSuccess;
   const { reset } = loginUrl;
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
 
   // 카카오·구글 화면에서 뒤로 오면 페이지가 그대로 복원되니 버튼을 다시 풀어 준다
   useEffect(() => {
@@ -101,12 +111,27 @@ export function LoginButtons({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button variant="kakao" size="xl" disabled={busy} onClick={() => start("kakao")}>
+    <div className="flex flex-col gap-3">
+      {/* 카카오(노랑 · 심볼 18) · 구글(흰 바탕 · 회색 테두리 · G 20). 56px · 모서리 12 */}
+      <Button
+        variant="kakao"
+        size="xl"
+        className="gap-2 font-medium"
+        disabled={busy}
+        loading={busy && loginUrl.variables === "kakao"}
+        onClick={() => start("kakao")}
+      >
         <KakaoSymbol />
         {labels.kakao}
       </Button>
-      <Button variant="outline" size="xl" disabled={busy} onClick={() => start("google")}>
+      <Button
+        variant="google"
+        size="xl"
+        className="gap-2.5 text-body-lg font-medium"
+        disabled={busy}
+        loading={busy && loginUrl.variables === "google"}
+        onClick={() => start("google")}
+      >
         <GoogleSymbol />
         {labels.google}
       </Button>
@@ -142,7 +167,7 @@ function KakaoSymbol() {
 
 function GoogleSymbol() {
   return (
-    <svg viewBox="0 0 18 18" className="size-[18px]" aria-hidden>
+    <svg viewBox="0 0 18 18" className="size-5" aria-hidden>
       <path
         fill="#4285F4"
         d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
@@ -188,12 +213,21 @@ export function useLogout() {
   });
 }
 
-export function FullScreenLoading({ className }: { className?: string }) {
+/** 화면을 불러오는 동안 (Figma 파봄 로딩). label 을 주면 아래에 한 줄 안내 */
+export function FullScreenLoading({ label, className }: { label?: string; className?: string }) {
   return (
-    <div className={cn("flex flex-1 items-center justify-center", className)}>
-      <Spinner />
+    <div
+      className={cn("flex flex-1 flex-col items-center justify-center gap-4 bg-screen", className)}
+    >
+      <PawLoader label={label} />
+      {label ? <p className="text-body-xl font-medium text-muted-foreground">{label}</p> : null}
     </div>
   );
+}
+
+/** SCR-A02 로그인 처리 중 */
+export function LoginLoading({ className }: { className?: string }) {
+  return <FullScreenLoading label="로그인하고 있어요" className={className} />;
 }
 
 /**

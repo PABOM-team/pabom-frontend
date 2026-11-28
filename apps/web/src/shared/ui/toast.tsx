@@ -40,7 +40,7 @@ const useToastStore = create<ToastState>((set) => ({
   dismiss: () => set({ current: null }),
 }));
 
-/** 화면 아래 검은 토스트 (C3). 한 번에 하나만 보인다 */
+/** 화면 아래 검은 토스트 (Figma 토스트, C3 · 앱 toast.tsx 와 같다). 한 번에 하나만 보인다 */
 export const toast = (message: string, options?: { action?: ToastAction; duration?: number }) =>
   useToastStore.getState().show(message, options);
 
@@ -57,15 +57,17 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute inset-x-gutter bottom-[calc(80px+env(safe-area-inset-bottom))] z-60 flex justify-center"
+      className="pointer-events-none absolute inset-x-gutter bottom-[calc(96px+env(safe-area-inset-bottom))] z-60 flex justify-center"
     >
       {current ? (
         <div
           key={current.id}
           role="status"
           className={cn(
-            "pointer-events-auto flex min-h-11 w-full items-center gap-3 rounded-lg bg-inverse px-4 py-2.5 text-body-lg font-medium text-inverse-foreground shadow-md",
-            "animate-in fade-in-0 slide-in-from-bottom-2",
+            // Figma 토스트: gray-900 · 모서리 12 · 14/12 여백 · 글 body-md medium
+            "pointer-events-auto flex min-h-10 w-full items-center gap-2.5 rounded-lg bg-inverse px-3.5 py-3 text-body-md font-medium text-inverse-foreground shadow-md",
+            // Figma 프로토타입: 아래에서 밀려 들어온다 (MOVE_IN 0.3s ease-out)
+            "animate-in duration-300 ease-out fade-in-0 slide-in-from-bottom-6",
           )}
         >
           <span className="min-w-0 flex-1">{current.message}</span>
@@ -73,7 +75,7 @@ export function Toaster() {
             <button
               type="button"
               disabled={current.action.disabled}
-              className="shrink-0 font-semibold text-sub-300 disabled:opacity-40"
+              className="shrink-0 font-semibold text-primary-300 disabled:opacity-40"
               onClick={() => {
                 current.action?.onClick();
                 dismiss();

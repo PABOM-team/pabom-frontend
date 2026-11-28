@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { FullScreenLoading, takeLoginNext } from "@/features/auth";
+import { LoginLoading, takeLoginNext } from "@/features/auth";
 import { authApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
 import { applyLoginResult } from "@pabom/core/api/session";
@@ -88,7 +88,7 @@ export function LoginCallback() {
     login.mutate();
   }, [provider.success, errorCode, errorMessage, login, router]);
 
-  return <FullScreenLoading />;
+  return <LoginLoading />;
 }
 
 const FAILED = "로그인하지 못했어요. 다시 시도해 주세요.";

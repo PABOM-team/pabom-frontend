@@ -1,14 +1,14 @@
 "use client";
 
-import { PlusIcon } from "./icons";
+import { ExclamationCircleIcon, PlusIcon } from "./icons";
 import { useEffect, useRef, useState } from "react";
 import { filesApi } from "@pabom/core/api/endpoints";
 import type { Photo } from "@pabom/core/domain/record";
 import { resizeImage } from "@/shared/lib/image";
 import { useTouchDevice } from "@/shared/lib/use-touch-device";
 import { cn } from "@/shared/lib/utils";
-import { Spinner } from "./display";
 import { Menu } from "./menu";
+import { Spinner } from "./spinner";
 
 type Pending = { key: string; file: File; status: "uploading" | "failed" };
 
@@ -78,7 +78,9 @@ export function PhotoInput({
   };
 
   const box =
-    "relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl";
+    "relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg";
+  /** Figma 사진 칸: gray-100 바탕 · gray-300 점선 1.5 · 모서리 12 */
+  const dashed = "border-[1.5px] border-dashed border-input bg-secondary";
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -87,7 +89,7 @@ export function PhotoInput({
           key={photo.id}
           type="button"
           onClick={() => onView?.(index)}
-          className={cn(box, "border border-input")}
+          className={cn(box, "bg-secondary")}
           aria-label={`사진 ${index + 1} 크게 보기`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -102,21 +104,22 @@ export function PhotoInput({
           onClick={() => upload(item)}
           className={cn(
             box,
-            "flex-col gap-0.5 border-[1.5px] border-dashed text-body-sm",
+            dashed,
+            "flex-col gap-0.5 text-body-md font-medium",
             item.status === "failed"
-              ? "border-destructive text-destructive"
-              : "border-input bg-placeholder",
+              ? "border-destructive bg-card text-destructive"
+              : "text-subtle-foreground",
           )}
           aria-label={item.status === "failed" ? "사진 다시 올리기" : "사진 올리는 중"}
         >
           {item.status === "uploading" ? (
             <>
-              <Spinner className="scale-75" />
-              <span className="text-muted-foreground">올리는 중</span>
+              <Spinner label="사진 올리는 중" />
+              <span>올리는 중</span>
             </>
           ) : (
             <>
-              <span className="text-body-xl leading-none font-bold">!</span>
+              <ExclamationCircleIcon className="size-6" />
               다시 시도
             </>
           )}
@@ -127,10 +130,12 @@ export function PhotoInput({
           // + 를 누르면 앨범·카메라 중 고른다 (T08-04)
           <Menu
             label="사진 추가"
+            align="start"
             trigger={<PlusIcon className="size-5" />}
             triggerClassName={cn(
               box,
-              "size-16 rounded-xl border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
+              dashed,
+              "size-16 rounded-lg text-muted-foreground hover:bg-gray-200 active:bg-gray-200",
             )}
             items={[
               { label: "앨범에서 고르기", onSelect: () => inputRef.current?.click() },
@@ -144,7 +149,8 @@ export function PhotoInput({
             aria-label="사진 추가"
             className={cn(
               box,
-              "border-[1.5px] border-dashed border-input bg-placeholder text-subtle-foreground",
+              dashed,
+              "text-muted-foreground transition-colors hover:bg-gray-200 active:bg-gray-200",
             )}
           >
             <PlusIcon className="size-5" />

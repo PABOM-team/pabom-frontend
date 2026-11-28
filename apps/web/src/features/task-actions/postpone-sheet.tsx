@@ -56,7 +56,8 @@ export function PostponeSheet({
         footer={
           <Button
             size="xl"
-            disabled={!date || pending}
+            disabled={!date}
+            loading={pending}
             onClick={() => current && date && onSubmit(current, date)}
           >
             미루기
@@ -65,24 +66,36 @@ export function PostponeSheet({
       >
         {already?.originalDueOn ? (
           <>
-            <InfoBox tone="primary" className="mb-3 text-body-lg">
+            <InfoBox tone="primary" className="mb-3">
               이미 미룬 할 일이에요 · 원래 {formatShortDay(already.originalDueOn)} → 지금{" "}
               {formatShortDay(already.dueOn)}
             </InfoBox>
-            <p className="mb-3 text-body-lg text-secondary-text">
+            <p className="mb-3 text-body-md font-medium text-muted-foreground">
               {already.petName} · {already.careItemName} · 한 번 더 미룰 수 있어요.
             </p>
           </>
         ) : null}
-        <div className="flex flex-wrap gap-2">
-          <ChipGroup
-            label="미룰 날"
-            className="contents"
-            options={quick}
-            value={custom ? null : date}
-            onChange={(v) => v && setDate(v)}
-          />
-          <Chip selected={Boolean(custom)} onClick={() => setCalendarOpen(true)}>
+        <div role="radiogroup" aria-label="미룰 날" className="flex flex-wrap gap-1.5">
+          {quick.map((option) => {
+            const selected = !custom && date === option.value;
+            return (
+              <Chip
+                key={option.value}
+                role="radio"
+                aria-checked={selected}
+                selected={selected}
+                onClick={() => setDate(option.value)}
+              >
+                {option.label}
+              </Chip>
+            );
+          })}
+          <Chip
+            role="radio"
+            aria-checked={Boolean(custom)}
+            selected={Boolean(custom)}
+            onClick={() => setCalendarOpen(true)}
+          >
             {custom ? formatShortDay(date) : "달력에서 고르기"}
           </Chip>
         </div>
@@ -142,14 +155,17 @@ export function SkipSheet({
           : undefined
       }
       footer={
-        <Button size="xl" disabled={pending} onClick={() => current && onSubmit(current, reason)}>
+        <Button size="xl" loading={pending} onClick={() => current && onSubmit(current, reason)}>
           건너뛰기
         </Button>
       }
     >
-      <SheetLabel className="mt-1">이유 (선택)</SheetLabel>
+      <SheetLabel first className="mb-1.5">
+        이유 (선택)
+      </SheetLabel>
       <ChipGroup
         label="건너뛰는 이유"
+        className="gap-1.5"
         allowDeselect
         options={SKIP_REASONS.map((value) => ({ value, label: value }))}
         value={reason}

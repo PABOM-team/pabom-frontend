@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { CareItemIcon } from "@/entities/record";
 import { routineSummary } from "@/entities/routine";
 import { routinesApi } from "@pabom/core/api/endpoints";
 import { getErrorMessage } from "@pabom/core/api/errors";
@@ -31,7 +32,10 @@ function useRoutineMutation() {
   };
 }
 
-/** 체크 리스트 한 줄 (SCR-P03): 항목·주기·기록 방식 · 수정 · 켜기/끄기 */
+/**
+ * 체크 리스트 한 줄 (SCR-P03 할 일 줄): 할 일 아이콘 · 항목·주기·기록 방식 · 켜기/끄기.
+ * 줄을 누르면 수정 창이 열린다 (Figma 줄 ON_CLICK → 수정 창). 꺼진 항목은 이름이 한 단계 옅다
+ */
 export function RoutineRow({
   routine,
   fallbackFoodName,
@@ -53,18 +57,34 @@ export function RoutineRow({
   const enabled = toggle.isPending ? Boolean(toggle.variables) : routine.enabled;
 
   return (
-    <li className="flex items-center gap-3 border-b border-border py-3">
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 text-body-xl font-bold">
-          {label}
-          {routine.customized ? <Badge tone="primary">내가 정한 주기</Badge> : null}
-        </p>
-        <p className="truncate text-body-md text-muted-foreground">
-          {routineSummary(routine, fallbackFoodName)}
-        </p>
-      </div>
-      <button type="button" onClick={onEdit} className="shrink-0 px-1 text-body-lg text-primary">
-        수정
+    <li className="flex items-center gap-3 px-4 py-3">
+      <button
+        type="button"
+        aria-label={`${label} 수정`}
+        onClick={onEdit}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left transition-opacity active:opacity-60"
+      >
+        <CareItemIcon code={routine.careItem} recordKind={routine.recordKind} />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "min-w-0 shrink truncate text-body-xl font-semibold",
+                routine.enabled ? "text-foreground" : "text-secondary-text",
+              )}
+            >
+              {label}
+            </span>
+            {routine.customized ? (
+              <Badge tone="primary" className="shrink-0">
+                내가 정한 주기
+              </Badge>
+            ) : null}
+          </span>
+          <span className="truncate text-body-md text-muted-foreground">
+            {routineSummary(routine, fallbackFoodName)}
+          </span>
+        </span>
       </button>
       <Switch
         checked={enabled}
@@ -139,31 +159,24 @@ export function RoutineEditSheet({
       onOpenChange={onOpenChange}
       title={`${label} 수정`}
       footer={
-        // 되돌리기가 있으면 두 버튼을 위아래로 쌓는다. 한 줄이면 좁은 화면에서 저장이 밀려난다
-        <div className={cn("flex w-full gap-2", current?.customized && "flex-col")}>
-          {current?.customized ? (
-            <Button variant="outline" size="xl" disabled={pending} onClick={() => reset.mutate()}>
-              가이드라인 주기로 되돌리기
-            </Button>
-          ) : null}
-          <Button
-            size="xl"
-            className={current?.customized ? undefined : "flex-1"}
-            disabled={invalid || pending}
-            onClick={() => save.mutate()}
-          >
-            저장
-          </Button>
-        </div>
+        <Button
+          size="xl"
+          className="flex-1"
+          disabled={invalid || pending}
+          loading={save.isPending}
+          onClick={() => save.mutate()}
+        >
+          저장
+        </Button>
       }
     >
-      <SheetLabel className="mt-1">
+      <SheetLabel first>
         <label htmlFor="routine-interval">주기</label>
       </SheetLabel>
       <Input
         id="routine-interval"
         inputMode="numeric"
-        wrapperClassName="w-[140px]"
+        maxLength={3}
         suffix="일마다"
         value={intervalText}
         aria-invalid={(intervalText !== "" && invalid) || undefined}
@@ -178,6 +191,20 @@ export function RoutineEditSheet({
         >
           {outOfRange ? "가이드라인 범위 밖 · " : ""}가이드라인 범위: {range.min}~{range.max}일
         </p>
+      ) : null}
+      {/* 직접 바꾼 주기면 '내가 정한 주기' 표시와 되돌리기 링크 (Figma 수정 창 · 급여 · 내가 정한 주기) */}
+      {current?.customized ? (
+        <>
+          <p className="mt-1.5 text-body-md text-primary">내가 정한 주기</p>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => reset.mutate()}
+            className="mt-1.5 text-body-lg font-medium text-primary transition-opacity active:opacity-60 disabled:opacity-60"
+          >
+            가이드라인 주기로 되돌리기
+          </button>
+        </>
       ) : null}
       {feed ? (
         <>
@@ -227,8 +254,8 @@ export function FeedIntervalAsk({ routine }: { routine: Routine }) {
   });
 
   return (
-    <section className="mt-3.5 rounded-xl bg-primary-soft p-3.5">
-      <label htmlFor="feed-interval-ask" className="text-body-xl font-bold">
+    <section className="rounded-2xl bg-primary-soft p-3.5">
+      <label htmlFor="feed-interval-ask" className="text-body-xl font-bold text-foreground">
         {FEED_INTERVAL_ASK.title}
       </label>
       <div className="mt-2 flex items-center gap-2">
